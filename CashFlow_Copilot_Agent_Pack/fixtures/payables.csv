@@ -1,0 +1,4 @@
+Bill ID,Supplier,Amount INR,Settled INR,Due Date,Expected Date,Status,Negotiable,Max Extension Days,Mandatory,Discretionary,Estimated Action Cost INR
+BILL-P200,Raw Materials Co,300000,0,2026-11-06,2026-11-06,open,yes,20,no,no,2000
+BILL-P201,Staff Payroll,100000,0,2026-11-11,2026-11-11,open,no,0,yes,no,
+BILL-P202,Monthly Rent,50000,0,2026-11-29,2026-11-29,open,no,0,yes,no,
