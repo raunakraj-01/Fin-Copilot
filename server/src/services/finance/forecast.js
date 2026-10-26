@@ -55,6 +55,7 @@ export function buildForecast({
       id: String(item.id || item._id || item.externalId), cashItemId: String(item.id || item._id || item.externalId),
       externalId: item.externalId, date: item.expectedDate,
       direction: item.category === 'receivable' ? 'in' : 'out', amountPaise: amount,
+      counterparty: item.counterparty, confidenceState: item.confidenceState || 'owner_assumption',
       reason: item.category === 'receivable' ? 'customer_invoice' : item.category === 'payable' ? 'supplier_bill' : 'expense',
     });
   }
@@ -66,7 +67,8 @@ export function buildForecast({
       const date = dateFromDay(day);
       if (Number(date.slice(8)) === rule.dayOfMonth && date >= rule.startsOn && (!rule.endsOn || date <= rule.endsOn)) {
         addEvent({ id: `${rule.id || rule._id}:${date}`, sourceId: String(rule.id || rule._id), date,
-          direction: 'out', amountPaise: rule.amountPaise, reason: 'recurring_expense', description: rule.description });
+          direction: 'out', amountPaise: rule.amountPaise, reason: 'recurring_expense', description: rule.description,
+          confidenceState: 'owner_assumption' });
       }
     }
   }
@@ -97,15 +99,25 @@ export function buildForecast({
       peakShortagePaise: Math.max(0, -worstCashPaise), contributingItems: [] },
     warnings, assumptions: ['Expected dates are user inputs, not guaranteed collection dates'],
   };
-  forecast.risk.contributingItems = explainRisk(forecast, cashItems).contributingItems;
+  Object.assign(forecast.risk, explainRisk(forecast, cashItems));
   return forecast;
 }
 
 export function explainRisk(forecast, _cashItems = []) {
-  const cutoff = [forecast.risk.firstNegativeDate, forecast.risk.firstReserveBreachDate].filter(Boolean).sort()[0] || forecast.risk.worstDate;
-  return { contributingItems: forecast.daily.flatMap(day => day.date <= cutoff ? day.events : [])
+  const riskDate = forecast.risk.firstNegativeDate || forecast.risk.firstReserveBreachDate;
+  const cutoff = riskDate || forecast.risk.worstDate;
+  const contributingItems = forecast.daily.flatMap(day => day.date <= cutoff ? day.events : [])
     .filter(event => event.direction === 'out')
     .sort((a, b) => b.amountPaise - a.amountPaise)
     .map(event => ({ cashItemId: event.cashItemId || event.sourceId || event.id, externalId: event.externalId,
-      amountPaise: event.amountPaise, date: event.date, direction: event.direction })) };
+      amountPaise: event.amountPaise, date: event.date, direction: event.direction }));
+  if (!riskDate) return { contributingItems, explanation: 'Cash stays above the minimum reserve throughout this forecast.' };
+  const day = forecast.daily.find(point => point.date === riskDate);
+  const driver = day.events.filter(event => event.direction === 'out').sort((a, b) => b.amountPaise - a.amountPaise)[0];
+  const nextReceipt = forecast.daily.flatMap(point => point.events)
+    .find(event => event.direction === 'in' && event.date > riskDate);
+  const condition = forecast.risk.firstNegativeDate ? 'turns negative' : 'falls below the minimum reserve';
+  const driverText = driver ? ` after ${driver.externalId || driver.description || driver.counterparty || 'a payment'} is scheduled` : ' from the opening cash position';
+  const receiptText = nextReceipt ? `, before ${nextReceipt.externalId || nextReceipt.counterparty || 'a receipt'} is expected on ${nextReceipt.date}` : '';
+  return { contributingItems, explanation: `Cash first ${condition} on ${riskDate}${driverText}${receiptText}.` };
 }

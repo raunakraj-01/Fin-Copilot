@@ -68,8 +68,15 @@ router.post('/:batchId/commit', asyncRoute(async (req, res) => {
   const excluded = new Set(excludedRowNumbers);
   const amended = batch.rawRows.map(row => {
     const correction = corrections.find(value => value.rowNumber === row.rowNumber);
-    if (correction && Object.keys(correction.values).some(header => !batch.headers.includes(header))) fail(400, 'VALIDATION_ERROR', 'Correction refers to an unknown header');
-    return correction ? { rowNumber: row.rowNumber, values: { ...row.values, ...correction.values } } : row;
+    if (!correction) return row;
+    const overrides = {};
+    for (const [fieldOrHeader, value] of Object.entries(correction.values)) {
+      const field = keys.includes(fieldOrHeader) ? fieldOrHeader
+        : Object.keys(batch.mapping).find(key => batch.mapping[key] === fieldOrHeader);
+      if (!field) fail(400, 'VALIDATION_ERROR', 'Correction refers to an unknown field');
+      overrides[field] = value;
+    }
+    return { rowNumber: row.rowNumber, values: row.values, overrides };
   });
   const rows = normalizeRows(amended.filter(row => !excluded.has(row.rowNumber)), batch.mapping, batch.kind, batch.sourceSystem);
   if (rows.some(row => row.state !== 'accepted')) fail(422, 'NEEDS_REVIEW', 'Correct or exclude all review and rejected rows', rows.flatMap(row => row.issues));

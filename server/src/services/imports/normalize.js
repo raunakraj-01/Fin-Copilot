@@ -5,8 +5,8 @@ const truthy = value => ['yes', 'true', '1'].includes(String(value).trim().toLow
 
 export function normalizeRows(rawRows, mapping, kind, sourceSystem) {
   const seen = new Set();
-  return rawRows.map(({ rowNumber, values }) => {
-    const get = field => String(values[mapping[field]] ?? '').trim();
+  return rawRows.map(({ rowNumber, values, overrides = {} }) => {
+    const get = field => String(overrides[field] ?? values[mapping[field]] ?? '').trim();
     const issues = [];
     const required = field => {
       const value = get(field);

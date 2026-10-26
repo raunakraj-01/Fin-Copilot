@@ -27,3 +27,6 @@ summary { cursor: pointer; }
 .check { flex-direction: row; align-items: center; }
 li { margin: 8px 0; }
 li button { margin-left: 8px; padding: 4px 8px; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: 10px; border-bottom: 1px solid #dfe7f0; }

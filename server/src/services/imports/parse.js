@@ -12,7 +12,8 @@ export async function parseUpload(file) {
     rows = parsed.data;
   } else {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(file.buffer);
+    try { await workbook.xlsx.load(file.buffer); }
+    catch { fail(400, 'VALIDATION_ERROR', 'Invalid XLSX file'); }
     const sheet = workbook.worksheets[0];
     if (!sheet) fail(400, 'VALIDATION_ERROR', 'XLSX workbook has no sheet');
     rows = [];

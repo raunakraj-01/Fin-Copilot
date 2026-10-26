@@ -19,15 +19,26 @@ export default function Outlook({ workspaceId }) {
   if (error) return <section><h1>Cash Outlook</h1><p role="alert">{error}</p></section>;
   if (!forecast) return <section><h1>Cash Outlook</h1><p>Loading forecast…</p></section>;
   const { risk } = forecast;
+  const events = forecast.daily.flatMap(day => day.events);
   return <section>
     <h1>Cash Outlook</h1>
     <p>This forecast assumes the entered expected payment dates. It is a scenario, not a guaranteed prediction.</p>
+    <p className="notice">{risk.explanation}</p>
     <div className="metrics">
       <div className="card"><small>Opening cash</small><strong>{money(forecast.openingCashPaise)}</strong></div>
       <div className="card"><small>First negative day</small><strong>{risk.firstNegativeDate || 'None'}</strong></div>
       <div className="card"><small>First reserve breach</small><strong>{risk.firstReserveBreachDate || 'None'}</strong></div>
       <div className="card"><small>Worst balance</small><strong>{money(risk.worstCashPaise)}</strong><span>{risk.worstDate}</span></div>
     </div>
+    {events.length === 0 && <p className="notice">No future cash movements are scheduled. Add or import records on Setup & Import, and check any data warnings below.</p>}
+    {events.length > 0 && <div className="card"><h2>Scheduled receipts and payments</h2><div className="table-scroll"><table>
+      <thead><tr><th>Date</th><th>Record</th><th>Direction</th><th>Amount</th><th>Evidence</th></tr></thead>
+      <tbody>{events.map((event, index) => <tr key={`${event.id}-${index}`}>
+        <td>{event.date}</td><td>{event.externalId || event.description || event.counterparty || event.id}</td>
+        <td>{event.direction === 'in' ? 'Receipt' : 'Payment'}</td><td>{money(event.amountPaise)}</td>
+        <td>{event.confidenceState === 'verified' ? 'Verified' : event.confidenceState === 'owner_assumption' ? 'Owner assumption' : 'Scenario'}</td>
+      </tr>)}</tbody>
+    </table></div></div>}
     <div className="chart" role="img" aria-label="Daily closing cash forecast">
       <ResponsiveContainer width="100%" height="100%"><LineChart data={forecast.daily} margin={{ top: 12, right: 20, left: 15, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" tickFormatter={value => value.slice(5)} minTickGap={20} />

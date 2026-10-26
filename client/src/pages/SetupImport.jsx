@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
 import ManualRecords from '../components/ManualRecords.jsx';
 
@@ -21,6 +21,18 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   const [busy, setBusy] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  useEffect(() => {
+    if (!workspaceId) return;
+    let active = true;
+    setBatchId(''); setRows([]); setCorrections({}); setExcluded([]);
+    api(`/workspaces/${workspaceId}`).then(({ workspace }) => {
+      if (active) setForm({ name: workspace.name, asOfDate: workspace.asOfDate,
+        openingCashInr: String(workspace.openingCashPaise / 100),
+        minimumReserveInr: String(workspace.minimumReservePaise / 100) });
+    }).catch(error => { if (active) setMessage(error.message); });
+    return () => { active = false; };
+  }, [workspaceId]);
+
   async function run(action) {
     setBusy(true); setMessage('');
     try { await action(); } catch (error) { setMessage(error.message); }
@@ -35,6 +47,15 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
         minimumReservePaise: Math.round(Number(form.minimumReserveInr) * 100) });
       onWorkspaceCreated(workspace.id);
       setMessage(`Workspace created: ${workspace.name}`);
+    });
+  }
+
+  function updateWorkspace() {
+    run(async () => {
+      const { workspace } = await json(`/workspaces/${workspaceId}`, 'PATCH', { name: form.name, asOfDate: form.asOfDate,
+        openingCashPaise: Math.round(Number(form.openingCashInr) * 100),
+        minimumReservePaise: Math.round(Number(form.minimumReserveInr) * 100) });
+      setMessage(`Updated cash snapshot and reserve for ${workspace.name}.`);
     });
   }
 
@@ -86,11 +107,13 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
       <label>As-of date<input type="date" value={form.asOfDate} onChange={event => setForm({ ...form, asOfDate: event.target.value })} required /></label>
       <label>Opening cash (₹)<input type="number" step="0.01" value={form.openingCashInr} onChange={event => setForm({ ...form, openingCashInr: event.target.value })} required /></label>
       <label>Minimum reserve (₹)<input type="number" step="0.01" min="0" value={form.minimumReserveInr} onChange={event => setForm({ ...form, minimumReserveInr: event.target.value })} required /></label>
-      <button disabled={busy}>Create workspace</button>
+      <button disabled={busy}>Create new workspace</button>
+      {workspaceId && <button type="button" disabled={busy} onClick={updateWorkspace}>Save active workspace</button>}
     </form>
     <button type="button" disabled={busy} onClick={useSeed}>Use seeded demo workspace</button>
     {workspaceId && <>
       <p>Active workspace: <code>{workspaceId}</code></p>
+      <p>CSV templates: <a href="/templates/receivables.csv" download>Receivables</a> · <a href="/templates/payables.csv" download>Payables</a></p>
       <form onSubmit={inspect} className="card form-grid">
         <label>Import type<select value={kind} onChange={event => setKind(event.target.value)}><option value="receivables">Receivables</option><option value="payables">Payables</option></select></label>
         <label>CSV or XLSX file<input type="file" accept=".csv,.xlsx" onChange={event => setFile(event.target.files[0])} required /></label>
@@ -100,7 +123,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
     {batchId && <div className="card">
       <h2>Column mapping</h2>
       <div className="form-grid">{fields.map(field => <label key={field}>{field}
-        <select value={mapping[field] || ''} onChange={event => { setMapping({ ...mapping, [field]: event.target.value }); setRows([]); }}>
+        <select value={mapping[field] || ''} onChange={event => { setMapping({ ...mapping, [field]: event.target.value }); setRows([]); setCorrections({}); }}>
           <option value="">Unmapped</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}
         </select></label>)}</div>
       <button disabled={busy} onClick={validateBatch}>Validate rows</button>
@@ -112,9 +135,9 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
         <summary>Row {row.rowNumber}: {row.item.externalId || 'No ID'} · {row.item.amountPaise === undefined ? 'Invalid amount' : money(row.item.amountPaise)} · {row.state}</summary>
         {row.issues.map(issue => <p className="issue" key={`${issue.field}-${issue.code}`}>{issue.field}: {issue.message}</p>)}
         <label><input type="checkbox" checked={excluded.includes(row.rowNumber)} onChange={event => setExcluded(event.target.checked ? [...excluded, row.rowNumber] : excluded.filter(number => number !== row.rowNumber))} /> Exclude row</label>
-        <div className="form-grid">{fields.filter(field => mapping[field]).map(field => <label key={field}>{field}
-          <input value={corrections[row.rowNumber]?.[mapping[field]] ?? row.values[mapping[field]] ?? ''}
-            onChange={event => setCorrections({ ...corrections, [row.rowNumber]: { ...corrections[row.rowNumber], [mapping[field]]: event.target.value } })} />
+        <div className="form-grid">{fields.map(field => <label key={field}>{field}{!mapping[field] && ' (manual)'}
+          <input value={corrections[row.rowNumber]?.[field] ?? row.values[mapping[field]] ?? ''}
+            onChange={event => setCorrections({ ...corrections, [row.rowNumber]: { ...corrections[row.rowNumber], [field]: event.target.value } })} />
         </label>)}</div>
       </details>)}
       <button disabled={busy} onClick={commitBatch}>Commit reviewed rows</button>
