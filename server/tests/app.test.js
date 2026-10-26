@@ -11,4 +11,7 @@ it('serves the health route and marks decision modules as pending', async () => 
   const oversized = await request(app).post('/api/workspaces/demo/imports/inspect')
     .field('kind', 'receivables').attach('file', Buffer.alloc(2 * 1024 * 1024 + 1), 'large.csv').expect(413);
   expect(oversized.body.error.code).toBe('UPLOAD_TOO_LARGE');
+  const unexpected = await request(app).post('/api/workspaces/demo/imports/inspect')
+    .field('kind', 'receivables').attach('other', Buffer.from('x'), 'small.csv').expect(400);
+  expect(unexpected.body.error.code).toBe('VALIDATION_ERROR');
 });

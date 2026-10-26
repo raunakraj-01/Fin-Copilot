@@ -12,9 +12,9 @@ Use Node.js LTS. Start MongoDB Server locally or use a MongoDB Atlas URI. MongoD
 4. Run `cd client && npm install && npm run dev` for the app at `http://localhost:5173`.
 5. Run `cd server && npm test` and `cd client && npm run build` to check the project. Tests use an isolated in-memory MongoDB, so they do not require your local database.
 
-Open the UI and select **Use seeded demo workspace** to inspect seeded data. To exercise the import flow, create a new workspace dated `2026-11-01` with ₹2,00,000 opening cash and ₹0 reserve, then import and approve `fixtures/receivables.csv` and `fixtures/payables.csv`.
+Open the UI and select **Use seeded demo workspace** to inspect seeded data. To exercise the import flow, create a new workspace dated `2026-11-01` with ₹2,00,000 opening cash and ₹0 reserve, then import and approve `fixtures/receivables.csv` and `fixtures/payables.csv`. The Setup screen also provides blank CSV templates, row corrections (including a missing expected-date column), manual records, monthly expenses, and an editor for the active workspace's cash snapshot and reserve.
 
-The fixture forecast first goes negative on **2026-11-06** and reaches **−₹2,00,000** on **2026-11-11**. The November 26 receipt brings cash back to ₹2,00,000 before later scheduled movements. These are entered-date scenarios, not guaranteed payment predictions.
+The fixture forecast first goes negative on **2026-11-06** and reaches **−₹2,00,000** on **2026-11-11**. The November 26 receipt brings cash back to ₹2,00,000 before later scheduled movements. Outlook shows the dated movements, their source IDs, and whether dates are verified or owner assumptions. These are entered-date scenarios, not guaranteed payment predictions.
 
 ## Finance API
 
@@ -25,6 +25,6 @@ The fixture forecast first goes negative on **2026-11-06** and reaches **−₹2
 - `GET/POST /api/workspaces/:workspaceId/recurring-rules`
 - `GET /api/workspaces/:workspaceId/forecast?horizonDays=90`
 
-All API monetary values are integer paise. Imports are reviewed before commit, repeated commits are idempotent, and imported source IDs do not overwrite existing records. The pure finance engine is `server/src/services/finance/forecast.js` with the agreed `buildForecast` and `explainRisk` exports. Person 2's modules can import these signatures and send default-exported routers/pages for shared integration.
+All API monetary values are integer paise. Imports are reviewed before commit, repeated commits are idempotent, and imported source IDs do not overwrite existing records. The pure finance engine is `server/src/services/finance/forecast.js` with the agreed `buildForecast` and `explainRisk` exports. `RescuePlan` and `OrderScenario` Mongoose models are available for Person 2's routes. Person 2's modules can import these signatures and send default-exported routers/pages for shared integration.
 
 This is a single-workspace demo without authentication. Do not upload real financial records or expose this API publicly.

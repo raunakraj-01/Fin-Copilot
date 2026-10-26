@@ -21,8 +21,8 @@ export const itemInput = z.object({
   confidenceState: z.enum(['verified', 'owner_assumption', 'needs_review']).default('owner_assumption'),
   constraints: z.object({
     mandatory: z.boolean().optional(), negotiable: z.boolean().optional(), discretionary: z.boolean().optional(),
-    maxExtensionDays: z.number().int().min(0).max(90).optional(), earliestCollectionDate: dateOnly.optional(),
-    maxEarlyCollectionPaise: paise.optional(), estimatedActionCostPaise: paise.nullable().optional(),
+    maxExtensionDays: z.number().int().min(0).max(90).optional(), earliestCollectionDate: dateOnly.nullable().optional(),
+    maxEarlyCollectionPaise: paise.nullable().optional(), estimatedActionCostPaise: paise.nullable().optional(),
   }).strict().optional(),
 }).strict().refine(item => item.settledPaise <= item.amountPaise, { path: ['settledPaise'], message: 'Cannot exceed amountPaise' })
   .refine(item => item.status !== 'paid' || item.settledPaise === item.amountPaise, { path: ['status'], message: 'Paid item must be fully settled' })
@@ -30,5 +30,5 @@ export const itemInput = z.object({
   .refine(item => item.status !== 'partial' || (item.settledPaise > 0 && item.settledPaise < item.amountPaise), { path: ['status'], message: 'Partial item requires a partial settlement' })
   .refine(item => !['open', 'partial'].includes(item.status) || !!item.expectedDate || item.confidenceState === 'needs_review',
     { path: ['expectedDate'], message: 'Open items need an expected date or needs_review status' })
-  .refine(item => item.constraints?.maxEarlyCollectionPaise === undefined || item.constraints.maxEarlyCollectionPaise <= item.amountPaise - item.settledPaise,
+  .refine(item => item.constraints?.maxEarlyCollectionPaise == null || item.constraints.maxEarlyCollectionPaise <= item.amountPaise - item.settledPaise,
     { path: ['constraints', 'maxEarlyCollectionPaise'], message: 'Cannot exceed outstanding amount' });

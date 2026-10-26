@@ -27,5 +27,8 @@ const schema = new mongoose.Schema({
   planWarnings: { type: [String], default: [] },
 }, { timestamps: true });
 schema.index({ workspaceId: 1, createdAt: -1 });
+schema.path('estimatedTotalCostPaise').validate(function (value) {
+  return !this.containsUnknownCosts || value == null;
+}, 'Unknown action costs require a null total');
 
 export default mongoose.model('RescuePlan', schema);

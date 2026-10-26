@@ -29,6 +29,7 @@ describe('finance forecast contract', () => {
       ] });
     expect(forecast.risk.firstNegativeDate).toBeNull();
     expect(forecast.risk.firstReserveBreachDate).toBe('2026-11-05');
+    expect(forecast.daily.find(day => day.date === '2026-11-05').closingCashPaise).toBe(5_000_000);
     expect(forecast.risk.explanation).toContain('minimum reserve');
     expect(forecast.warnings).toHaveLength(1);
   });
@@ -48,5 +49,12 @@ describe('finance forecast contract', () => {
       ] });
     expect(forecast.daily[0].closingCashPaise).toBe(20_000_000);
     expect(forecast.warnings).toHaveLength(1);
+  });
+
+  it('schedules only the unpaid part of a partly settled invoice', () => {
+    const forecast = buildForecast({ asOfDate: '2026-11-01', horizonDays: 30, openingCashPaise: 0,
+      cashItems: [{ id: 'partial', category: 'receivable', amountPaise: 40_000_000,
+        settledPaise: 10_000_000, status: 'partial', expectedDate: '2026-11-26' }] });
+    expect(forecast.daily.find(day => day.date === '2026-11-26').receiptsPaise).toBe(30_000_000);
   });
 });

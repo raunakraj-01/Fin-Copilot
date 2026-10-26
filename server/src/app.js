@@ -25,7 +25,10 @@ app.use('/api/workspaces/:workspaceId/orders', (_req, res) =>
 
 app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }));
 app.use((err, _req, res, next) => {
-  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: { code: 'UPLOAD_TOO_LARGE', message: 'Maximum file size is 2 MB' } });
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: { code: 'UPLOAD_TOO_LARGE', message: 'Maximum file size is 2 MB' } });
+    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid upload' } });
+  }
   next(err);
 });
 app.use(errorResponse);

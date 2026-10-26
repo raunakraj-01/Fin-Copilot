@@ -56,8 +56,8 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
       confidenceState: itemForm.expectedDate ? 'owner_assumption' : 'needs_review',
       constraints: { mandatory: itemForm.mandatory, negotiable: itemForm.negotiable,
         discretionary: itemForm.discretionary, maxExtensionDays: Number(itemForm.maxExtensionDays),
-        ...(itemForm.earliestCollectionDate && { earliestCollectionDate: itemForm.earliestCollectionDate }),
-        ...(itemForm.maxEarlyCollectionInr && { maxEarlyCollectionPaise: toPaise(itemForm.maxEarlyCollectionInr) }),
+        earliestCollectionDate: itemForm.earliestCollectionDate || null,
+        maxEarlyCollectionPaise: itemForm.maxEarlyCollectionInr ? toPaise(itemForm.maxEarlyCollectionInr) : null,
         estimatedActionCostPaise: itemForm.estimatedActionCostInr ? toPaise(itemForm.estimatedActionCostInr) : null },
     };
     try {
@@ -82,6 +82,7 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
     <div className="card">
       <h2>Manual cash items</h2>
       <p>Add an item or select one below to correct its dates, settlement, or planning constraints.</p>
+      <p>When recording a real payment, also update the active workspace's opening bank cash snapshot; settled amounts are excluded from future cash movements.</p>
       <form onSubmit={saveItem} className="form-grid">
         <label>Category<select value={itemForm.category} onChange={event => setItemForm({ ...itemForm, category: event.target.value })}>
           <option value="receivable">Receivable</option><option value="payable">Payable</option><option value="expense">Expense</option>
