@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api, json } from '../services/api.js';
+import ManualRecords from '../components/ManualRecords.jsx';
 
 const fields = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDate', 'expectedDate', 'status',
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
@@ -18,6 +19,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   const [excluded, setExcluded] = useState([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   async function run(action) {
     setBusy(true); setMessage('');
@@ -71,6 +73,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
         excludedRowNumbers: excluded,
       });
       setMessage(`Saved ${result.savedCount} records. Skipped ${result.skippedCount}.`);
+      setRefreshKey(value => value + 1);
       setBatchId(''); setRows([]);
     });
   }
@@ -116,6 +119,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
       </details>)}
       <button disabled={busy} onClick={commitBatch}>Commit reviewed rows</button>
     </div>}
+    {workspaceId && <ManualRecords workspaceId={workspaceId} refreshKey={refreshKey} />}
     {message && <p role="status" className="notice">{message}</p>}
   </section>;
 }

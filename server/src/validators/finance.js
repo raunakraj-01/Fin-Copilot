@@ -11,13 +11,13 @@ export const workspacePatch = workspaceCreate.partial().refine(value => Object.k
 
 export const itemInput = z.object({
   category: z.enum(['receivable', 'payable', 'expense']),
-  externalId: z.string().trim().max(100).optional(),
+  externalId: z.string().trim().max(100).nullable().optional(),
   counterparty: z.string().trim().min(1).max(200),
   description: z.string().max(500).optional(),
   sourceSystem: z.enum(['tally_export', 'excel', 'manual', 'csv']).default('manual'),
   amountPaise: paise.positive(), settledPaise: paise.default(0),
   status: z.enum(['open', 'partial', 'paid', 'cancelled']).default('open'),
-  dueDate: dateOnly, expectedDate: dateOnly.optional(),
+  dueDate: dateOnly, expectedDate: dateOnly.nullable().optional(),
   confidenceState: z.enum(['verified', 'owner_assumption', 'needs_review']).default('owner_assumption'),
   constraints: z.object({
     mandatory: z.boolean().optional(), negotiable: z.boolean().optional(), discretionary: z.boolean().optional(),

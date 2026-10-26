@@ -63,3 +63,23 @@ it('seeds fixture records idempotently', async () => {
   expect(workspace.openingCashPaise).toBe(20_000_000);
   expect(await CashItem.countDocuments({ workspaceId: workspace._id })).toBe(5);
 }, 30_000);
+
+it('creates and corrects manual items and monthly expenses', async () => {
+  const created = await request(app).post('/api/workspaces').send({ name: 'Manual test',
+    asOfDate: '2026-11-01', openingCashPaise: 20_000_000, minimumReservePaise: 0 }).expect(201);
+  const id = created.body.workspace.id;
+  const item = await request(app).post(`/api/workspaces/${id}/items`).send({ category: 'receivable',
+    counterparty: 'Example buyer', amountPaise: 10_000_000, settledPaise: 0, status: 'open',
+    dueDate: '2026-11-10', confidenceState: 'needs_review' }).expect(201);
+  expect(item.body.item.outstandingPaise).toBe(10_000_000);
+  const unverified = await request(app).get(`/api/workspaces/${id}/forecast`).expect(200);
+  expect(unverified.body.warnings).toHaveLength(1);
+  const corrected = await request(app).patch(`/api/workspaces/${id}/items/${item.body.item.id}`)
+    .send({ expectedDate: '2026-11-12', confidenceState: 'owner_assumption' }).expect(200);
+  expect(corrected.body.item.expectedDate).toBe('2026-11-12');
+  await request(app).post(`/api/workspaces/${id}/recurring-rules`).send({ description: 'Rent',
+    amountPaise: 2_500_000, dayOfMonth: 5, startsOn: '2026-11-01' }).expect(201);
+  const forecast = await request(app).get(`/api/workspaces/${id}/forecast`).expect(200);
+  expect(forecast.body.daily.find(day => day.date === '2026-11-05').paymentsPaise).toBe(2_500_000);
+  expect(forecast.body.daily.find(day => day.date === '2026-11-12').receiptsPaise).toBe(10_000_000);
+});
