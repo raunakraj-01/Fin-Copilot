@@ -9,7 +9,7 @@ Use Node.js LTS. Start MongoDB Server locally or use a MongoDB Atlas URI. MongoD
 1. Copy `server/.env.example` to `server/.env`; set `MONGODB_URI` and optionally `CLIENT_ORIGIN`.
 2. Run `cd server && npm install && npm run seed` to create the repeatable synthetic demo workspace (`650000000000000000000001`).
 3. Run `cd server && npm run dev` for the API at `http://localhost:5000/api`.
-4. Run `cd client && npm install && npm run dev` for the app at `http://127.0.0.1:5173`.
+4. Run `cd client && npm install && npm run dev` for the app at `http://localhost:5173`.
 5. Run `cd server && npm test` and `cd client && npm run build` to check the project. Tests use an isolated in-memory MongoDB, so they do not require your local database.
 
 Open the UI and select **Use seeded demo workspace** to inspect seeded data. To exercise the import flow, create a new workspace dated `2026-11-01` with ₹2,00,000 opening cash and ₹0 reserve, then import and approve `fixtures/receivables.csv` and `fixtures/payables.csv`.

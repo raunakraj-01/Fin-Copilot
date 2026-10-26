@@ -3,7 +3,8 @@ import request from 'supertest';
 import app from '../src/app.js';
 
 it('serves the health route and marks decision modules as pending', async () => {
-  await request(app).get('/api/health').expect(200, { ok: true });
+  const health = await request(app).get('/api/health').set('Origin', 'http://localhost:5173').expect(200, { ok: true });
+  expect(health.headers['access-control-allow-origin']).toBe('http://localhost:5173');
   const response = await request(app).post('/api/workspaces/demo/rescue/analyze').expect(501);
   expect(response.body.error.code).toBe('NOT_IMPLEMENTED');
   await request(app).get('/api/workspaces/not-an-id/forecast').expect(404);
