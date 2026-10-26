@@ -29,11 +29,16 @@ export function buildForecast({
     const day = dayNumber(event.date);
     if (!Number.isSafeInteger(event.amountPaise) || event.amountPaise < 0) throw new Error('Invalid event amount');
     if (!['in', 'out'].includes(event.direction)) throw new Error('Invalid event direction');
-    if (day >= start && day < start + horizonDays) events.push(event);
+    // Opening cash is an as-of-date snapshot, so only later movements are added.
+    if (day > start && day < start + horizonDays) events.push(event);
   };
 
   for (const item of cashItems) {
-    if (['paid', 'cancelled'].includes(item.status) || item.confidenceState === 'needs_review') continue;
+    if (['paid', 'cancelled'].includes(item.status)) continue;
+    if (item.confidenceState === 'needs_review') {
+      warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs verification`);
+      continue;
+    }
     const amount = item.amountPaise - (item.settledPaise || 0);
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error('Invalid cash item settlement');
     if (!amount) continue;
@@ -41,7 +46,7 @@ export function buildForecast({
       warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs an expected date`);
       continue;
     }
-    if (dayNumber(item.expectedDate) < start) {
+    if (dayNumber(item.expectedDate) <= start) {
       warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs a future expected date`);
       continue;
     }
@@ -71,7 +76,7 @@ export function buildForecast({
   let cash = openingCashPaise;
   let firstNegativeDate = null;
   let firstReserveBreachDate = null;
-  let worstCashPaise = cash;
+  let worstCashPaise = Infinity;
   let worstDate = asOfDate;
   for (let day = start; day < start + horizonDays; day++) {
     const date = dateFromDay(day);
@@ -79,6 +84,7 @@ export function buildForecast({
     const receiptsPaise = dayEvents.filter(event => event.direction === 'in').reduce((sum, event) => sum + event.amountPaise, 0);
     const paymentsPaise = dayEvents.filter(event => event.direction === 'out').reduce((sum, event) => sum + event.amountPaise, 0);
     cash += receiptsPaise - paymentsPaise;
+    if (!Number.isSafeInteger(cash)) throw new Error('Forecast balance exceeds safe integer range');
     daily.push({ date, receiptsPaise, paymentsPaise, closingCashPaise: cash, events: dayEvents });
     if (cash < 0 && !firstNegativeDate) firstNegativeDate = date;
     if (cash < minimumReservePaise && !firstReserveBreachDate) firstReserveBreachDate = date;
@@ -96,7 +102,7 @@ export function buildForecast({
 }
 
 export function explainRisk(forecast, _cashItems = []) {
-  const cutoff = forecast.risk.firstNegativeDate || forecast.risk.firstReserveBreachDate || forecast.risk.worstDate;
+  const cutoff = [forecast.risk.firstNegativeDate, forecast.risk.firstReserveBreachDate].filter(Boolean).sort()[0] || forecast.risk.worstDate;
   return { contributingItems: forecast.daily.flatMap(day => day.date <= cutoff ? day.events : [])
     .filter(event => event.direction === 'out')
     .sort((a, b) => b.amountPaise - a.amountPaise)

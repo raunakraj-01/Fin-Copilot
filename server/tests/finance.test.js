@@ -29,4 +29,21 @@ describe('finance forecast contract', () => {
     expect(forecast.risk.firstReserveBreachDate).toBe('2026-11-05');
     expect(forecast.warnings).toHaveLength(1);
   });
+
+  it('expands monthly expenses once per month', () => {
+    const forecast = buildForecast({ asOfDate: '2026-11-01', horizonDays: 75, openingCashPaise: 10_000_000,
+      recurringRules: [{ id: 'rent', description: 'Rent', amountPaise: 2_500_000,
+        dayOfMonth: 5, startsOn: '2026-11-01', active: true }] });
+    expect(forecast.daily.filter(day => day.paymentsPaise > 0).map(day => day.date))
+      .toEqual(['2026-11-05', '2026-12-05', '2027-01-05']);
+  });
+
+  it('does not add an as-of-date cash item into the opening snapshot', () => {
+    const forecast = buildForecast({ asOfDate: '2026-11-01', horizonDays: 2,
+      openingCashPaise: 20_000_000, cashItems: [
+        { id: 'old', category: 'receivable', amountPaise: 10_000_000, status: 'open', expectedDate: '2026-11-01' },
+      ] });
+    expect(forecast.daily[0].closingCashPaise).toBe(20_000_000);
+    expect(forecast.warnings).toHaveLength(1);
+  });
 });
