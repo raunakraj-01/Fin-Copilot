@@ -1,0 +1,9 @@
+{
+  "name": "cashflow-copilot",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix server run dev",
+    "test": "npm --prefix server test",
+    "build": "npm --prefix client run build"
+  }
+}
