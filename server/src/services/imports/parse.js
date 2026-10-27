@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import ExcelJS from 'exceljs';
+import { readSheet } from 'read-excel-file/node';
 import { fail } from '../../utils/http.js';
 
 export async function parseUpload(file) {
@@ -11,17 +11,13 @@ export async function parseUpload(file) {
     if (parsed.errors.length) fail(400, 'VALIDATION_ERROR', `CSV parse error: ${parsed.errors[0].message}`);
     rows = parsed.data;
   } else {
-    const workbook = new ExcelJS.Workbook();
-    try { await workbook.xlsx.load(file.buffer); }
+    try { rows = await readSheet(file.buffer); }
     catch { fail(400, 'VALIDATION_ERROR', 'Invalid XLSX file'); }
-    const sheet = workbook.worksheets[0];
-    if (!sheet) fail(400, 'VALIDATION_ERROR', 'XLSX workbook has no sheet');
-    rows = [];
-    sheet.eachRow({ includeEmpty: false }, row => rows.push(row.values.slice(1).map(value => {
+    rows = rows.filter(row => row.some(value => value != null && value !== '')).map(row => row.map(value => {
       if (value instanceof Date) return value.toISOString().slice(0, 10);
       if (typeof value === 'object' && value !== null) return String(value.text ?? value.result ?? '');
       return String(value ?? '');
-    })));
+    }));
   }
   if (rows.length < 2) fail(400, 'VALIDATION_ERROR', 'File needs a header and at least one data row');
   if (rows.length > 501) fail(400, 'VALIDATION_ERROR', 'Maximum 500 data rows per file');

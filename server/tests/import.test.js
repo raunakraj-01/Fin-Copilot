@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import ExcelJS from 'exceljs';
 import { parseUpload, suggestMapping } from '../src/services/imports/parse.js';
 import { normalizeRows } from '../src/services/imports/normalize.js';
 import { parseInrPaise } from '../src/utils/money.js';
@@ -29,11 +28,8 @@ describe('fixture import', () => {
   });
 
   it('reads an XLSX sheet with the same mapping path', async () => {
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Receivables');
-    sheet.addRow(['Invoice ID', 'Customer', 'Amount INR', 'Due Date', 'Expected Date']);
-    sheet.addRow(['INV-X1', 'Example Buyer', '₹1,20,000', '2026-11-05', '2026-11-10']);
-    const parsed = await parseUpload({ originalname: 'test.xlsx', buffer: await workbook.xlsx.writeBuffer() });
+    const buffer = await readFile(new URL('./fixtures/receivables.xlsx', import.meta.url));
+    const parsed = await parseUpload({ originalname: 'test.xlsx', buffer });
     const rows = normalizeRows(parsed.rawRows, suggestMapping(parsed.headers), 'receivables', 'excel');
     expect(parsed.type).toBe('xlsx');
     expect(rows[0].state).toBe('accepted');

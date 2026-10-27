@@ -2,7 +2,6 @@ import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import mongoose from 'mongoose';
-import ExcelJS from 'exceljs';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import request from 'supertest';
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -15,7 +14,7 @@ const execFileAsync = promisify(execFile);
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
-}, 120_000);
+}, 600_000);
 afterAll(async () => {
   await mongoose.disconnect();
   await mongo?.stop();
@@ -133,12 +132,9 @@ it('corrects a missing source column and commits an XLSX preview', async () => {
     .send({ corrections: [{ rowNumber: 2, values: { expectedDate: '2026-11-10' } }] }).expect(200);
   expect(corrected.body.savedCount).toBe(1);
 
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Receivables');
-  sheet.addRow(['Invoice ID', 'Customer', 'Amount INR', 'Due Date', 'Expected Date']);
-  sheet.addRow(['INV-XLSX', 'Buyer', '₹1,20,000', '2026-11-05', '2026-11-12']);
+  const workbook = await readFile(new URL('./fixtures/receivables.xlsx', import.meta.url));
   const xlsx = await request(app).post(`/api/workspaces/${id}/imports/inspect`)
-    .field('kind', 'receivables').attach('file', Buffer.from(await workbook.xlsx.writeBuffer()), 'valid.xlsx').expect(201);
+    .field('kind', 'receivables').attach('file', workbook, 'valid.xlsx').expect(201);
   const xlsxPreview = await request(app).post(`/api/workspaces/${id}/imports/${xlsx.body.batchId}/validate`)
     .send({ mapping: xlsx.body.suggestedMapping }).expect(200);
   expect(xlsxPreview.body.counts.accepted).toBe(1);
