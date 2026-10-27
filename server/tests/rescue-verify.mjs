@@ -16,7 +16,7 @@ function run(command, args) {
   });
 }
 console.log(`Verification workspace: ${sandbox}`);
-for (const path of ['server/src/services/rescue', 'server/src/services/orders', 'server/src/controllers/rescueDecisionHandler.js', 'server/src/routes/rescue.js', 'server/src/routes/orders.js', 'server/tests', 'client/src/pages/RescuePlanner', 'client/src/pages/RescuePlanner.jsx', 'client/src/pages/OrderAnalyzer', 'client/src/pages/OrderAnalyzer.jsx', 'CashFlow_Copilot_Agent_Pack/fixtures']) {
+for (const path of ['server/src/services/rescue', 'server/src/services/orders', 'server/src/controllers/rescueDecisionHandler.js', 'server/src/routes/rescue.js', 'server/src/routes/orders.js', 'server/tests', 'client/src/pages/RescuePlanner', 'client/src/pages/RescuePlanner.jsx', 'client/src/pages/OrderAnalyzer', 'client/src/pages/OrderAnalyzer.jsx', 'fixtures']) {
   await cp(join(repository, path), join(sandbox, path), { recursive: true });
 }
 await writeFile(join(sandbox, 'package.json'), JSON.stringify({ private: true, type: 'module' }));

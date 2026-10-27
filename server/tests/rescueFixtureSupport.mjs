@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 export function fixtureContext() {
-  const root = new URL('../../CashFlow_Copilot_Agent_Pack/fixtures/', import.meta.url);
+  const root = new URL('../../fixtures/', import.meta.url);
   function rows(name) {
     const [header, ...records] = readFileSync(new URL(name, root), 'utf8').trim().split(/\r?\n/);
     const keys = header.split(',');
