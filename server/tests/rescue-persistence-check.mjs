@@ -9,7 +9,10 @@ import request from 'supertest';
 import Workspace from '../src/models/Workspace.js';
 import CashItem from '../src/models/CashItem.js';
 import RescuePlan from '../src/models/RescuePlan.js';
+import OrderScenario from '../src/models/OrderScenario.js';
 import rescueRouter from '../src/routes/rescue.js';
+import ordersRouter from '../src/routes/orders.js';
+import { draftOrder } from './rescueFixtureSupport.mjs';
 
 const database = await MongoMemoryServer.create();
 try {
@@ -26,6 +29,7 @@ try {
   const app = express();
   app.use(express.json());
   app.use('/api/workspaces/:workspaceId/rescue', rescueRouter);
+  app.use('/api/workspaces/:workspaceId/orders', ordersRouter);
   const action = { cashItemId: String(invoice._id), type: 'accelerate_collection', amountPaise: 20_000_000, fromDate: '2026-11-26', toDate: '2026-11-04' };
   const save = (workspaceId, actions = [action]) => request(app).post(`/api/workspaces/${workspaceId}/rescue/plans`).send({ objective: 'nonnegative', actions });
   const sourceSnapshot = async () => JSON.stringify(await CashItem.find().sort({ _id: 1 }).lean());
@@ -43,6 +47,23 @@ try {
   assert.equal(saved.estimatedTotalCostPaise, 300_000);
   assert.equal(saved.actions[0].status, 'proposed');
   assert.equal(String(saved.actions[0].cashItemId), String(invoice._id));
+  assert.equal(await sourceSnapshot(), before);
+
+  const actionUrl = `/api/workspaces/${workspace._id}/rescue/plans/${saved._id}/actions/action-1`;
+  for (const status of ['requested', 'agreed', 'completed']) {
+    const updated = await request(app).patch(actionUrl).send({ status, ownerNotes: `Owner marked ${status}` });
+    assert.equal(updated.status, 200, JSON.stringify(updated.body));
+    assert.equal(updated.body.actions[0].status, status);
+  }
+  const noteUpdate = await request(app).patch(actionUrl).send({ ownerNotes: 'Reconciled separately' });
+  assert.equal(noteUpdate.body.actions[0].status, 'completed');
+  assert.equal((await RescuePlan.findById(saved._id).lean()).actions[0].ownerNotes, 'Reconciled separately');
+  assert.equal((await request(app).patch(actionUrl).send({ settledPaise: 1 })).status, 400);
+  assert.equal((await request(app).patch(`/api/workspaces/${otherWorkspace._id}/rescue/plans/${saved._id}/actions/action-1`).send({ status: 'rejected' })).status, 404);
+  assert.equal((await request(app).patch(actionUrl.replace('action-1', 'action-99')).send({ status: 'rejected' })).status, 404);
+  const ownPlans = await request(app).get(`/api/workspaces/${workspace._id}/rescue/plans`);
+  assert.equal(ownPlans.body.plans[0].actions[0].status, 'completed');
+  assert.deepEqual((await request(app).get(`/api/workspaces/${otherWorkspace._id}/rescue/plans`)).body.plans, []);
   assert.equal(await sourceSnapshot(), before);
 
   // The same action cannot reference an invoice outside the requested workspace.
@@ -70,7 +91,24 @@ try {
   assert.equal(stale.body.error.code, 'VALIDATION_ERROR');
   assert.equal(await RescuePlan.countDocuments(), 2);
   assert.equal(await sourceSnapshot(), beforeStaleSave);
-  console.log('MongoDB rescue checks passed: persistence, recalculation, unknown costs, workspace isolation, stale-action rejection, and unchanged cash items.');
+  const orderWorkspace = await Workspace.create({ name: 'Hypothetical order checks', asOfDate: '2026-11-01', openingCashPaise: 20_000_000, minimumReservePaise: 10_000_000 });
+  const orderSave = await request(app).post(`/api/workspaces/${orderWorkspace._id}/orders/scenarios`).send({ ...draftOrder(), simulatedMinimumAdvancePaise: 0 });
+  assert.equal(orderSave.status, 201, JSON.stringify(orderSave.body));
+  const scenario = await OrderScenario.findById(orderSave.body._id).lean();
+  assert.equal(scenario.simulatedMinimumAdvancePaise, 40_000_000);
+  assert.ok(scenario.scenarioWarnings.some(text => text.includes('Hypothetical')));
+  const orderList = await request(app).get(`/api/workspaces/${orderWorkspace._id}/orders/scenarios`);
+  assert.equal(orderList.body.scenarios.length, 1);
+  assert.equal(orderList.body.scenarios[0]._id, orderSave.body._id);
+  assert.deepEqual((await request(app).get(`/api/workspaces/${otherWorkspace._id}/orders/scenarios`)).body.scenarios, []);
+  const impossible = await request(app).post(`/api/workspaces/${orderWorkspace._id}/orders/scenarios`).send({ ...draftOrder(), advanceDate: '2026-11-12' });
+  assert.equal(impossible.status, 201);
+  assert.equal((await OrderScenario.findById(impossible.body._id).lean()).simulatedMinimumAdvancePaise, null);
+  assert.equal(await sourceSnapshot(), beforeStaleSave);
+  const workspaceAfter = await Workspace.findById(orderWorkspace._id).lean();
+  assert.equal(workspaceAfter.openingCashPaise, 20_000_000);
+  assert.equal(workspaceAfter.minimumReservePaise, 10_000_000);
+  console.log('MongoDB checks passed: rescue and order persistence, scoped retrieval, action tracking, recalculation, unknown costs, stale-action rejection, and unchanged cash records.');
 } finally {
   await mongoose.disconnect();
   await database.stop();

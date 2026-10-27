@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
+import SavedPlans from './RescuePlanner/SavedPlans.jsx';
 
 const actionLabels = { accelerate_collection: 'Request early collection', defer_payable: 'Request supplier extension', delay_expense: 'Postpone discretionary expense' };
 
 export default function RescuePlanner({ workspaceId, apiBaseUrl }) {
   const [objective, setObjective] = useState('nonnegative');
+  const [savedVersion, setSavedVersion] = useState(0);
   const [saveState, setSaveState] = useState({ planId: null, busy: false, message: '', error: '' });
   const saveController = useRef(null);
   const { result, error, loading, run, clear } = useAnalysis(workspaceId, 'rescue', apiBaseUrl);
@@ -26,7 +28,10 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl }) {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error?.message || 'Could not save this plan');
-      if (!controller.signal.aborted) setSaveState({ planId: plan.planId, busy: false, message: 'Plan saved as a proposal. Cash records were not changed.', error: '' });
+      if (!controller.signal.aborted) {
+        setSaveState({ planId: plan.planId, busy: false, message: 'Plan saved as a proposal. Cash records were not changed.', error: '' });
+        setSavedVersion(value => value + 1);
+      }
     } catch (saveError) {
       if (!controller.signal.aborted) setSaveState({ planId: plan.planId, busy: false, message: '', error: saveError.message || 'Could not save this plan' });
     }
@@ -60,5 +65,6 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl }) {
       {!!result.candidates?.length && <details className="decision-details"><summary>All candidate actions and constraints</summary><ul>{result.candidates.map(action => <li key={action.cashItemId}>{action.externalId || action.cashItemId}: {actionLabels[action.type]}, {rupees(action.amountPaise)} on {displayDate(action.toDate)}. Original expected date: {displayDate(action.fromDate)}.</li>)}</ul></details>}
       <Notices warnings={result.warnings} assumptions={result.assumptions} />
     </section>}
+    <SavedPlans key={`${workspaceId}:${apiBaseUrl}`} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} reloadKey={savedVersion} />
   </main>;
 }

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
 import { inputRupees, parseRupees } from './OrderAnalyzer/money.js';
+import SavedScenarios, { SaveScenario } from './OrderAnalyzer/SavedScenarios.jsx';
 
 export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
   const [form, setForm] = useState({ label: '', orderValue: '', advance: '0', advanceDate: '', finalCollectionDate: '', delayedCollectionDays: '14' });
   const [costLines, setCostLines] = useState([{ description: '', amount: '', paymentDate: '' }]);
   const [inputError, setInputError] = useState('');
+  const [analyzedOrder, setAnalyzedOrder] = useState(null);
+  const [savedVersion, setSavedVersion] = useState(0);
   const { result, error, loading, run, clear } = useAnalysis(workspaceId, 'orders', apiBaseUrl);
   function changed() { clear(); setInputError(''); }
   const change = event => { changed(); setForm(current => ({ ...current, [event.target.name]: event.target.value })); };
@@ -14,12 +17,14 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
     event.preventDefault();
     setInputError('');
     try {
-      await run({
+      const order = {
         label: form.label || 'Prospective order', orderValuePaise: parseRupees(form.orderValue), advancePaise: parseRupees(form.advance),
         advanceDate: form.advanceDate, finalCollectionDate: form.finalCollectionDate,
         costLines: costLines.map(line => ({ description: line.description || 'Order cost', amountPaise: parseRupees(line.amount), paymentDate: line.paymentDate })),
         delayedCollectionDays: Number(form.delayedCollectionDays),
-      });
+      };
+      setAnalyzedOrder(order);
+      await run(order);
     } catch (cause) { setInputError(cause.message); }
   }
   const series = result ? [
@@ -57,6 +62,8 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
       </article>
       <section className="decision-card"><h2>Daily cash comparison</h2><CashChart series={series} reserve={result.minimumReservePaise} /><DailyTable series={series} />{result.delayedCustomerScenario && <p>With final payment delayed to {displayDate(result.delayedCustomerScenario.finalCollectionDate)}, lowest cash is {rupees(result.delayedCustomerScenario.worstCashPaise)}.</p>}</section>
       <Notices warnings={result.warnings} assumptions={result.assumptions} />
+      <SaveScenario key={`${workspaceId}:${apiBaseUrl}`} order={analyzedOrder} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} onSaved={() => setSavedVersion(value => value + 1)} />
     </section>}
+    <SavedScenarios key={`${workspaceId}:${apiBaseUrl}`} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} reloadKey={savedVersion} />
   </main>;
 }

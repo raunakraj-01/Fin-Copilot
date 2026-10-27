@@ -10,7 +10,8 @@
 - Recharts comparisons, every-day tables, INR input/display, loading/errors/empty states, and stale-request cancellation.
 - `POST /rescue/plans` and a Save proposed plan control. The server revalidates actions against current workspace data and recomputes balances and costs before writing a `RescuePlan`; it does not change cash items.
 
-Optional save-scenario and action-tracking endpoints are not implemented.
+- Order scenarios can be saved explicitly, with a server-recomputed minimum advance and hypothetical warnings. The page can retrieve the latest 50 scenarios.
+- Saved rescue plans can be retrieved, and each action's status and owner note can be updated. This records the owner's report; it never changes settlement, payment dates, or the cash snapshot.
 
 ## Verification and its limits
 
@@ -18,7 +19,7 @@ The isolated verification suite covers engines, HTTP routes, model-read scoping,
 
 The test suite uses the original CSV fixture files, including the four-lakh isolated advance and seven-lakh advance against the bundled shortage baseline. It checks one-paise/one-rupee boundaries, partial settlements, duplicate actions, mandatory bills, unknown costs, recurring obligations, deferral reappearance, late advances, delayed receipts, malformed inputs, all-day safety and immutability.
 
-A production-mode React bundle is also built by the verification script. A temporary synthetic preview can exercise the pages and API together without MongoDB. Focused tests and the shared-module smoke check exercise the real forecast. The separate MongoDB persistence check exercises the default rescue router and actual shared models in a disposable database. These checks do not verify the shared app's route/page registration; the full application flow must still run after integration.
+A production-mode React bundle is also built by the verification script. A temporary synthetic preview can exercise the pages and API together without MongoDB. Focused tests and the shared-module smoke check exercise the real forecast. The separate MongoDB persistence check exercises the default rescue/order routers and actual shared models in a disposable database. These checks do not verify the shared app's route/page registration; the full application flow must still run after integration.
 
 ## Run independently now
 
@@ -41,6 +42,9 @@ Isolated example: choose Order analyzer and Isolated order example; enter order 
 server/src/routes/rescue.js
 server/src/routes/orders.js
 server/src/controllers/rescueDecisionHandler.js
+server/src/controllers/rescuePersistenceHandler.js
+server/src/controllers/rescueTrackingHandler.js
+server/src/controllers/ordersScenarioHandler.js
 server/src/services/rescue/analyze.js
 server/src/services/rescue/dates.js
 server/src/services/rescue/validation.js
@@ -48,11 +52,15 @@ server/src/services/rescue/savePlan.js
 server/src/services/rescue/decisionContext.js
 server/src/services/rescue/INTEGRATION.md
 server/src/services/orders/analyze.js
+server/src/services/orders/saveScenario.js
 client/src/pages/RescuePlanner.jsx
 client/src/pages/RescuePlanner/DecisionUI.jsx
+client/src/pages/RescuePlanner/SavedPlans.jsx
+client/src/pages/RescuePlanner/useSavedRecords.js
 client/src/pages/RescuePlanner/decision.css
 client/src/pages/OrderAnalyzer.jsx
 client/src/pages/OrderAnalyzer/money.js
+client/src/pages/OrderAnalyzer/SavedScenarios.jsx
 server/tests/rescue* and server/tests/orders*
 ```
 
@@ -80,7 +88,7 @@ server/src/models/CashItem.js
 server/src/models/RecurringRule.js
 ```
 
-These filenames and exports match the merged finance skeleton. The adapter queries cash items by workspace and active recurring rules by workspace. Plan saving writes only through `RescuePlan.create`; preserve IDs, partial settlements, confidence states, expected dates and constraints.
+These filenames and exports match the merged finance skeleton. The adapter queries cash items by workspace and active recurring rules by workspace. Saved proposals use Person 1's default-exported `RescuePlan.js` and `OrderScenario.js` models. Action tracking updates only the selected rescue action's `status` and `ownerNotes`, scoped by workspace and plan ID.
 
 The context supports both nested `constraints` and the frozen flattened optional constraint fields. If both exist, a defined flattened field takes precedence.
 
@@ -104,6 +112,8 @@ import { createRescueRouter } from './routes/rescue.js';
 import { createOrdersRouter } from './routes/orders.js';
 // Both factories accept { loadContext, buildForecast, logError }.
 // Rescue also accepts createPlan for persistence tests.
+// Tracking accepts workspaceExists, listPlans and updateAction.
+// Order persistence accepts createScenario, workspaceExists and listScenarios.
 ```
 
 ### Register the pages
@@ -118,6 +128,17 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 
 Pass the actual selected workspace ID. An optional `apiBaseUrl` prop overrides `VITE_API_BASE_URL`; the fallback is `http://localhost:5000/api`. The feature pages fetch their own API responses and use no mock values in production. Their private shared UI module imports feature-scoped CSS automatically.
 
+### Persistence routes
+
+All paths below are relative to `/api/workspaces/:workspaceId`:
+
+- `POST /orders/scenarios`: takes the same order inputs as `/orders/analyze`; returns the saved scenario with HTTP 201. The server recomputes the minimum advance. An infeasible threshold remains `null`, with an explanation.
+- `GET /orders/scenarios`: returns `{ scenarios, hypothetical: true, limit: 50 }`, newest first.
+- `GET /rescue/plans`: returns `{ plans, limit: 50 }`, newest first.
+- `PATCH /rescue/plans/:planId/actions/:actionId`: accepts `{ status?, ownerNotes? }`, with at least one field. Status is `proposed`, `requested`, `agreed`, `rejected`, or `completed`; notes are limited to 2,000 characters. Other fields are rejected. Returns the updated saved plan.
+
+Unknown workspaces, plans, or actions return 404. Lists and edits are scoped to the requested workspace. This demo's shared app still needs any future authentication/membership layer; workspace scoping does not establish user identity. Tracking records owner reports and does not automatically change the overall saved plan status. The existing OrderScenario schema saves original payment terms; the delay stress test is described in warnings rather than stored as a separately replayable scenario. Saved metrics are snapshots; reanalyze before making a current decision.
+
 ### Verify after integration
 
 ```sh
@@ -127,7 +148,7 @@ node server/tests/rescue-persistence-check.mjs
 
 The shared check deliberately imports the real `finance/forecast.js`, with no test-stub fallback. It checks the bundled rescue scenario and both order advance thresholds.
 
-The persistence check requires the dependencies in `server/package.json`. It starts disposable MongoDB through `mongodb-memory-server` and never uses the application database URL. It verifies stored plan figures, workspace isolation, unknown costs, rejection of actions made stale by settlement, and unchanged cash items. Its first run may download a MongoDB binary.
+The persistence check requires the dependencies in `server/package.json`. It starts disposable MongoDB through `mongodb-memory-server` and never uses the application database URL. It verifies saved plan/scenario figures, scoped retrieval, action status/note updates, workspace isolation, unknown costs, rejection of actions made stale by settlement, and unchanged cash items. Its first run may download a MongoDB binary.
 
 Then run the full team's server tests, client build, seed workflow, and a real MongoDB run: load a workspace, analyze rescue and order options, save one proposal, and verify that cash items remain unchanged. Repeat after model/forecast changes.
 
@@ -151,4 +172,4 @@ Then run the full team's server tests, client build, seed workflow, and a real M
 
 ## Merge status and handoff
 
-The original Person 2 feature PR has merged into `main`. Person 1 still needs to mount the routers, register the pages, and align shared test dependencies in the files assigned to them by `PARALLEL_WORK_CONTRACT.md`. Snapshot-date and plan-saving changes should be reviewed in a follow-up PR. Keep isolated test results separate from a real MongoDB persistence check, and run the full application acceptance path after shared wiring.
+The original Person 2 features, snapshot-date fixes, and plan saving have merged into `main`. New Person 2 changes continue on `Raunak`. Person 1 still needs to mount the routers, register the pages, and align shared test dependencies in the files assigned to them by `PARALLEL_WORK_CONTRACT.md`. Review scenario saving and action tracking in the next PR from `Raunak`, then run the full application acceptance path after shared wiring.
