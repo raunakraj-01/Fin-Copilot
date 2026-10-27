@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { analyzeNewOrder } from '../src/services/orders/analyze.js';
 import { buildForecast } from './rescueForecastStub.mjs';
+import { buildForecast as buildSharedForecast } from '../src/services/finance/forecast.js';
 import { draftOrder, fixtureContext, isolatedContext } from './rescueFixtureSupport.mjs';
 import { parseRupees } from '../../client/src/pages/OrderAnalyzer/money.js';
 const analyze = (context, order) => analyzeNewOrder(context, order, buildForecast);
@@ -77,4 +78,11 @@ test('forecast dependency receives unchanged baseline items and only hypothetica
   expect(calls[0].additionalEvents).toEqual([]);
   expect(calls.slice(1).every(call => call.additionalEvents.every(event => event.sourceId === 'proposed-order'))).toBe(true);
   expect(context.cashItems).toEqual(original);
+});
+
+test('snapshot-day order cash is rejected instead of silently omitted by the shared forecast', () => {
+  const context = isolatedContext();
+  expect(() => analyzeNewOrder(context, { ...draftOrder(), advanceDate: context.asOfDate }, buildSharedForecast)).toThrow(/snapshot/);
+  expect(() => analyzeNewOrder(context, { ...draftOrder(), costLines: [{ amountPaise: 50_000_000, paymentDate: context.asOfDate }] }, buildSharedForecast)).toThrow(/snapshot/);
+  expect(analyzeNewOrder(context, draftOrder(), buildSharedForecast).minimumAdvance.amountPaise).toBe(40_000_000);
 });

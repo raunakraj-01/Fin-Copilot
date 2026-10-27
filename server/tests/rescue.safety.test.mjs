@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { analyzeRescue, applyActions, makeCandidates } from '../src/services/rescue/analyze.js';
 import { buildForecast } from './rescueForecastStub.mjs';
+import { buildForecast as buildSharedForecast } from '../src/services/finance/forecast.js';
 import { fixtureContext } from './rescueFixtureSupport.mjs';
 
 const analyze = (context, options = {}) => analyzeRescue(context, options, buildForecast);
@@ -132,4 +133,27 @@ test('forecast callback mutations cannot alter the original scenario', () => {
     return result;
   });
   expect(context).toEqual(original);
+});
+
+test('a rescue receipt cannot be proposed on the opening-cash snapshot day', () => {
+  const context = fixtureContext();
+  context.cashItems[0].constraints.earliestCollectionDate = context.asOfDate;
+  const action = makeCandidates(context).find(candidate => candidate.cashItemId === 'INV-R100');
+  expect(action.toDate).toBe('2026-11-02');
+  expect(() => applyActions(context, [{ ...action, toDate: context.asOfDate }])).toThrow(/timeline/);
+  const forecast = buildSharedForecast({ ...context, cashItems: applyActions(context, [action]) });
+  expect(forecast.daily[1].receiptsPaise).toBe(20_000_000);
+});
+
+test('snapshot-day bills remain review warnings and do not abort valid rescue analysis', () => {
+  const context = fixtureContext();
+  context.cashItems.push({
+    id: 'snapshot-bill', externalId: 'BILL-SNAPSHOT', category: 'payable',
+    status: 'open', amountPaise: 1_000_000, settledPaise: 0,
+    expectedDate: context.asOfDate, constraints: { negotiable: true, maxExtensionDays: 10 },
+  });
+  expect(makeCandidates(context).some(action => action.cashItemId === 'snapshot-bill')).toBe(false);
+  const result = analyzeRescue(context, {}, buildSharedForecast);
+  expect(result.warnings.join(' ')).toContain('BILL-SNAPSHOT needs a future expected date');
+  expect(result.plans.some(plan => plan.worstCashPaiseAfter === 0)).toBe(true);
 });

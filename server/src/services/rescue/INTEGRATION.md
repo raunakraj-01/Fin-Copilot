@@ -8,16 +8,17 @@
 - Default-exported Express routers and React pages. Both production routers resolve the same `server/src/services/finance/forecast.js` export through `loadSharedForecast`.
 - Zod request validation, structured 400/404/500 responses, scoped read-only model loading, and testable dependency factories.
 - Recharts comparisons, every-day tables, INR input/display, loading/errors/empty states, and stale-request cancellation.
+- `POST /rescue/plans` and a Save proposed plan control. The server revalidates actions against current workspace data and recomputes balances and costs before writing a `RescuePlan`; it does not change cash items.
 
-Optional save-plan, save-scenario, and action-tracking endpoints are not implemented. They are stretch work in the Person 2 prompt and require Person 1's persistence models and explicit user-save workflow.
+Optional save-scenario and action-tracking endpoints are not implemented.
 
 ## Verification and its limits
 
-The isolated verification suite contains 42 tests across six files, covering engines, HTTP routes, model-read scoping, and UI behavior. It uses the explicitly named `server/tests/rescueForecastStub.mjs`; that stub is never imported into production source.
+The isolated verification suite covers engines, HTTP routes, model-read scoping, and UI behavior. It uses the explicitly named `server/tests/rescueForecastStub.mjs` for most checks and also runs focused checks against the real shared forecast. The stub is never imported into production source.
 
 The test suite uses the original CSV fixture files, including the four-lakh isolated advance and seven-lakh advance against the bundled shortage baseline. It checks one-paise/one-rupee boundaries, partial settlements, duplicate actions, mandatory bills, unknown costs, recurring obligations, deferral reappearance, late advances, delayed receipts, malformed inputs, all-day safety and immutability.
 
-A production-mode React bundle is also built by the verification script. A temporary synthetic preview can exercise the pages and API together without MongoDB. Neither that preview nor these isolated tests proves compatibility with Person 1's actual forecast implementation or database. The real shared-module smoke check and MongoDB application checks must run after integration.
+A production-mode React bundle is also built by the verification script. A temporary synthetic preview can exercise the pages and API together without MongoDB. Focused tests and the shared-module smoke check exercise the real forecast. The separate MongoDB persistence check exercises the default rescue router and actual shared models in a disposable database. These checks do not verify the shared app's route/page registration; the full application flow must still run after integration.
 
 ## Run independently now
 
@@ -43,6 +44,7 @@ server/src/controllers/rescueDecisionHandler.js
 server/src/services/rescue/analyze.js
 server/src/services/rescue/dates.js
 server/src/services/rescue/validation.js
+server/src/services/rescue/savePlan.js
 server/src/services/rescue/decisionContext.js
 server/src/services/rescue/INTEGRATION.md
 server/src/services/orders/analyze.js
@@ -78,7 +80,7 @@ server/src/models/CashItem.js
 server/src/models/RecurringRule.js
 ```
 
-These filenames/export conventions are assumptions until Person 1's skeleton arrives. If they differ, adjust only this Person 2 adapter or use the router factory with an injected `loadContext`. The adapter queries cash items by workspace and active recurring rules by workspace. It performs no writes. Preserve IDs, partial settlements, confidence states, expected dates and constraints.
+These filenames and exports match the merged finance skeleton. The adapter queries cash items by workspace and active recurring rules by workspace. Plan saving writes only through `RescuePlan.create`; preserve IDs, partial settlements, confidence states, expected dates and constraints.
 
 The context supports both nested `constraints` and the frozen flattened optional constraint fields. If both exist, a defined flattened field takes precedence.
 
@@ -101,6 +103,7 @@ For tests or alternate repository/model conventions:
 import { createRescueRouter } from './routes/rescue.js';
 import { createOrdersRouter } from './routes/orders.js';
 // Both factories accept { loadContext, buildForecast, logError }.
+// Rescue also accepts createPlan for persistence tests.
 ```
 
 ### Register the pages
@@ -119,11 +122,14 @@ Pass the actual selected workspace ID. An optional `apiBaseUrl` prop overrides `
 
 ```sh
 node server/tests/rescue-shared-check.mjs
+node server/tests/rescue-persistence-check.mjs
 ```
 
-This check deliberately imports the real `finance/forecast.js`, with no test-stub fallback. It checks the bundled rescue scenario and both order advance thresholds. It cannot run before Person 1 supplies that module.
+The shared check deliberately imports the real `finance/forecast.js`, with no test-stub fallback. It checks the bundled rescue scenario and both order advance thresholds.
 
-Then run the full team's server tests, client build, seed workflow, and a real MongoDB run: load a workspace, analyze rescue and order options, and verify that cash items remain unchanged. Repeat after model/forecast changes.
+The persistence check requires the dependencies in `server/package.json`. It starts disposable MongoDB through `mongodb-memory-server` and never uses the application database URL. It verifies stored plan figures, workspace isolation, unknown costs, rejection of actions made stale by settlement, and unchanged cash items. Its first run may download a MongoDB binary.
+
+Then run the full team's server tests, client build, seed workflow, and a real MongoDB run: load a workspace, analyze rescue and order options, save one proposal, and verify that cash items remain unchanged. Repeat after model/forecast changes.
 
 ## Engine exports
 
@@ -138,14 +144,11 @@ Then run the full team's server tests, client build, seed workflow, and a real M
 - Rescues search all compatible subsets of at most 12 generated actions. Each eligible item contributes one maximum permitted timing/amount proposal. This is a bounded search, not a global optimum across all possible dates and amounts. Truncation is reported.
 - Action costs have no payment-date field in the supplied contract. They rank plans but are not silently assigned a cash date or subtracted from invoices. Every plan discloses this. Add dated fees to the cash inputs before using results as a funding commitment. Unknown costs remain `null`, never “free.”
 - Feasibility is based on every end-of-day balance within the horizon. Same-day intraday ordering is outside the supplied model. Events outside the horizon do not appear as current-horizon cash and are warned about for orders.
+- The as-of date is an opening-cash snapshot. Rescue candidates require future expected dates and future action dates; items dated on or before the snapshot stay available for review rather than becoming deferral candidates. Proposed order cash dates must also follow the snapshot date.
 - Deferred outflows remain inside the horizon. A maximum extension beyond the horizon is capped at its final day and still evaluated there.
 - Split receivable IDs are temporary scenario IDs. The original external/source identifiers remain available; no MongoDB CashItem is created or updated.
-- The standalone demo has no database, auth, bank connection, saved plan, payment arrangement, or external transaction.
+- The standalone synthetic preview has no database, auth, bank connection, persistent plan, payment arrangement, or external transaction. The integrated app's save endpoint uses the `RescuePlan` model.
 
-## PR / merge procedure
+## Merge status and handoff
 
-Work currently remains on the existing `Raunak` checkout as uncommitted Person 2 files. Per the parallel contract, once Person 1 commits the shared skeleton on `main`, create `feature/decision-engine` from that agreed commit and carry only the Person 2 paths listed above. Preserve these files before changing branches if the skeleton introduces conflicting placeholders.
-
-Suggested PR title: `Implement Person 2 rescue planner and order impact analyzer`.
-
-In the PR, report isolated test/build results separately from the real shared-forecast and MongoDB checks. Person 1 mounts the routers/pages and installs dependencies in shared files. Resolve any model-import mismatch in the adapter, run the shared smoke check and application acceptance path, then merge. Do not mark database integration complete based only on the synthetic preview.
+The original Person 2 feature PR has merged into `main`. Person 1 still needs to mount the routers, register the pages, and align shared test dependencies in the files assigned to them by `PARALLEL_WORK_CONTRACT.md`. Snapshot-date and plan-saving changes should be reviewed in a follow-up PR. Keep isolated test results separate from a real MongoDB persistence check, and run the full application acceptance path after shared wiring.

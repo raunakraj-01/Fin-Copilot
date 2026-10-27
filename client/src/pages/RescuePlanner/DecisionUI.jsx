@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Too
 
 export const rupees = paise => paise == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(paise / 100);
 export const displayDate = value => value ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)) : 'None within forecast';
+export const decisionApiBase = apiBaseUrl => (apiBaseUrl || import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
 export function useAnalysis(workspaceId, feature, apiBaseUrl) {
   const [state, setState] = useState({ result: null, error: '', loading: false });
@@ -26,7 +27,7 @@ export function useAnalysis(workspaceId, feature, apiBaseUrl) {
     const request = ++serial.current;
     setState({ result: null, error: '', loading: true });
     try {
-      const base = (apiBaseUrl || import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+      const base = decisionApiBase(apiBaseUrl);
       const response = await fetch(`${base}/workspaces/${encodeURIComponent(workspaceId)}/${feature}/analyze`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal,
       });

@@ -1,17 +1,41 @@
-import React, { useState } from 'react';
-import { CashChart, DailyTable, Metric, Notices, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
+import React, { useEffect, useRef, useState } from 'react';
+import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
 
 const actionLabels = { accelerate_collection: 'Request early collection', defer_payable: 'Request supplier extension', delay_expense: 'Postpone discretionary expense' };
 
 export default function RescuePlanner({ workspaceId, apiBaseUrl }) {
   const [objective, setObjective] = useState('nonnegative');
+  const [saveState, setSaveState] = useState({ planId: null, busy: false, message: '', error: '' });
+  const saveController = useRef(null);
   const { result, error, loading, run, clear } = useAnalysis(workspaceId, 'rescue', apiBaseUrl);
   const shownPlans = result ? result.plans.length ? result.plans : result.partialMitigations : [];
+  useEffect(() => {
+    saveController.current?.abort();
+    setSaveState({ planId: null, busy: false, message: '', error: '' });
+    return () => saveController.current?.abort();
+  }, [workspaceId]);
+  async function savePlan(plan) {
+    saveController.current?.abort();
+    const controller = new AbortController();
+    saveController.current = controller;
+    setSaveState({ planId: plan.planId, busy: true, message: '', error: '' });
+    try {
+      const response = await fetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/rescue/plans`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective, actions: plan.actions }), signal: controller.signal,
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message || 'Could not save this plan');
+      if (!controller.signal.aborted) setSaveState({ planId: plan.planId, busy: false, message: 'Plan saved as a proposal. Cash records were not changed.', error: '' });
+    } catch (saveError) {
+      if (!controller.signal.aborted) setSaveState({ planId: plan.planId, busy: false, message: '', error: saveError.message || 'Could not save this plan' });
+    }
+  }
   return <main className="decision-page">
     <header><span className="decision-kicker">CashFlow Copilot · Decision support</span><h1>Build a cash rescue plan</h1><p className="decision-intro">Explore earlier customer collections and flexible payment dates. Every option is checked across the entire cash forecast and remains conditional on agreement.</p></header>
     {!workspaceId ? <div className="decision-empty">Create or select a workspace, verify its records, then return to find rescue options.</div> : <section className="decision-card"><div className="decision-controls">
-      <label>Cash objective<select value={objective} disabled={loading} onChange={event => { setObjective(event.target.value); clear(); }}><option value="nonnegative">Keep cash at or above zero</option><option value="minimum_reserve">Preserve the minimum reserve</option></select></label>
-      <button onClick={() => run({ objective, maxCandidates: 12, maxPlans: 3 })} disabled={loading}>{loading ? 'Testing possible plans…' : 'Find rescue options'}</button>
+      <label>Cash objective<select value={objective} disabled={loading} onChange={event => { saveController.current?.abort(); setObjective(event.target.value); clear(); setSaveState({ planId: null, busy: false, message: '', error: '' }); }}><option value="nonnegative">Keep cash at or above zero</option><option value="minimum_reserve">Preserve the minimum reserve</option></select></label>
+      <button onClick={() => { saveController.current?.abort(); setSaveState({ planId: null, busy: false, message: '', error: '' }); run({ objective, maxCandidates: 12, maxPlans: 3 }); }} disabled={loading}>{loading ? 'Testing possible plans…' : 'Find rescue options'}</button>
     </div><p className="decision-muted">Uses only owner-permitted changes to open invoices and payments. Viewing a plan does not change your records.</p></section>}
     {error && <p className="decision-error" role="alert">{error}</p>}
     {loading && <p role="status">Checking candidate combinations across every forecast day…</p>}
@@ -27,6 +51,9 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl }) {
           <div className="decision-metrics"><Metric label="Lowest cash after actions" value={rupees(plan.worstCashPaiseAfter)} /><Metric label="Known estimated costs" value={rupees(plan.knownActionCostPaise)} note={plan.containsUnknownCosts ? 'Additional costs are unknown' : 'Fee payment dates are not modeled'} /></div>
           {plan.partialReason && <p>{plan.partialReason}. Remaining breach: {displayDate(plan.firstBreachAfter)}.</p>}
           <ol className="decision-action-list">{plan.actions.map(action => <li key={`${action.cashItemId}-${action.type}`}><strong>{actionLabels[action.type]}</strong> for {action.externalId || action.cashItemId}: {rupees(action.amountPaise)}, from {displayDate(action.fromDate)} to {displayDate(action.toDate)}. Estimated cost: {action.estimatedCostPaise == null ? 'unknown' : rupees(action.estimatedCostPaise)}. Requires agreement.</li>)}</ol>
+          <button type="button" disabled={saveState.busy} onClick={() => savePlan(plan)}>{saveState.busy && saveState.planId === plan.planId ? 'Saving proposal…' : 'Save proposed plan'}</button>
+          {saveState.planId === plan.planId && saveState.message && <p role="status">{saveState.message}</p>}
+          {saveState.planId === plan.planId && saveState.error && <p className="decision-error" role="alert">{saveState.error}</p>}
           <CashChart series={series} reserve={result.objective === 'minimum_reserve' ? result.minimumReservePaise ?? 0 : 0} /><DailyTable series={series} /><Notices warnings={plan.warnings} />
         </article>;
       })}
