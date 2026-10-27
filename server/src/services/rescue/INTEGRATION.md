@@ -18,7 +18,7 @@ The isolated verification suite covers engines, HTTP routes, model-read scoping,
 
 The test suite uses the original CSV fixture files, including the four-lakh isolated advance and seven-lakh advance against the bundled shortage baseline. It checks one-paise/one-rupee boundaries, partial settlements, duplicate actions, mandatory bills, unknown costs, recurring obligations, deferral reappearance, late advances, delayed receipts, malformed inputs, all-day safety and immutability.
 
-A production-mode React bundle is also built by the verification script. A temporary synthetic preview can exercise the pages and API together without MongoDB. Neither that preview nor these isolated tests proves compatibility with Person 1's actual forecast implementation or database. The real shared-module smoke check and MongoDB application checks must run after integration.
+A production-mode React bundle is also built by the verification script. A temporary synthetic preview can exercise the pages and API together without MongoDB. Focused tests and the shared-module smoke check exercise the real forecast. The separate MongoDB persistence check exercises the default rescue router and actual shared models in a disposable database. These checks do not verify the shared app's route/page registration; the full application flow must still run after integration.
 
 ## Run independently now
 
@@ -122,9 +122,12 @@ Pass the actual selected workspace ID. An optional `apiBaseUrl` prop overrides `
 
 ```sh
 node server/tests/rescue-shared-check.mjs
+node server/tests/rescue-persistence-check.mjs
 ```
 
-This check deliberately imports the real `finance/forecast.js`, with no test-stub fallback. It checks the bundled rescue scenario and both order advance thresholds. It cannot run before Person 1 supplies that module.
+The shared check deliberately imports the real `finance/forecast.js`, with no test-stub fallback. It checks the bundled rescue scenario and both order advance thresholds.
+
+The persistence check requires the dependencies in `server/package.json`. It starts disposable MongoDB through `mongodb-memory-server` and never uses the application database URL. It verifies stored plan figures, workspace isolation, unknown costs, rejection of actions made stale by settlement, and unchanged cash items. Its first run may download a MongoDB binary.
 
 Then run the full team's server tests, client build, seed workflow, and a real MongoDB run: load a workspace, analyze rescue and order options, save one proposal, and verify that cash items remain unchanged. Repeat after model/forecast changes.
 
@@ -141,6 +144,7 @@ Then run the full team's server tests, client build, seed workflow, and a real M
 - Rescues search all compatible subsets of at most 12 generated actions. Each eligible item contributes one maximum permitted timing/amount proposal. This is a bounded search, not a global optimum across all possible dates and amounts. Truncation is reported.
 - Action costs have no payment-date field in the supplied contract. They rank plans but are not silently assigned a cash date or subtracted from invoices. Every plan discloses this. Add dated fees to the cash inputs before using results as a funding commitment. Unknown costs remain `null`, never “free.”
 - Feasibility is based on every end-of-day balance within the horizon. Same-day intraday ordering is outside the supplied model. Events outside the horizon do not appear as current-horizon cash and are warned about for orders.
+- The as-of date is an opening-cash snapshot. Rescue candidates require future expected dates and future action dates; items dated on or before the snapshot stay available for review rather than becoming deferral candidates. Proposed order cash dates must also follow the snapshot date.
 - Deferred outflows remain inside the horizon. A maximum extension beyond the horizon is capped at its final day and still evaluated there.
 - Split receivable IDs are temporary scenario IDs. The original external/source identifiers remain available; no MongoDB CashItem is created or updated.
 - The standalone synthetic preview has no database, auth, bank connection, persistent plan, payment arrangement, or external transaction. The integrated app's save endpoint uses the `RescuePlan` model.

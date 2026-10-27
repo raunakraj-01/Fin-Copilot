@@ -12,7 +12,7 @@ function candidatesFor(context) {
   const end = horizonEnd(context.asOfDate, context.horizonDays);
   return context.cashItems.flatMap(item => {
     const fromDate = item.expectedDate;
-    if (!active(item) || !fromDate || fromDate < context.asOfDate) return [];
+    if (!active(item) || !fromDate || fromDate <= context.asOfDate) return [];
     const common = {
       cashItemId: item.id, externalId: item.externalId ?? null, fromDate,
       estimatedCostPaise: item.estimatedActionCostPaise ?? null, requiresAgreement: true, status: 'proposed',
