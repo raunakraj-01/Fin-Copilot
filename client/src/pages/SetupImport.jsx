@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
 import ManualRecords from '../components/ManualRecords.jsx';
 

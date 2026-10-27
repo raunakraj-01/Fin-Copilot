@@ -54,7 +54,7 @@ it('persists both fixture imports and returns the documented shortage', async ()
   expect(forecast.body.risk.worstDate).toBe('2026-11-11');
 });
 
-it('seeds fixture records idempotently', async () => {
+it('seeds fixture records and runs the complete decision flow without changing cash items', async () => {
   const seed = async () => execFileAsync(process.execPath, ['src/seed/index.js'], {
     cwd: new URL('..', import.meta.url), env: { ...process.env, MONGODB_URI: mongo.getUri() },
   });
@@ -63,7 +63,32 @@ it('seeds fixture records idempotently', async () => {
   const workspace = await Workspace.findById('650000000000000000000001');
   expect(workspace.openingCashPaise).toBe(20_000_000);
   expect(await CashItem.countDocuments({ workspaceId: workspace._id })).toBe(5);
-}, 30_000);
+  const base = `/api/workspaces/${workspace._id}`;
+  const before = await CashItem.find({ workspaceId: workspace._id }).sort({ _id: 1 }).lean();
+  const outlook = await request(app).get(`${base}/forecast`).expect(200);
+  expect(outlook.body.risk.firstNegativeDate).toBe('2026-11-06');
+  const rescue = await request(app).post(`${base}/rescue/analyze`)
+    .send({ objective: 'nonnegative', maxCandidates: 12, maxPlans: 3 }).expect(200);
+  expect(rescue.body.plans.length).toBeGreaterThan(0);
+  const savedPlan = await request(app).post(`${base}/rescue/plans`)
+    .send({ objective: 'nonnegative', actions: rescue.body.plans[0].actions }).expect(201);
+  const plans = await request(app).get(`${base}/rescue/plans`).expect(200);
+  expect(plans.body.plans.some(plan => plan._id === savedPlan.body._id)).toBe(true);
+  const actionId = savedPlan.body.actions[0].actionId;
+  const tracked = await request(app).patch(`${base}/rescue/plans/${savedPlan.body._id}/actions/${actionId}`)
+    .send({ status: 'requested', ownerNotes: 'Demo follow-up' }).expect(200);
+  expect(tracked.body.actions[0].status).toBe('requested');
+  const order = { label: 'Demo order', orderValuePaise: 80_000_000, advancePaise: 0,
+    advanceDate: '2026-11-02', finalCollectionDate: '2026-12-31',
+    costLines: [{ description: 'Materials', amountPaise: 50_000_000, paymentDate: '2026-11-11' }],
+    delayedCollectionDays: 14 };
+  const analysis = await request(app).post(`${base}/orders/analyze`).send(order).expect(200);
+  const scenario = await request(app).post(`${base}/orders/scenarios`).send(order).expect(201);
+  expect(scenario.body.simulatedMinimumAdvancePaise).toBe(analysis.body.minimumAdvance.amountPaise);
+  const scenarios = await request(app).get(`${base}/orders/scenarios`).expect(200);
+  expect(scenarios.body.scenarios.some(saved => saved._id === scenario.body._id)).toBe(true);
+  expect(await CashItem.find({ workspaceId: workspace._id }).sort({ _id: 1 }).lean()).toEqual(before);
+}, 60_000);
 
 it('creates and corrects manual items and monthly expenses', async () => {
   const created = await request(app).post('/api/workspaces').send({ name: 'Manual test',

@@ -5,6 +5,8 @@ import workspaces from './routes/workspaces.js';
 import imports from './routes/imports.js';
 import items from './routes/items.js';
 import forecast from './routes/forecast.js';
+import rescue from './routes/rescue.js';
+import orders from './routes/orders.js';
 import { errorResponse } from './utils/http.js';
 
 const app = express();
@@ -17,11 +19,8 @@ app.use('/api/workspaces/:workspaceId/imports', imports);
 app.use('/api/workspaces/:workspaceId', items);
 app.use('/api/workspaces/:workspaceId/forecast', forecast);
 
-// These mounts are replaced by Person 2's default-exported routers during integration.
-app.use('/api/workspaces/:workspaceId/rescue', (_req, res) =>
-  res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'Rescue Planner is being built' } }));
-app.use('/api/workspaces/:workspaceId/orders', (_req, res) =>
-  res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'Order Analyzer is being built' } }));
+app.use('/api/workspaces/:workspaceId/rescue', rescue);
+app.use('/api/workspaces/:workspaceId/orders', orders);
 
 app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }));
 app.use((err, _req, res, next) => {

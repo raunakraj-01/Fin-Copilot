@@ -1,6 +1,6 @@
 # CashFlow Copilot
 
-Student MVP for a synthetic Indian supplier's 90-day cash outlook. This branch implements the finance foundation. Rescue Planner and New Order Analyzer are being developed by Person 2 and currently show placeholders.
+Student MVP for a synthetic Indian supplier's 90-day cash outlook. The app connects setup and import, Cash Outlook, Rescue Planner, and New Order Analyzer to the same workspace and forecast engine. Saved plans and order scenarios are hypothetical; viewing or saving them does not change cash records.
 
 ## Run locally
 
@@ -16,7 +16,16 @@ Open the UI and select **Use seeded demo workspace** to inspect seeded data. To 
 
 The fixture forecast first goes negative on **2026-11-06** and reaches **−₹2,00,000** on **2026-11-11**. The November 26 receipt brings cash back to ₹2,00,000 before later scheduled movements. Outlook shows the dated movements, their source IDs, and whether dates are verified or owner assumptions. These are entered-date scenarios, not guaranteed payment predictions.
 
-## Finance API
+## Demo walkthrough
+
+1. Select the seeded workspace, then open **Cash Outlook** to see the shortage and its contributing bills.
+2. Open **Rescue Planner**, choose a cash objective, and select **Find rescue options**. Review the conditional actions and before/after daily cash. Save a proposed plan, load saved plans, and update an action's status or notes. Customer and supplier agreement is still required.
+3. Open **New Order Analyzer**. Try an ₹8,00,000 order with a ₹5,00,000 material payment on `2026-11-11`, advance date `2026-11-02`, and final collection date `2026-12-31`. Analyze the minimum advance against the **current workspace**; save the hypothetical scenario and reload the saved list. The amount need not equal the isolated ₹4,00,000 acceptance example because the seeded workspace already has a shortage.
+4. Change a record constraint in Setup, rerun the analysis, and check the updated result. Saved proposals are snapshots; reanalyze after changing cash records.
+
+`npm test` runs an in-memory MongoDB seeded workflow covering forecast, rescue proposal saving and tracking, and order scenario saving. It verifies that these decisions leave the underlying cash items untouched.
+
+## API
 
 - `GET /api/health`
 - `POST /api/workspaces`; `GET/PATCH /api/workspaces/:workspaceId`
@@ -24,7 +33,9 @@ The fixture forecast first goes negative on **2026-11-06** and reaches **−₹2
 - `GET/POST /api/workspaces/:workspaceId/items`; `PATCH/DELETE /api/workspaces/:workspaceId/items/:itemId`
 - `GET/POST /api/workspaces/:workspaceId/recurring-rules`
 - `GET /api/workspaces/:workspaceId/forecast?horizonDays=90`
+- `POST /api/workspaces/:workspaceId/rescue/analyze`; `GET/POST .../rescue/plans`; `PATCH .../rescue/plans/:planId/actions/:actionId`
+- `POST /api/workspaces/:workspaceId/orders/analyze`; `GET/POST .../orders/scenarios`
 
-All API monetary values are integer paise. Imports are reviewed before commit, repeated commits are idempotent, and imported source IDs do not overwrite existing records. The pure finance engine is `server/src/services/finance/forecast.js` with the agreed `buildForecast` and `explainRisk` exports. `RescuePlan` and `OrderScenario` Mongoose models are available for Person 2's routes. Person 2's modules can import these signatures and send default-exported routers/pages for shared integration.
+All API monetary values are integer paise. Imports are reviewed before commit, repeated commits are idempotent, and imported source IDs do not overwrite existing records. The pure finance engine is `server/src/services/finance/forecast.js` with the agreed `buildForecast` and `explainRisk` exports. Rescue and order simulations use that engine and persist only explicit hypothetical plans or scenarios.
 
 This is a single-workspace demo without authentication. Do not upload real financial records or expose this API publicly.

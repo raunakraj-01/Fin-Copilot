@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import SetupImport from '../pages/SetupImport.jsx';
 import Outlook from '../pages/Outlook.jsx';
+import RescuePlanner from '../pages/RescuePlanner.jsx';
+import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 
 const pages = {
   setup: ['Setup & Import', SetupImport],
   outlook: ['Cash Outlook', Outlook],
-  rescue: ['Rescue Planner', () => <p>Rescue Planner is being built.</p>],
-  orders: ['New Order Analyzer', () => <p>New Order Analyzer is being built.</p>],
+  rescue: ['Rescue Planner', RescuePlanner],
+  orders: ['New Order Analyzer', OrderAnalyzer],
 };
 
 export default function App() {
