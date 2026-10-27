@@ -33,7 +33,7 @@ export function orderEvents(order, advance = order.advancePaise, finalDate = ord
 export function analyzeNewOrder(rawContext, rawOrder, buildForecast) {
   const context = normalizeContext(rawContext);
   const order = structuredClone(validateOrder(rawOrder));
-  if (order.advanceDate < context.asOfDate || order.costLines.some(line => line.paymentDate < context.asOfDate)) fail('Hypothetical order events cannot precede the cash snapshot date', 'orderDates');
+  if (order.advanceDate <= context.asOfDate || order.costLines.some(line => line.paymentDate <= context.asOfDate)) fail('Hypothetical order events must follow the cash snapshot date', 'orderDates');
   safeTotal([Math.abs(context.openingCashPaise), context.minimumReservePaise, order.orderValuePaise, ...order.costLines.map(line => line.amountPaise), ...context.cashItems.map(item => item.amountPaise), ...context.recurringRules.map(rule => rule.amountPaise * Math.ceil(context.horizonDays / 28))], 'combined scenario amounts');
   const reserve = context.minimumReservePaise;
   const end = horizonEnd(context.asOfDate, context.horizonDays);

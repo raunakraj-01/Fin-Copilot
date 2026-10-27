@@ -53,3 +53,21 @@ test('changing workspace aborts pending requests and ignores stale results', asy
   await waitFor(() => expect(screen.getByRole('button', { name: 'Find rescue options' }).disabled).toBe(false));
   expect(screen.queryByText('Stale result')).toBeNull();
 });
+
+test('saving a displayed rescue proposal sends only objective and actions', async () => {
+  const day = { date: '2026-11-02', closingCashPaise: 0 };
+  const actions = [{ cashItemId: '000000000000000000000001', type: 'accelerate_collection', amountPaise: 20_000_000, fromDate: '2026-11-26', toDate: '2026-11-04' }];
+  const analysis = { baseline: { worstCashPaise: -20_000_000, daily: [day] }, candidateCount: 1, plans: [{ planId: 'simulation-1', fullyFeasible: true, worstCashPaiseAfter: 0, knownActionCostPaise: 0, actions, daily: [day], warnings: [] }], partialMitigations: [], warnings: [], assumptions: [] };
+  const fetch = vi.fn(async url => url.endsWith('/plans')
+    ? { ok: true, json: async () => ({ _id: 'saved-plan' }) }
+    : { ok: true, json: async () => analysis });
+  vi.stubGlobal('fetch', fetch);
+  render(<RescuePlanner workspaceId="workspace" apiBaseUrl="/api" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Find rescue options' }));
+  const buttons = await screen.findAllByRole('button', { name: 'Save proposed plan' });
+  fireEvent.click(buttons[0]);
+  expect((await screen.findByText(/Plan saved as a proposal/)).textContent).toContain('Cash records were not changed');
+  const [url, options] = fetch.mock.calls[1];
+  expect(url).toBe('/api/workspaces/workspace/rescue/plans');
+  expect(JSON.parse(options.body)).toEqual({ objective: 'nonnegative', actions: analysis.plans[0].actions });
+});

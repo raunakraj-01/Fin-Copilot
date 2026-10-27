@@ -18,7 +18,9 @@ function candidatesFor(context) {
       estimatedCostPaise: item.estimatedActionCostPaise ?? null, requiresAgreement: true, status: 'proposed',
     };
     if (item.category === 'receivable' && item.earliestCollectionDate && isMoney(item.maxEarlyCollectionPaise)) {
-      const toDate = item.earliestCollectionDate < context.asOfDate ? context.asOfDate : item.earliestCollectionDate;
+      // Opening cash already includes the snapshot day; a proposed receipt must occur later.
+      const firstForecastDay = addDays(context.asOfDate, 1);
+      const toDate = item.earliestCollectionDate < firstForecastDay ? firstForecastDay : item.earliestCollectionDate;
       const amountPaise = Math.min(outstanding(item), item.maxEarlyCollectionPaise);
       return amountPaise > 0 && toDate < fromDate && toDate <= end
         ? [{ ...common, type: 'accelerate_collection', amountPaise, toDate }] : [];
@@ -48,7 +50,7 @@ export function applyActions(context, actions) {
     if (!item || !active(item)) fail('Action must reference an eligible open cash item', 'actions.cashItemId');
     date(action.toDate, 'actions.toDate');
     money(action.amountPaise, 'actions.amountPaise');
-    if (action.fromDate !== item.expectedDate || !item.expectedDate || item.expectedDate < base.asOfDate || action.toDate < base.asOfDate || action.toDate > end) fail('Action date is outside the allowed timeline', 'actions.toDate');
+    if (action.fromDate !== item.expectedDate || !item.expectedDate || item.expectedDate <= base.asOfDate || action.toDate <= base.asOfDate || action.toDate > end) fail('Action date is outside the allowed timeline', 'actions.toDate');
     if (action.type === 'accelerate_collection') {
       if (item.category !== 'receivable' || !item.earliestCollectionDate || !isMoney(item.maxEarlyCollectionPaise) || action.toDate < item.earliestCollectionDate || action.toDate >= item.expectedDate || action.amountPaise <= 0 || action.amountPaise > Math.min(outstanding(item), item.maxEarlyCollectionPaise)) fail('Collection action exceeds invoice constraints', 'actions');
     } else {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { analyzeRescue, applyActions, makeCandidates } from '../src/services/rescue/analyze.js';
 import { buildForecast } from './rescueForecastStub.mjs';
+import { buildForecast as buildSharedForecast } from '../src/services/finance/forecast.js';
 import { fixtureContext } from './rescueFixtureSupport.mjs';
 
 const analyze = (context, options = {}) => analyzeRescue(context, options, buildForecast);
@@ -132,4 +133,14 @@ test('forecast callback mutations cannot alter the original scenario', () => {
     return result;
   });
   expect(context).toEqual(original);
+});
+
+test('a rescue receipt cannot be proposed on the opening-cash snapshot day', () => {
+  const context = fixtureContext();
+  context.cashItems[0].constraints.earliestCollectionDate = context.asOfDate;
+  const action = makeCandidates(context).find(candidate => candidate.cashItemId === 'INV-R100');
+  expect(action.toDate).toBe('2026-11-02');
+  expect(() => applyActions(context, [{ ...action, toDate: context.asOfDate }])).toThrow(/timeline/);
+  const forecast = buildSharedForecast({ ...context, cashItems: applyActions(context, [action]) });
+  expect(forecast.daily[1].receiptsPaise).toBe(20_000_000);
 });

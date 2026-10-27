@@ -1,5 +1,6 @@
 import { DecisionValidationError } from '../services/rescue/validation.js';
 import { loadDecisionContext, loadSharedForecast } from '../services/rescue/decisionContext.js';
+import { prepareSavedPlan, validateSavePlanRequest } from '../services/rescue/savePlan.js';
 
 export function decisionHandler(analyze, validate, dependencies = {}) {
   const loadContext = dependencies.loadContext ?? loadDecisionContext;
@@ -15,6 +16,29 @@ export function decisionHandler(analyze, validate, dependencies = {}) {
       if (error instanceof DecisionValidationError) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.message, details: error.details } });
       (dependencies.logError ?? console.error)(error);
       return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not analyze this scenario', details: [] } });
+    }
+  };
+}
+
+export function saveRescuePlanHandler(dependencies = {}) {
+  const loadContext = dependencies.loadContext ?? loadDecisionContext;
+  const createPlan = dependencies.createPlan ?? (async plan => {
+    const { default: RescuePlan } = await import('../models/RescuePlan.js');
+    return RescuePlan.create(plan);
+  });
+  return async (req, res) => {
+    try {
+      if (!/^[a-fA-F0-9]{24}$/.test(req.params.workspaceId ?? '')) throw new DecisionValidationError('workspaceId must be a valid MongoDB object ID', 'workspaceId');
+      validateSavePlanRequest(req.body);
+      const context = await loadContext(req.params.workspaceId);
+      if (!context) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Workspace not found', details: [] } });
+      const buildForecast = dependencies.buildForecast ?? await loadSharedForecast();
+      const saved = await createPlan({ workspaceId: req.params.workspaceId, ...prepareSavedPlan(context, req.body, buildForecast) });
+      return res.status(201).json(saved);
+    } catch (error) {
+      if (error instanceof DecisionValidationError) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.message, details: error.details } });
+      (dependencies.logError ?? console.error)(error);
+      return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not save this plan', details: [] } });
     }
   };
 }

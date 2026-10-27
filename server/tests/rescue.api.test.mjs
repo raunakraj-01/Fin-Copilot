@@ -4,6 +4,8 @@ import request from 'supertest';
 import rescueRouter, { createRescueRouter } from '../src/routes/rescue.js';
 import ordersRouter, { createOrdersRouter } from '../src/routes/orders.js';
 import { buildForecast } from './rescueForecastStub.mjs';
+import { buildForecast as buildSharedForecast } from '../src/services/finance/forecast.js';
+import { makeCandidates } from '../src/services/rescue/analyze.js';
 import { draftOrder, fixtureContext, isolatedContext } from './rescueFixtureSupport.mjs';
 
 const id = '0123456789abcdef01234567';
@@ -72,4 +74,33 @@ test('model adapter scopes all reads to the workspace and loads active recurring
   expect(RecurringRule.find).toHaveBeenCalledWith({ workspaceId: id, active: true });
   expect(context.cashItems[0].id).toBe('invoice');
   expect(context.minimumReservePaise).toBe(0);
+});
+
+test('saving a selected rescue action recalculates figures and leaves source items untouched', async () => {
+  const context = fixtureContext();
+  context.cashItems.forEach((item, index) => { item.id = String(index + 1).padStart(24, '0'); });
+  const original = structuredClone(context);
+  const action = makeCandidates(context).find(item => item.externalId === 'INV-R100');
+  const createPlan = vi.fn(async plan => ({ _id: 'saved-plan', ...plan }));
+  const response = await request(appFor({ loadContext: async () => context, buildForecast: buildSharedForecast, createPlan }))
+    .post(`/api/workspaces/${id}/rescue/plans`)
+    .send({ objective: 'nonnegative', actions: [{ ...action, estimatedCostPaise: 0, status: 'completed' }] });
+  expect(response.status).toBe(201);
+  expect(response.body).toMatchObject({ workspaceId: id, baselineWorstCashPaise: -20_000_000, simulatedWorstCashPaise: 0, feasibility: 'conditional', status: 'proposed' });
+  expect(response.body.actions[0]).toMatchObject({ cashItemId: action.cashItemId, status: 'proposed', estimatedCostPaise: 300_000 });
+  expect(context).toEqual(original);
+  expect(createPlan).toHaveBeenCalledOnce();
+});
+
+test('invalid rescue plans are rejected before any persistence', async () => {
+  const context = fixtureContext();
+  context.cashItems.forEach((item, index) => { item.id = String(index + 1).padStart(24, '0'); });
+  const action = makeCandidates(context).find(item => item.externalId === 'INV-R100');
+  const createPlan = vi.fn();
+  const app = appFor({ loadContext: async () => context, buildForecast: buildSharedForecast, createPlan });
+  for (const actions of [[], [{ ...action, amountPaise: 50_000_000 }], [action, action], [{ ...action, toDate: context.asOfDate }]]) {
+    const response = await request(app).post(`/api/workspaces/${id}/rescue/plans`).send({ objective: 'nonnegative', actions });
+    expect(response.status).toBe(400);
+  }
+  expect(createPlan).not.toHaveBeenCalled();
 });
