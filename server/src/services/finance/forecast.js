@@ -29,11 +29,16 @@ export function buildForecast({
     const day = dayNumber(event.date);
     if (!Number.isSafeInteger(event.amountPaise) || event.amountPaise < 0) throw new Error('Invalid event amount');
     if (!['in', 'out'].includes(event.direction)) throw new Error('Invalid event direction');
-    if (day >= start && day < start + horizonDays) events.push(event);
+    // Opening cash is an as-of-date snapshot, so only later movements are added.
+    if (day > start && day < start + horizonDays) events.push(event);
   };
 
   for (const item of cashItems) {
-    if (['paid', 'cancelled'].includes(item.status) || item.confidenceState === 'needs_review') continue;
+    if (['paid', 'cancelled'].includes(item.status)) continue;
+    if (item.confidenceState === 'needs_review') {
+      warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs verification`);
+      continue;
+    }
     const amount = item.amountPaise - (item.settledPaise || 0);
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error('Invalid cash item settlement');
     if (!amount) continue;
@@ -41,7 +46,7 @@ export function buildForecast({
       warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs an expected date`);
       continue;
     }
-    if (dayNumber(item.expectedDate) < start) {
+    if (dayNumber(item.expectedDate) <= start) {
       warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs a future expected date`);
       continue;
     }
@@ -50,6 +55,7 @@ export function buildForecast({
       id: String(item.id || item._id || item.externalId), cashItemId: String(item.id || item._id || item.externalId),
       externalId: item.externalId, date: item.expectedDate,
       direction: item.category === 'receivable' ? 'in' : 'out', amountPaise: amount,
+      counterparty: item.counterparty, confidenceState: item.confidenceState || 'owner_assumption',
       reason: item.category === 'receivable' ? 'customer_invoice' : item.category === 'payable' ? 'supplier_bill' : 'expense',
     });
   }
@@ -61,7 +67,8 @@ export function buildForecast({
       const date = dateFromDay(day);
       if (Number(date.slice(8)) === rule.dayOfMonth && date >= rule.startsOn && (!rule.endsOn || date <= rule.endsOn)) {
         addEvent({ id: `${rule.id || rule._id}:${date}`, sourceId: String(rule.id || rule._id), date,
-          direction: 'out', amountPaise: rule.amountPaise, reason: 'recurring_expense', description: rule.description });
+          direction: 'out', amountPaise: rule.amountPaise, reason: 'recurring_expense', description: rule.description,
+          confidenceState: 'owner_assumption' });
       }
     }
   }
@@ -71,7 +78,7 @@ export function buildForecast({
   let cash = openingCashPaise;
   let firstNegativeDate = null;
   let firstReserveBreachDate = null;
-  let worstCashPaise = cash;
+  let worstCashPaise = Infinity;
   let worstDate = asOfDate;
   for (let day = start; day < start + horizonDays; day++) {
     const date = dateFromDay(day);
@@ -79,6 +86,7 @@ export function buildForecast({
     const receiptsPaise = dayEvents.filter(event => event.direction === 'in').reduce((sum, event) => sum + event.amountPaise, 0);
     const paymentsPaise = dayEvents.filter(event => event.direction === 'out').reduce((sum, event) => sum + event.amountPaise, 0);
     cash += receiptsPaise - paymentsPaise;
+    if (!Number.isSafeInteger(cash)) throw new Error('Forecast balance exceeds safe integer range');
     daily.push({ date, receiptsPaise, paymentsPaise, closingCashPaise: cash, events: dayEvents });
     if (cash < 0 && !firstNegativeDate) firstNegativeDate = date;
     if (cash < minimumReservePaise && !firstReserveBreachDate) firstReserveBreachDate = date;
@@ -91,15 +99,25 @@ export function buildForecast({
       peakShortagePaise: Math.max(0, -worstCashPaise), contributingItems: [] },
     warnings, assumptions: ['Expected dates are user inputs, not guaranteed collection dates'],
   };
-  forecast.risk.contributingItems = explainRisk(forecast, cashItems).contributingItems;
+  Object.assign(forecast.risk, explainRisk(forecast, cashItems));
   return forecast;
 }
 
 export function explainRisk(forecast, _cashItems = []) {
-  const cutoff = forecast.risk.firstNegativeDate || forecast.risk.firstReserveBreachDate || forecast.risk.worstDate;
-  return { contributingItems: forecast.daily.flatMap(day => day.date <= cutoff ? day.events : [])
+  const riskDate = forecast.risk.firstNegativeDate || forecast.risk.firstReserveBreachDate;
+  const cutoff = riskDate || forecast.risk.worstDate;
+  const contributingItems = forecast.daily.flatMap(day => day.date <= cutoff ? day.events : [])
     .filter(event => event.direction === 'out')
     .sort((a, b) => b.amountPaise - a.amountPaise)
     .map(event => ({ cashItemId: event.cashItemId || event.sourceId || event.id, externalId: event.externalId,
-      amountPaise: event.amountPaise, date: event.date, direction: event.direction })) };
+      amountPaise: event.amountPaise, date: event.date, direction: event.direction }));
+  if (!riskDate) return { contributingItems, explanation: 'Cash stays above the minimum reserve throughout this forecast.' };
+  const day = forecast.daily.find(point => point.date === riskDate);
+  const driver = day.events.filter(event => event.direction === 'out').sort((a, b) => b.amountPaise - a.amountPaise)[0];
+  const nextReceipt = forecast.daily.flatMap(point => point.events)
+    .find(event => event.direction === 'in' && event.date > riskDate);
+  const condition = forecast.risk.firstNegativeDate ? 'turns negative' : 'falls below the minimum reserve';
+  const driverText = driver ? ` after ${driver.externalId || driver.description || driver.counterparty || 'a payment'} is scheduled` : ' from the opening cash position';
+  const receiptText = nextReceipt ? `, before ${nextReceipt.externalId || nextReceipt.counterparty || 'a receipt'} is expected on ${nextReceipt.date}` : '';
+  return { contributingItems, explanation: `Cash first ${condition} on ${riskDate}${driverText}${receiptText}.` };
 }
