@@ -8,7 +8,10 @@ import forecast from './routes/forecast.js';
 import rescue from './routes/rescue.js';
 import orders from './routes/orders.js';
 import shock from './routes/shock.js';
+import copilot from './routes/copilot.js';
 import { errorResponse } from './utils/http.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
@@ -23,6 +26,13 @@ app.use('/api/workspaces/:workspaceId/forecast', forecast);
 app.use('/api/workspaces/:workspaceId/rescue', rescue);
 app.use('/api/workspaces/:workspaceId/orders', orders);
 app.use('/api/workspaces/:workspaceId/shock', shock);
+app.use('/api/workspaces/:workspaceId/copilot', copilot);
+
+if (process.env.NODE_ENV === 'production') {
+  const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
+  app.use(express.static(dist));
+  app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+}
 
 app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }));
 app.use((err, _req, res, next) => {

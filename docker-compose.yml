@@ -1,0 +1,23 @@
+services:
+  mongodb:
+    image: mongo:7-jammy
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  hisaab-app:
+    build: .
+    ports:
+      - "5001:5001"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/hisaab
+      CLIENT_ORIGIN: http://localhost:5001
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+volumes:
+  mongo-data:

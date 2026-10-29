@@ -5,6 +5,7 @@ import Outlook from '../pages/Outlook.jsx';
 import RescuePlanner from '../pages/RescuePlanner.jsx';
 import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
+import Copilot from '../pages/Copilot.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport],
@@ -12,6 +13,7 @@ const pages = {
   shock: ['Cash Shock Lab', 'Test delays and protect your cash reserve', CashShockLab],
   rescue: ['Rescue Planner', 'Find practical ways through a shortfall', RescuePlanner],
   orders: ['New Order Analyzer', 'Test an opportunity before committing', OrderAnalyzer],
+  copilot: ['Cash Copilot', 'Ask about your cash records', Copilot],
 };
 
 const icons = {
@@ -20,6 +22,7 @@ const icons = {
   shock: <><path d="M4 19V5M4 19h16"/><path d="m6 10 4-3 4 9 5-4"/></>,
   rescue: <><path d="M12 21a9 9 0 1 0-9-9"/><path d="M3 5v7h7"/><path d="M9 12h6M12 9v6"/></>,
   orders: <><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h3"/></>,
+  copilot: <><path d="M4 5h16v12H8l-4 4z"/><path d="M8 10h8M8 13h5"/></>,
 };
 
 export default function App() {

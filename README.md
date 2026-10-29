@@ -4,6 +4,10 @@ Student MVP for a synthetic Indian supplier's 90-day cash outlook. The app conne
 
 The top-right language menu remembers English, Hindi or Kannada on this browser. Core navigation, forms, and decision labels are translated locally; entered business names and record IDs remain as supplied. Some detailed backend-generated explanations and warnings are still shown in English.
 
+Cash Copilot answers runway and overdue collection questions from the active workspace through `POST /api/workspaces/:workspaceId/copilot/chat` (SSE). It can draft a collection message for a named debtor; drafts are never sent. Set `GEMINI_API_KEY` in `server/.env` to enable model-based intent classification, optionally with `GEMINI_MODEL`; without a key or when the model fails, local rules select the intent. Financial answers always come from the existing forecast and ledger. The current ledger lacks the fields required to calculate Section 43B(h) deadlines, so the copilot reports that limitation. The app still has no authentication and is for synthetic data only.
+
+For a container run, use `docker compose up --build` and open `http://localhost:5001`. The Compose setup stores MongoDB data in a named volume. Seed the demo workspace with `docker compose exec hisaab-app node src/seed/index.js`.
+
 ## Presentation demo
 
 With client and server dependencies installed, run `npm run demo` from the repository root, then open `http://localhost:5000` and select **Use seeded demo workspace**. This builds the UI and starts the real API against an isolated temporary MongoDB. It never uses your configured business database. Demo edits disappear when it stops; use the normal setup below for persistence. The first run may need internet to download the MongoDB test binary. Port 5000 must be free; use the default client API URL for this launcher.
