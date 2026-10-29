@@ -32,12 +32,29 @@ export default function App() {
   const language = useLanguage();
   const [page, setPage] = useState('setup');
   const [operationsItemId, setOperationsItemId] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('cashflowSidebarCollapsed') === '1');
   const [workspaceId, setWorkspaceId] = useState(localStorage.getItem('cashflowWorkspaceId') || '');
-  const selectWorkspace = id => { localStorage.setItem('cashflowWorkspaceId', id); setWorkspaceId(id); };
+  const [profiles, setProfiles] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cashflowProfiles') || '[]'); } catch { return []; }
+  });
+  const selectWorkspace = value => {
+    if (!value) { localStorage.removeItem('cashflowWorkspaceId'); setWorkspaceId(''); return; }
+    const profile = typeof value === 'string' ? { id: value, name: profiles.find(item => item.id === value)?.name || value } : value;
+    const next = [...profiles.filter(item => item.id !== profile.id), { id: profile.id, name: profile.name }];
+    localStorage.setItem('cashflowProfiles', JSON.stringify(next));
+    localStorage.setItem('cashflowWorkspaceId', profile.id);
+    setProfiles(next); setWorkspaceId(profile.id);
+  };
+  const toggleSidebar = () => setSidebarCollapsed(current => {
+    const next = !current;
+    localStorage.setItem('cashflowSidebarCollapsed', next ? '1' : '0');
+    return next;
+  });
   const Page = pages[page][2];
-  return <div className="shell">
+  return <div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
-      <div className="brand"><span className="brand-mark">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div>
+      <div className="sidebar-head"><div className="brand"><span className="brand-mark">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div>
+        <button className="sidebar-toggle" type="button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={sidebarCollapsed ? 'm9 18 6-6-6-6' : 'm15 18-6-6 6-6'} /></svg></button></div>
       <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label]]) =>
         <button key={key} type="button" aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={() => setPage(key)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">{t(icons[key])}</svg><span>{t(label)}</span>
@@ -46,8 +63,8 @@ export default function App() {
     </aside>
     <div className="app-area">
       <header className="topbar">
-        <div><small>{t(pages[page][1])}</small><strong>{t(pages[page][0])}</strong></div>
-        <div className="topbar-actions"><span className={`workspace-state${workspaceId ? ' connected' : ''}`}><i />{t(workspaceId ? 'Workspace active' : 'No workspace')}</span>
+        <div className="page-title"><strong>{t(pages[page][0])}</strong></div>
+        <div className="topbar-actions"><label className="language-picker">Profile<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select profile</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
           <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label></div>
       </header>
       <div className="content"><Page workspaceId={workspaceId} onWorkspaceCreated={selectWorkspace}

@@ -19,14 +19,23 @@ export default function Operations({ workspaceId, operationsItemId }) {
   const [offer, setOffer] = useState(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [payment, setPayment] = useState(null);
+  const [consent, setConsent] = useState(false);
+  const [deviceName, setDeviceName] = useState('Browser bridge test');
+  const [deviceToken, setDeviceToken] = useState('');
+  const [syncMessage, setSyncMessage] = useState('');
+  const [syncForm, setSyncForm] = useState({ companyId: '', sourceId: '', buyerGstin: '', invoiceDate: '', dueDate: '', clearedDate: '', amount: '' });
   const [error, setError] = useState('');
-  useEffect(() => { setStatus(null); setScore(null); setOffer(null); setPayment(null); setConfirmSend(false); setReceivables([]);
+  useEffect(() => { setStatus(null); setScore(null); setOffer(null); setPayment(null); setConfirmSend(false); setReceivables([]); setConsent(false); setDeviceToken(''); setSyncMessage('');
     if (workspaceId) fetch(`${base}/workspaces/${workspaceId}/items?category=receivable`).then(response => response.json())
       .then(data => setReceivables((data.items || []).filter(item => ['open', 'partial'].includes(item.status)))).catch(() => {});
   }, [workspaceId]);
   useEffect(() => { fetch(`${base}/health`).then(response => response.json()).then(data => {
     setDemoMode(data.demoMode === true); setLocalSyntheticDev(data.localSyntheticDev === true);
   }).catch(() => {}); }, []);
+  useEffect(() => {
+    if (!workspaceId || (!demoMode && !localSyntheticDev && !token)) return;
+    ownerRequest('reliability/consent').then(data => setConsent(data.share)).catch(() => {});
+  }, [workspaceId, demoMode, localSyntheticDev, token]);
   useEffect(() => { if (operationsItemId) { setItemId(operationsItemId.cashItemId); setAmount(inputRupees(operationsItemId.amountPaise)); setDate(operationsItemId.toDate); } }, [operationsItemId]);
   async function call(path, body) {
     setError('');
@@ -34,6 +43,34 @@ export default function Operations({ workspaceId, operationsItemId }) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || 'Request failed');
     return data;
+  }
+  async function ownerRequest(path, method = 'GET', body) {
+    setError('');
+    const response = await fetch(`${base}/workspaces/${workspaceId}/${path}`, { method,
+      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}` },
+      ...(body ? { body: JSON.stringify(body) } : {}) });
+    const data = response.status === 204 ? null : await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'Request failed');
+    return data;
+  }
+  async function submitSyncTest(event) {
+    event.preventDefault(); setError(''); setSyncMessage('');
+    try {
+      const amountPaise = parseRupees(syncForm.amount);
+      const response = await fetch(`${base}/workspaces/${workspaceId}/sync/batches`, { method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${deviceToken}` },
+        body: JSON.stringify({ companyId: syncForm.companyId, batchId: crypto.randomUUID(), rows: [{
+          sourceId: syncForm.sourceId, version: '1', item: { category: 'receivable', counterparty: syncForm.buyerGstin,
+            sourceSystem: 'tally_export', amountPaise, settledPaise: amountPaise, status: 'paid', dueDate: syncForm.dueDate,
+            expectedDate: syncForm.clearedDate, confidenceState: 'verified' },
+          observation: { buyerGstin: syncForm.buyerGstin, invoiceDate: syncForm.invoiceDate, dueDate: syncForm.dueDate,
+            clearedDate: syncForm.clearedDate, amountPaise },
+        }] }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'Sync failed');
+      setSyncMessage(`Applied ${data.count} Tally row and ${data.observationCount} payment observation. Switch profiles and repeat for the same buyer GSTIN.`);
+      setSyncForm(current => ({ ...current, sourceId: '', amount: '' }));
+    } catch (cause) { setError(cause.message); }
   }
   useEffect(() => {
     if (!payment?.id || payment.status === 'paid') return undefined;
@@ -50,9 +87,16 @@ export default function Operations({ workspaceId, operationsItemId }) {
     <h1>Operations</h1><p>Review Tally sync, payment reliability, and a proposed early-payment message. Real financial data requires an authorized deployment.</p>
     {!workspaceId ? <p>Select a workspace first.</p> : <>
       {demoMode ? <p className="decision-notice">Synthetic demo mode: sample sync and payment observations. No message or payment is sent.</p> : localSyntheticDev ? <p className="decision-notice">Local synthetic dev: offer previews are available without a token. No message or payment is sent.</p> : <div className="card"><label>Owner access token<input type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} /></label><p>Kept in this page only. The server must have FEATURE_ADMIN_TOKEN configured.</p></div>}
-      <div className="card"><h2>Tally sync</h2><p>{status?.latest ? `Last batch: ${new Date(status.latest.createdAt).toLocaleString()} (${status.latest.count} rows)${demoMode ? ' — seeded sample' : ''}` : 'No sync batch loaded.'}</p><button disabled={!demoMode && !token} onClick={async () => { try { const response = await fetch(`${base}/workspaces/${workspaceId}/sync/status`, { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.error?.message); setStatus(data); } catch (cause) { setError(cause.message); } }}>Refresh status</button></div>
+      <div className="card"><h2>Feature 1 → Feature 2 connection test</h2><p>Enroll a device for this supplier profile, enable consent, then submit a paid Tally row. Use five independent profiles with the same buyer GSTIN to unlock its pooled score.</p>
+        <p>Payment telemetry: <strong>{consent ? 'enabled' : 'disabled'}</strong> <button type="button" className="secondary" onClick={async () => { try { const data = await ownerRequest('reliability/consent', 'PATCH', { share: !consent }); setConsent(data.share); } catch (cause) { setError(cause.message); } }}>{consent ? 'Withdraw consent' : 'Enable consent'}</button></p>
+        <label>Device name<input value={deviceName} onChange={event => setDeviceName(event.target.value)} /></label><button type="button" onClick={async () => { try { const data = await ownerRequest('sync/devices', 'POST', { name: deviceName }); setDeviceToken(data.token); setSyncMessage('Device enrolled. Its token is shown below only for this session.'); } catch (cause) { setError(cause.message); } }}>Enroll sync device</button>
+        <label>Sync device token<input type="password" autoComplete="off" value={deviceToken} onChange={event => setDeviceToken(event.target.value)} required /></label>
+        <form onSubmit={submitSyncTest} className="form-grid"><label>Tally company ID<input value={syncForm.companyId} onChange={event => setSyncForm({ ...syncForm, companyId: event.target.value })} required /></label><label>Invoice/source ID<input value={syncForm.sourceId} onChange={event => setSyncForm({ ...syncForm, sourceId: event.target.value })} required /></label><label>Buyer GSTIN<input value={syncForm.buyerGstin} onChange={event => setSyncForm({ ...syncForm, buyerGstin: event.target.value.toUpperCase() })} maxLength="15" required /></label><label>Invoice date<input type="date" value={syncForm.invoiceDate} onChange={event => setSyncForm({ ...syncForm, invoiceDate: event.target.value })} required /></label><label>Due date<input type="date" value={syncForm.dueDate} onChange={event => setSyncForm({ ...syncForm, dueDate: event.target.value })} required /></label><label>Cleared date<input type="date" value={syncForm.clearedDate} onChange={event => setSyncForm({ ...syncForm, clearedDate: event.target.value })} required /></label><label>Paid amount (₹)<input inputMode="decimal" value={syncForm.amount} onChange={event => setSyncForm({ ...syncForm, amount: event.target.value })} required /></label><button disabled={!deviceToken || !consent}>Submit bridge test batch</button></form>
+        {syncMessage && <p role="status">{syncMessage}</p>}
+      </div>
+      <div className="card"><h2>Tally sync</h2><p>{status?.latest ? `Last batch: ${new Date(status.latest.createdAt).toLocaleString()} (${status.latest.count} rows)${demoMode ? ' — seeded sample' : ''}` : 'No sync batch loaded.'}</p><button disabled={!demoMode && !localSyntheticDev && !token} onClick={async () => { try { const response = await fetch(`${base}/workspaces/${workspaceId}/sync/status`, { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.error?.message); setStatus(data); } catch (cause) { setError(cause.message); } }}>Refresh status</button></div>
       <form className="card" onSubmit={async e => { e.preventDefault(); try { const response = await fetch(`${base}/workspaces/${workspaceId}/reliability/buyers/${encodeURIComponent(gstin.toUpperCase())}`, { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.error?.message); setScore(data); } catch (cause) { setError(cause.message); } }}>
-        <h2>Buyer payment reliability</h2><label>Buyer GSTIN<input value={gstin} onChange={e => setGstin(e.target.value)} placeholder={demoMode ? 'Demo: 22AAAAA0000A1Z5' : ''} required /></label><button disabled={!demoMode && !token}>Check score</button>
+        <h2>Buyer payment reliability</h2><label>Buyer GSTIN<input value={gstin} onChange={e => setGstin(e.target.value)} placeholder={demoMode ? 'Demo: 22AAAAA0000A1Z5' : ''} required /></label><button disabled={!demoMode && !localSyntheticDev && !token}>Check score</button>
         {score && <p>{score.available ? `Median clearance: ${score.clearanceDays} days; median lateness: ${score.latenessDays} days; score: ${score.score}/100; ${score.supplierCount} suppliers.` : score.reason}</p>}
       </form>
       <form className="card" onSubmit={async e => { e.preventDefault(); setConfirmSend(false); setPayment(null); try { setOffer(await call('offers/preview', { cashItemId: itemId, ...(amount ? { amountPaise: parseRupees(amount) } : {}), phone, settleBy: date, discountBps: Number(discount) })); } catch (cause) { setError(cause.message); } }}>

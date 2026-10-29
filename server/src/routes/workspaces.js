@@ -5,7 +5,8 @@ import Workspace from '../models/Workspace.js';
 
 const router = Router();
 const shape = workspace => ({ id: String(workspace._id), name: workspace.name, asOfDate: workspace.asOfDate,
-  openingCashPaise: workspace.openingCashPaise, minimumReservePaise: workspace.minimumReservePaise });
+  openingCashPaise: workspace.openingCashPaise, minimumReservePaise: workspace.minimumReservePaise,
+  businessGstin: workspace.businessGstin || '', sharePaymentTelemetry: workspace.sharePaymentTelemetry === true });
 
 router.post('/', asyncRoute(async (req, res) => {
   const workspace = await Workspace.create(validate(workspaceCreate, req.body));

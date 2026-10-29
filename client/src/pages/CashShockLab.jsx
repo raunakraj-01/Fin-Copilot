@@ -51,8 +51,8 @@ export default function CashShockLab({ workspaceId, apiBaseUrl }) {
   useEffect(() => {
     if (result) { setCustomers(result.customers); setCounterparty(result.counterparty || ''); }
   }, [result]);
-  const series = result ? [{ label: 'Original forecast', daily: result.baseline.daily, color: '#176c61' },
-    { label: `${result.delayDays}-day customer delay`, daily: result.stressed.daily, color: '#b94d35' }] : [];
+  const series = result ? [{ label: 'Original forecast', daily: result.baseline.daily, color: '#5e83ae' },
+    { label: `${result.delayDays}-day customer delay`, daily: result.stressed.daily, color: '#9a5b4b' }] : [];
   return <main className="decision-page">
     <header><span className="decision-kicker">{t("CashFlow Copilot · Stress testing")}</span><h1>{t("Cash Shock Lab")}</h1>
       <p className="decision-intro">{t("Can your cash plan withstand a late customer payment? Test the delay, inspect your rescue plans, and decide which collection to pursue first.")}</p></header>
@@ -78,7 +78,7 @@ export default function CashShockLab({ workspaceId, apiBaseUrl }) {
         {!result.plans.length && <p className="decision-notice">{t(result.baseline.peakGapPaise ? 'No improving rescue was found under the entered constraints.' : 'The original forecast needs no rescue. The delayed forecast may still expose a shortage.')}</p>}
         {result.plans.map(plan => {
           const selected = plan.scenarios.find(scenario => scenario.delayDays === result.delayDays);
-          const comparison = [{ label: 'Plan before delay', daily: plan.daily, color: '#176c61' }, { label: 'Plan after delay', daily: selected.daily, color: '#b94d35' }];
+          const comparison = [{ label: 'Plan before delay', daily: plan.daily, color: '#5e83ae' }, { label: 'Plan after delay', daily: selected.daily, color: '#9a5b4b' }];
           return <article className="decision-card" key={plan.planId}><span className={`decision-badge${selected.passes ? '' : ' partial'}`}>{t(plan.passingScenarios)}{t(" of 3 scenarios pass")}</span><h3>{plan.label}</h3>
             <ul>{plan.actions.map(action => <li key={action.cashItemId}><a href={sourceLink(action.cashItemId)}>{action.externalId || action.cashItemId}</a>: {t(action.type.replaceAll('_', ' '))} · {t(rupees(action.amountPaise))}{t(" on ")}{displayDate(action.toDate)}{t(". Fee ")}{t(action.estimatedCostPaise == null ? 'unknown (excluded)' : `${rupees(action.estimatedCostPaise)} on ${displayDate(action.feeDate)}`)}.</li>)}</ul>
             <div className="decision-table-wrap"><table><caption>{t("Rescue under each customer delay")}</caption><thead><tr><th>{t("Delay")}</th><th>{t("Result")}</th><th>{t("Peak gap")}</th><th>{t("First reserve breach")}</th></tr></thead><tbody>{plan.scenarios.map(scenario => <tr key={scenario.delayDays}><th>{t(scenario.delayDays)}{t(" days")}</th><td>{t(scenario.passes ? 'Conditional pass' : 'Reserve breached')}{t(scenario.receiptsBeyondHorizon > 0 ? ' · receipts beyond horizon' : '')}</td><td>{t(rupees(scenario.peakGapPaise))}</td><td>{t(displayDate(scenario.firstReserveBreachDate))}</td></tr>)}</tbody></table></div>

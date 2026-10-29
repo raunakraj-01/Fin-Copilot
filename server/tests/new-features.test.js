@@ -34,6 +34,35 @@ it('applies a Tally batch once and updates a changed source without duplicates',
   expect(rows[0].amountPaise).toBe(12000);
 });
 
+it('connects five supplier sync devices to an eligible pooled buyer score', async () => {
+  vi.stubEnv('TELEMETRY_HMAC_KEY', 'connected-flow-hmac-secret');
+  const buyerGstin = '22AAAAA0000A1Z5';
+  const supplierIds = [id];
+  for (let index = 1; index < 5; index++) supplierIds.push(String((await Workspace.create({
+    name: `Connected supplier ${index + 1}`, asOfDate: '2026-08-01', openingCashPaise: 0,
+  }))._id));
+  for (let index = 0; index < supplierIds.length; index++) {
+    const workspaceId = supplierIds[index];
+    await request(app).patch(`/api/workspaces/${workspaceId}/reliability/consent`)
+      .set('Authorization', 'Bearer owner-secret').send({ share: true }).expect(200);
+    const enrolled = await request(app).post(`/api/workspaces/${workspaceId}/sync/devices`)
+      .set('Authorization', 'Bearer owner-secret').send({ name: `Tally bridge ${index + 1}` }).expect(201);
+    const amountPaise = 10000 + index;
+    const synced = await request(app).post(`/api/workspaces/${workspaceId}/sync/batches`)
+      .set('Authorization', `Bearer ${enrolled.body.token}`).send({ companyId: `company-${index + 1}`,
+        batchId: crypto.randomUUID(), rows: [{ sourceId: `invoice-${index + 1}`, version: '1', item: {
+          category: 'receivable', counterparty: buyerGstin, sourceSystem: 'tally_export', amountPaise,
+          settledPaise: amountPaise, status: 'paid', dueDate: '2026-09-15', expectedDate: '2026-10-10',
+          confidenceState: 'verified',
+        }, observation: { buyerGstin, invoiceDate: '2026-08-01', dueDate: '2026-09-15',
+          clearedDate: `2026-10-${String(index + 6).padStart(2, '0')}`, amountPaise } }] }).expect(200);
+    expect(synced.body.observationCount).toBe(1);
+  }
+  const score = await request(app).get(`/api/workspaces/${id}/reliability/buyers/${buyerGstin}`)
+    .set('Authorization', 'Bearer owner-secret').expect(200);
+  expect(score.body).toMatchObject({ available: true, supplierCount: 5, invoiceCount: 5 });
+});
+
 it('suppresses buyer scores below five independent suppliers', () => {
   const observation = { buyerHash: 'buyer', invoiceDate: '2026-01-01', dueDate: '2026-02-15', clearedDate: '2026-03-10' };
   expect(reliability([1, 2, 3, 4].map(n => ({ ...observation, supplierHash: String(n) })))).toBeNull();

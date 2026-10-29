@@ -10,7 +10,7 @@ const money = value => new Intl.NumberFormat(locale(), { style: 'currency', curr
 
 export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   useLanguage();
-  const [form, setForm] = useState({ name: 'Demo Packaging Supplier', asOfDate: '2026-11-01', openingCashInr: '200000', minimumReserveInr: '0' });
+  const [form, setForm] = useState({ name: 'Demo Packaging Supplier', businessGstin: '', asOfDate: '2026-11-01', openingCashInr: '200000', minimumReserveInr: '0' });
   const [kind, setKind] = useState('receivables');
   const [file, setFile] = useState(null);
   const [batchId, setBatchId] = useState('');
@@ -28,7 +28,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
     let active = true;
     setBatchId(''); setRows([]); setCorrections({}); setExcluded([]);
     api(`/workspaces/${workspaceId}`).then(({ workspace }) => {
-      if (active) setForm({ name: workspace.name, asOfDate: workspace.asOfDate,
+      if (active) setForm({ name: workspace.name, businessGstin: workspace.businessGstin || '', asOfDate: workspace.asOfDate,
         openingCashInr: String(workspace.openingCashPaise / 100),
         minimumReserveInr: String(workspace.minimumReservePaise / 100) });
     }).catch(error => { if (active) setMessage(error.message); });
@@ -44,20 +44,21 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   function createWorkspace(event) {
     event.preventDefault();
     run(async () => {
-      const { workspace } = await json('/workspaces', 'POST', { name: form.name, asOfDate: form.asOfDate,
+      const { workspace } = await json('/workspaces', 'POST', { name: form.name, ...(form.businessGstin ? { businessGstin: form.businessGstin.toUpperCase() } : {}), asOfDate: form.asOfDate,
         openingCashPaise: Math.round(Number(form.openingCashInr) * 100),
         minimumReservePaise: Math.round(Number(form.minimumReserveInr) * 100) });
-      onWorkspaceCreated(workspace.id);
+      onWorkspaceCreated(workspace);
       setMessage(`Workspace created: ${workspace.name}`);
     });
   }
 
   function updateWorkspace() {
     run(async () => {
-      const { workspace } = await json(`/workspaces/${workspaceId}`, 'PATCH', { name: form.name, asOfDate: form.asOfDate,
+      const { workspace } = await json(`/workspaces/${workspaceId}`, 'PATCH', { name: form.name, ...(form.businessGstin ? { businessGstin: form.businessGstin.toUpperCase() } : {}), asOfDate: form.asOfDate,
         openingCashPaise: Math.round(Number(form.openingCashInr) * 100),
         minimumReservePaise: Math.round(Number(form.minimumReserveInr) * 100) });
       setMessage(`Updated cash snapshot and reserve for ${workspace.name}.`);
+      onWorkspaceCreated(workspace);
     });
   }
 
@@ -65,7 +66,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
     run(async () => {
       const id = '650000000000000000000001';
       const { workspace } = await api(`/workspaces/${id}`);
-      onWorkspaceCreated(workspace.id);
+      onWorkspaceCreated(workspace);
       setMessage(`Using seeded workspace: ${workspace.name}`);
     });
   }
@@ -106,6 +107,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
     <p>{t("Use synthetic records for this demo. Enter opening cash and reserve in Indian rupees.")}</p>
     <form onSubmit={createWorkspace} className="card form-grid">
       <label>{t("Business name")}<input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} required /></label>
+      <label>Business GSTIN (optional)<input value={form.businessGstin} onChange={event => setForm({ ...form, businessGstin: event.target.value.toUpperCase() })} pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]" maxLength="15" /></label>
       <label>{t("As-of date")}<input type="date" value={form.asOfDate} onChange={event => setForm({ ...form, asOfDate: event.target.value })} required /></label>
       <label>{t("Opening cash (₹)")}<input type="number" step="0.01" value={form.openingCashInr} onChange={event => setForm({ ...form, openingCashInr: event.target.value })} required /></label>
       <label>{t("Minimum reserve (₹)")}<input type="number" step="0.01" min="0" value={form.minimumReserveInr} onChange={event => setForm({ ...form, minimumReserveInr: event.target.value })} required /></label>

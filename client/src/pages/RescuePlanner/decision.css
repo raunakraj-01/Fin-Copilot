@@ -9,7 +9,7 @@
 .decision-controls, .decision-form-grid, .decision-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px; align-items:end; }
 .decision-page label { display:grid; gap:6px; font-size:14px; font-weight:600; }
 .decision-page input,.decision-page select { width:100%; border:1px solid var(--border-strong); border-radius:10px; background:var(--surface-2); padding:11px 12px; font:inherit; color:var(--text); min-height:44px; }
-.decision-page button { border:1px solid var(--accent); border-radius:8px; padding:11px 16px; font:inherit; font-weight:650; color:#062313; background:var(--accent); cursor:pointer; min-height:44px; }
+.decision-page button { border:1px solid var(--accent); border-radius:8px; padding:11px 16px; font:inherit; font-weight:650; color:#fff; background:var(--accent); cursor:pointer; min-height:44px; }
 .decision-page button.secondary { background:transparent; color:var(--accent); }
 .decision-page button:disabled { opacity:.55; cursor:wait; }
 .decision-page :focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
@@ -21,7 +21,7 @@
 .decision-metric::after { content:''; position:absolute; width:84px; height:84px; right:-40px; top:-40px; border-radius:50%; background:var(--accent-soft); }
 .decision-metric span,.decision-metric small { color:var(--muted); font-size:13px; }
 .decision-metric strong { font-size:23px; letter-spacing:-.025em; }
-.decision-notice { padding:16px 20px; border:1px solid rgba(242,186,85,.2); border-radius:10px; background:var(--warning-soft); color:#f3ce88; margin:18px 0; }
+.decision-notice { padding:16px 20px; border:1px solid rgba(147,105,31,.22); border-radius:10px; background:var(--warning-soft); color:#755418; margin:18px 0; }
 .decision-error { padding:16px; background:var(--danger-soft); border:1px solid rgba(255,107,107,.3); color:var(--danger); border-radius:10px; }
 .decision-empty { border:1px dashed var(--border-strong); border-radius:12px; padding:28px; background:var(--surface); color:var(--muted); }
 .decision-badge { display:inline-block; background:var(--accent-soft); color:var(--accent); padding:5px 9px; border-radius:24px; font-size:11px; font-weight:750; margin-bottom:12px; }
@@ -29,8 +29,8 @@
 .decision-chart { margin:18px 0; }
 .decision-chart svg { display:block; width:100%; height:auto; min-height:160px; }
 .decision-chart text { font-size:12px; fill:var(--muted); }
-.decision-chart .recharts-cartesian-grid line { stroke:rgba(255,255,255,.08); }
-.decision-chart .recharts-tooltip-wrapper { color:#17231e; }
+.decision-chart .recharts-cartesian-grid line { stroke:rgba(94,131,174,.15); }
+.decision-chart .recharts-tooltip-wrapper { color:var(--text); }
 .decision-chart figcaption { display:flex; flex-wrap:wrap; gap:10px 20px; font-size:13px; }
 .decision-chart figcaption span { display:flex; align-items:center; gap:6px; }
 .decision-chart i { width:12px; height:3px; display:inline-block; }

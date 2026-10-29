@@ -6,6 +6,7 @@ export const paise = z.number().int().safe().nonnegative();
 export const workspaceCreate = z.object({
   name: z.string().trim().min(1).max(100), asOfDate: dateOnly,
   openingCashPaise: z.number().int().safe(), minimumReservePaise: paise.default(0),
+  businessGstin: z.string().trim().toUpperCase().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/).optional(),
 }).strict();
 export const workspacePatch = workspaceCreate.partial().refine(value => Object.keys(value).length > 0, 'No fields supplied');
 

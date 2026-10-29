@@ -30,10 +30,10 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
     } catch (cause) { setInputError(cause.message); }
   }
   const series = result ? [
-    { label: 'Current forecast', daily: result.baseline.daily, color: '#94604e' },
-    { label: 'Proposed terms', daily: result.withOrder.daily, color: '#176c61' },
-    { label: 'Delayed final payment', daily: result.delayedCustomerScenario?.daily, color: '#7761a8' },
-    { label: 'Minimum advance terms', daily: result.minimumAdvance.scenario?.daily, color: '#287cbd' },
+    { label: 'Current forecast', daily: result.baseline.daily, color: '#2a2a2a' },
+    { label: 'Proposed terms', daily: result.withOrder.daily, color: '#5e83ae' },
+    { label: 'Delayed final payment', daily: result.delayedCustomerScenario?.daily, color: '#8a6d7d' },
+    { label: 'Minimum advance terms', daily: result.minimumAdvance.scenario?.daily, color: '#6f8792' },
   ] : [];
   return <main className="decision-page">
     <header><span className="decision-kicker">{t("CashFlow Copilot · Decision support")}</span><h1>{t("Can this order fit your cash plan?")}</h1><p className="decision-intro">{t("Enter payment dates and production costs to compare daily cash, test a delayed customer payment, and find the minimum advance needed to preserve your reserve.")}</p></header>

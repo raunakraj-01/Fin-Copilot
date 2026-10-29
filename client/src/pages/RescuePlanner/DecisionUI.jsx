@@ -62,11 +62,11 @@ export function CashChart({ series, reserve = 0, label = 'Daily cash comparison'
   return <figure className="decision-chart" aria-label={label}>
     <ResponsiveContainer width="100%" height={270} minWidth={0}>
       <LineChart data={data} margin={{ top: 16, right: 24, bottom: 12, left: 8 }} accessibilityLayer>
-        <CartesianGrid stroke="#dce5e4" strokeDasharray="3 3" />
+        <CartesianGrid stroke="#d9dfe5" strokeDasharray="3 3" />
         <XAxis dataKey="date" tickFormatter={value => value.slice(5)} minTickGap={50} />
         <YAxis width={110} tickFormatter={rupees} domain={[minimum => Math.min(0, reserve, minimum), maximum => Math.max(reserve, maximum)]} />
         <Tooltip labelFormatter={displayDate} formatter={value => rupees(value)} />
-        <ReferenceLine y={reserve} stroke="#8b661d" strokeDasharray="5 4" />
+        <ReferenceLine y={reserve} stroke="#93691f" strokeDasharray="5 4" />
         {available.map((series, index) => <Line key={series.label} type="stepAfter" dataKey={`series${index}`} name={series.label} stroke={series.color} strokeWidth={2.2} dot={false} isAnimationActive={false} />)}
       </LineChart>
     </ResponsiveContainer>
