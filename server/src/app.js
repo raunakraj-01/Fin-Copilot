@@ -9,15 +9,21 @@ import rescue from './routes/rescue.js';
 import orders from './routes/orders.js';
 import shock from './routes/shock.js';
 import copilot from './routes/copilot.js';
+import sync from './routes/sync.js';
+import reliabilityRoutes from './routes/reliability.js';
+import offers from './routes/offers.js';
+import razorpayWebhook from './routes/razorpayWebhook.js';
 import { errorResponse } from './utils/http.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
+app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json(app.locals.demoMode === true ? { ok: true, demoMode: true }
+  : app.locals.localSyntheticDev === true ? { ok: true, localSyntheticDev: true } : { ok: true }));
 app.use('/api/workspaces', workspaces);
 app.use('/api/workspaces/:workspaceId/imports', imports);
 app.use('/api/workspaces/:workspaceId', items);
@@ -27,6 +33,9 @@ app.use('/api/workspaces/:workspaceId/rescue', rescue);
 app.use('/api/workspaces/:workspaceId/orders', orders);
 app.use('/api/workspaces/:workspaceId/shock', shock);
 app.use('/api/workspaces/:workspaceId/copilot', copilot);
+app.use('/api/workspaces/:workspaceId/sync', sync);
+app.use('/api/workspaces/:workspaceId/reliability', reliabilityRoutes);
+app.use('/api/workspaces/:workspaceId/offers', offers);
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');

@@ -34,6 +34,9 @@ export function buildForecast({
   };
 
   for (const item of cashItems) {
+    for (const receipt of item.gatewayReceipts || []) addEvent({ id: receipt.paymentOfferId,
+      cashItemId: String(item.id || item._id), date: receipt.date, direction: 'in', amountPaise: receipt.amountPaise,
+      reason: 'gateway_receipt', counterparty: item.counterparty });
     if (['paid', 'cancelled'].includes(item.status)) continue;
     if (item.confidenceState === 'needs_review') {
       warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs verification`);

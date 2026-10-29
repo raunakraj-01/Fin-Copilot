@@ -5,7 +5,7 @@ import SavedPlans from './RescuePlanner/SavedPlans.jsx';
 
 const actionLabels = { accelerate_collection: 'Request early collection', defer_payable: 'Request supplier extension', delay_expense: 'Postpone discretionary expense' };
 
-export default function RescuePlanner({ workspaceId, apiBaseUrl }) {
+export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) {
   useLanguage();
   const [objective, setObjective] = useState('nonnegative');
   const [savedVersion, setSavedVersion] = useState(0);
@@ -57,7 +57,7 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl }) {
           <h2>{t(plan.fullyFeasible ? 'Plan' : 'Mitigation')} {t(index + 1)}</h2>
           <div className="decision-metrics"><Metric label={t("Lowest cash after actions")} value={rupees(plan.worstCashPaiseAfter)} /><Metric label={t("Known estimated costs")} value={rupees(plan.knownActionCostPaise)} note={plan.containsUnknownCosts ? 'Additional unknown fees are excluded' : 'Deducted on the displayed fee dates'} /></div>
           {plan.partialReason && <p>{t(plan.partialReason)}{t(". Remaining breach: ")}{t(displayDate(plan.firstBreachAfter))}.</p>}
-          <ol className="decision-action-list">{plan.actions.map(action => <li key={`${action.cashItemId}-${action.type}`}><strong>{t(actionLabels[action.type])}</strong>{t(" for ")}{action.externalId || action.cashItemId}: {t(rupees(action.amountPaise))}{t(", from ")}{displayDate(action.fromDate)}{t(" to ")}{displayDate(action.toDate)}{t(". Estimated fee: ")}{t(action.estimatedCostPaise == null ? 'unknown (excluded)' : `${rupees(action.estimatedCostPaise)} on ${displayDate(action.feeDate)}`)}{t(". Requires agreement.")}</li>)}</ol>
+          <ol className="decision-action-list">{plan.actions.map(action => <li key={`${action.cashItemId}-${action.type}`}><strong>{t(actionLabels[action.type])}</strong>{t(" for ")}{action.externalId || action.cashItemId}: {t(rupees(action.amountPaise))}{t(", from ")}{displayDate(action.fromDate)}{t(" to ")}{displayDate(action.toDate)}{t(". Estimated fee: ")}{t(action.estimatedCostPaise == null ? 'unknown (excluded)' : `${rupees(action.estimatedCostPaise)} on ${displayDate(action.feeDate)}`)}{t(". Requires agreement.")}{action.type === 'accelerate_collection' && <button type="button" className="secondary" onClick={() => onOpenOffer?.(action)}>Draft WhatsApp offer</button>}</li>)}</ol>
           <button type="button" disabled={saveState.busy} onClick={() => savePlan(plan)}>{t(saveState.busy && saveState.planId === plan.planId ? 'Saving proposal…' : 'Save proposed plan')}</button>
           {saveState.planId === plan.planId && saveState.message && <p role="status">{t(saveState.message)}</p>}
           {saveState.planId === plan.planId && saveState.error && <p className="decision-error" role="alert">{t(saveState.error)}</p>}

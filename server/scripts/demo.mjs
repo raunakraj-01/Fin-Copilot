@@ -6,6 +6,11 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../src/app.js';
+import { randomBytes } from 'node:crypto';
+import Workspace from '../src/models/Workspace.js';
+import SyncBatch from '../src/models/SyncBatch.js';
+import PaymentObservation from '../src/models/PaymentObservation.js';
+import { pseudonym } from '../src/services/finance/reliability.js';
 
 const clientDist = fileURLToPath(new URL('../../client/dist/', import.meta.url));
 let database;
@@ -23,6 +28,18 @@ try {
     env: { ...process.env, MONGODB_URI: uri }, stdio: 'pipe', timeout: 30_000,
   });
   await mongoose.connect(uri);
+  process.env.TELEMETRY_HMAC_KEY = randomBytes(32).toString('hex');
+  app.locals.demoMode = true;
+  const demoWorkspaceId = '650000000000000000000001';
+  await SyncBatch.create({ workspaceId: demoWorkspaceId, companyId: 'Synthetic Tally company', batchId: '00000000-0000-4000-8000-000000000001', count: 5 });
+  const buyerHash = pseudonym('22AAAAA0000A1Z5');
+  for (let index = 0; index < 5; index++) {
+    const supplier = await Workspace.create({ name: `Synthetic supplier ${index + 1}`, asOfDate: '2026-11-01', openingCashPaise: 0 });
+    await PaymentObservation.create({ workspaceId: supplier._id, buyerHash,
+      supplierHash: pseudonym(String(supplier._id)), sourceId: `demo-payment-${index}`,
+      invoiceDate: '2026-08-01', dueDate: '2026-09-15', clearedDate: `2026-10-${String(index + 5).padStart(2, '0')}`,
+      amountPaise: 1000000, source: 'tally_verified' });
+  }
   const demo = express();
   demo.use(express.static(clientDist));
   demo.use(app);
