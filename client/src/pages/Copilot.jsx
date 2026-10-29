@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AsyncActionButton from '../components/AsyncActionButton.jsx';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 const sessionId = crypto.randomUUID();
@@ -31,6 +32,6 @@ export default function Copilot({ workspaceId }) {
       <strong>You: {entry.question}</strong><p>{entry.reply}</p>
       {entry.facts?.length > 0 && <div className="copilot-facts">{entry.facts.map(fact => <span key={fact.label}>{fact.label}: <b>{fact.value}</b></span>)}</div>}
     </article>) : <p>Try “When will I run out of cash?” or “Which customers are overdue?”</p>}</div>
-    <form onSubmit={send} className="copilot-form"><label htmlFor="copilot-message">Your question</label><input id="copilot-message" value={message} onChange={event => setMessage(event.target.value)} maxLength={2000} disabled={!workspaceId || busy} /><button disabled={!workspaceId || busy || !message.trim()}>{busy ? 'Checking…' : 'Ask'}</button></form>
+    <form onSubmit={send} className="copilot-form"><label htmlFor="copilot-message">Your question</label><input id="copilot-message" value={message} onChange={event => setMessage(event.target.value)} maxLength={2000} disabled={!workspaceId || busy} /><AsyncActionButton type="submit" disabled={!workspaceId || busy || !message.trim()} busy={busy} idleLabel="Ask" doneLabel="Answer ready" steps={["Checking records…", "Reading cash forecast…", "Grounding the answer…"]} /></form>
   </section>;
 }

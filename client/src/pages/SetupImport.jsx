@@ -2,6 +2,7 @@ import { t, useLanguage, locale } from '../i18n/index.js';
 import React, { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
 import ManualRecords from '../components/ManualRecords.jsx';
+import AsyncActionButton from '../components/AsyncActionButton.jsx';
 
 const fields = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDate', 'expectedDate', 'status',
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
@@ -21,6 +22,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   const [excluded, setExcluded] = useState([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [activity, setActivity] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -35,15 +37,15 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
     return () => { active = false; };
   }, [workspaceId]);
 
-  async function run(action) {
-    setBusy(true); setMessage('');
+  async function run(name, action) {
+    setBusy(true); setActivity(name); setMessage('');
     try { await action(); } catch (error) { setMessage(error.message); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setActivity(''); }
   }
 
   function createWorkspace(event) {
     event.preventDefault();
-    run(async () => {
+    run('workspace', async () => {
       const { workspace } = await json('/workspaces', 'POST', { name: form.name, ...(form.businessGstin ? { businessGstin: form.businessGstin.toUpperCase() } : {}), asOfDate: form.asOfDate,
         openingCashPaise: Math.round(Number(form.openingCashInr) * 100),
         minimumReservePaise: Math.round(Number(form.minimumReserveInr) * 100) });
@@ -53,7 +55,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   }
 
   function updateWorkspace() {
-    run(async () => {
+    run('workspace', async () => {
       const { workspace } = await json(`/workspaces/${workspaceId}`, 'PATCH', { name: form.name, ...(form.businessGstin ? { businessGstin: form.businessGstin.toUpperCase() } : {}), asOfDate: form.asOfDate,
         openingCashPaise: Math.round(Number(form.openingCashInr) * 100),
         minimumReservePaise: Math.round(Number(form.minimumReserveInr) * 100) });
@@ -63,7 +65,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   }
 
   function useSeed() {
-    run(async () => {
+    run('seed', async () => {
       const id = '650000000000000000000001';
       const { workspace } = await api(`/workspaces/${id}`);
       onWorkspaceCreated(workspace);
@@ -73,7 +75,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
 
   function inspect(event) {
     event.preventDefault();
-    run(async () => {
+    run('inspect', async () => {
       const body = new FormData(); body.append('kind', kind); body.append('file', file);
       const result = await api(`/workspaces/${workspaceId}/imports/inspect`, { method: 'POST', body });
       setBatchId(result.batchId); setHeaders(result.headers); setMapping(result.suggestedMapping);
@@ -83,7 +85,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   }
 
   function validateBatch() {
-    run(async () => {
+    run('validate', async () => {
       const result = await json(`/workspaces/${workspaceId}/imports/${batchId}/validate`, 'POST', { mapping });
       setRows(result.rows);
       setMessage(`${result.counts.accepted} accepted, ${result.counts.needsReview} need review, ${result.counts.rejected} rejected.`);
@@ -91,7 +93,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   }
 
   function commitBatch() {
-    run(async () => {
+    run('commit', async () => {
       const result = await json(`/workspaces/${workspaceId}/imports/${batchId}/commit`, 'POST', {
         corrections: Object.entries(corrections).map(([rowNumber, values]) => ({ rowNumber: Number(rowNumber), values })),
         excludedRowNumbers: excluded,
@@ -111,17 +113,19 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
       <label>{t("As-of date")}<input type="date" value={form.asOfDate} onChange={event => setForm({ ...form, asOfDate: event.target.value })} required /></label>
       <label>{t("Opening cash (₹)")}<input type="number" step="0.01" value={form.openingCashInr} onChange={event => setForm({ ...form, openingCashInr: event.target.value })} required /></label>
       <label>{t("Minimum reserve (₹)")}<input type="number" step="0.01" min="0" value={form.minimumReserveInr} onChange={event => setForm({ ...form, minimumReserveInr: event.target.value })} required /></label>
-      <button disabled={busy}>{t("Create new workspace")}</button>
-      {workspaceId && <button type="button" disabled={busy} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
+      <div className="form-actions">
+        <button disabled={busy}>{t("Create new workspace")}</button>
+        {workspaceId && <button type="button" className="secondary" disabled={busy} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
+      </div>
     </form>
-    <button type="button" disabled={busy} onClick={useSeed}>{t("Use seeded demo workspace")}</button>
+    <div className="page-actions"><button type="button" className="secondary" disabled={busy} onClick={useSeed}>{t("Use seeded demo workspace")}</button></div>
     {workspaceId && <>
       <p>{t("Active workspace: ")}<code>{workspaceId}</code></p>
       <p>{t("CSV templates: ")}<a href="/templates/receivables.csv" download>{t("Receivables")}</a> · <a href="/templates/payables.csv" download>{t("Payables")}</a></p>
       <form onSubmit={inspect} className="card form-grid">
         <label>{t("Import type")}<select value={kind} onChange={event => setKind(event.target.value)}><option value="receivables">{t("Receivables")}</option><option value="payables">{t("Payables")}</option></select></label>
         <label>{t("CSV or XLSX file")}<input type="file" accept=".csv,.xlsx" onChange={event => setFile(event.target.files[0])} required /></label>
-        <button disabled={busy || !file}>{t("Inspect file")}</button>
+        <AsyncActionButton type="submit" disabled={busy || !file} busy={busy && activity === 'inspect'} idleLabel={t("Inspect file")} doneLabel={t("File inspected")} steps={[t("Reading the file…"), t("Detecting columns…"), t("Suggesting mappings…")]} />
       </form>
     </>}
     {batchId && <div className="card">
@@ -130,7 +134,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
         <select value={mapping[field] || ''} onChange={event => { setMapping({ ...mapping, [field]: event.target.value }); setRows([]); setCorrections({}); }}>
           <option value="">{t("Unmapped")}</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}
         </select></label>)}</div>
-      <button disabled={busy} onClick={validateBatch}>{t("Validate rows")}</button>
+      <AsyncActionButton disabled={busy} busy={busy && activity === 'validate'} onClick={validateBatch} idleLabel={t("Validate rows")} doneLabel={t("Review ready")} steps={[t("Validating rows…"), t("Checking dates and amounts…"), t("Flagging uncertain records…")]} />
     </div>}
     {rows.length > 0 && <div className="card">
       <h2>{t("Review rows")}</h2>
@@ -144,7 +148,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
             onChange={event => setCorrections({ ...corrections, [row.rowNumber]: { ...corrections[row.rowNumber], [field]: event.target.value } })} />
         </label>)}</div>
       </details>)}
-      <button disabled={busy} onClick={commitBatch}>{t("Commit reviewed rows")}</button>
+      <AsyncActionButton disabled={busy} busy={busy && activity === 'commit'} onClick={commitBatch} idleLabel={t("Commit reviewed rows")} doneLabel={t("Import complete")} steps={[t("Saving reviewed rows…"), t("Updating cash records…"), t("Refreshing forecast…")]} />
     </div>}
     {workspaceId && <ManualRecords workspaceId={workspaceId} refreshKey={refreshKey} />}
     {message && <p role="status" className="notice">{t(message)}</p>}

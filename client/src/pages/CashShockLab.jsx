@@ -1,6 +1,7 @@
 import { t, useLanguage } from '../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
+import AsyncActionButton from '../components/AsyncActionButton.jsx';
 
 const sourceLink = id => `#cash-source-${encodeURIComponent(id)}`;
 
@@ -61,7 +62,7 @@ export default function CashShockLab({ workspaceId, apiBaseUrl }) {
         {!customers.length && <option value="">{t("No dated customer receipts")}</option>}{customers.map(customer => <option key={customer}>{customer}</option>)}
       </select></label><label>{t("Payment delay")}<select value={delayDays} disabled={loading} onChange={event => { setDelayDays(Number(event.target.value)); clear(); }}>
         {[7, 15, 30].map(days => <option key={days} value={days}>{t(days)}{t(" days")}</option>)}</select></label>
-        <button disabled={loading} onClick={() => run({ ...(counterparty ? { counterparty } : {}), delayDays })}>{t(loading ? 'Testing cash resilience…' : 'Run stress test')}</button></div>
+        <AsyncActionButton disabled={loading} busy={loading} onClick={() => run({ ...(counterparty ? { counterparty } : {}), delayDays })} idleLabel={t("Run stress test")} doneLabel={t("Stress test ready")} steps={[t("Testing cash resilience…"), t("Rebuilding daily forecast…"), t("Stressing rescue options…"), t("Ranking collection moves…")]} /></div>
       <p className="decision-muted">{t("All dated receipts from this customer move together. Your stored records stay unchanged.")}</p>
     </section>}
     {loading && <p role="status">{t("Calculating the full forecast and checking the top rescue plans…")}</p>}

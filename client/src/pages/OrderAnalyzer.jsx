@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
 import { inputRupees, parseRupees } from './OrderAnalyzer/money.js';
 import SavedScenarios, { SaveScenario } from './OrderAnalyzer/SavedScenarios.jsx';
+import AsyncActionButton from '../components/AsyncActionButton.jsx';
 
 export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
   useLanguage();
@@ -51,7 +52,7 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
         <button type="button" className="secondary" aria-label={`Remove payment ${index + 1}`} onClick={() => { changed(); setCostLines(current => current.filter((_, position) => position !== index)); }}>{t("Remove")}</button>
       </div>)}<button type="button" className="secondary" disabled={costLines.length >= 100} onClick={() => { changed(); setCostLines(current => [...current, { description: '', amount: '', paymentDate: '' }]); }}>{t("Add payment")}</button></fieldset>
       <p className="decision-muted">{t("Amounts are in rupees; Indian comma formatting is accepted. The advance is part of the total order value. A delay of 0 skips the stress scenario.")}</p>
-      <div className="decision-actions"><button type="submit">{t(loading ? 'Checking daily cash…' : 'Analyze order')}</button></div></fieldset>
+      <div className="decision-actions"><AsyncActionButton type="submit" busy={loading} idleLabel={t("Analyze order")} doneLabel={t("Analysis ready")} steps={[t("Checking daily cash…"), t("Adding production payments…"), t("Stressing customer delay…"), t("Finding minimum advance…")]} /></div></fieldset>
     </form>}
     {(error || inputError) && <p className="decision-error" role="alert">{t(inputError || error)}</p>}
     {loading && <p role="status">{t("Testing cash coverage and the minimum possible advance…")}</p>}

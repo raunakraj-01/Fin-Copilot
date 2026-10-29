@@ -1,0 +1,24 @@
+.rb-click-spark { position:relative; isolation:isolate; min-height:100vh; }
+.rb-click-spark > .shell { position:relative; z-index:1; }
+.rb-spark-canvas { position:fixed; inset:0; z-index:100; pointer-events:none; }
+
+.rb-aurora { position:fixed; z-index:0; inset:0; overflow:hidden; pointer-events:none; opacity:.72; }
+.rb-aurora i { position:absolute; width:58vw; height:36vw; min-width:420px; min-height:260px; border-radius:50%; filter:blur(72px); opacity:.18; transform:translate3d(0,0,0); animation:rb-aurora-drift 18s ease-in-out infinite alternate; }
+.rb-aurora i:nth-child(1) { left:30%; top:-22%; background:#5e83ae; }
+.rb-aurora i:nth-child(2) { right:-18%; top:18%; background:#a7bfd7; animation-delay:-6s; animation-duration:22s; }
+.rb-aurora i:nth-child(3) { left:4%; bottom:-28%; background:#d7c7ae; animation-delay:-11s; animation-duration:26s; }
+@keyframes rb-aurora-drift { to { transform:translate3d(7vw,5vh,0) scale(1.12) rotate(8deg); } }
+
+.rb-shiny-text { display:inline-block; color:transparent; background:linear-gradient(105deg, rgba(255,255,255,.82) 22%, #fff 42%, #8fb0d3 50%, #fff 58%, rgba(255,255,255,.82) 78%) 0 0 / 260% 100%; -webkit-background-clip:text; background-clip:text; animation:rb-shine 5.8s ease-in-out infinite; }
+@keyframes rb-shine { 0%,28% { background-position:100% 0; } 62%,100% { background-position:-70% 0; } }
+
+.rb-reveal { animation:rb-reveal-in .58s cubic-bezier(.22,1,.36,1) both; transform-origin:50% 0; }
+@keyframes rb-reveal-in { from { opacity:0; filter:blur(8px); transform:translateY(16px) scale(.992); } to { opacity:1; filter:blur(0); transform:none; } }
+
+.rb-spotlight-field { min-width:0; }
+.rb-spotlight-field :is(.card,.decision-card,.decision-metric,.decision-empty) { isolation:isolate; background-color:var(--surface); background-image:radial-gradient(300px circle at var(--rb-x,50%) var(--rb-y,50%), rgba(94,131,174,var(--rb-glow,0)), transparent 68%); transition:border-color .2s ease,transform .2s ease,background-color .2s ease; }
+.rb-spotlight-field :is(.card,.decision-card,.decision-metric,.decision-empty)[data-spotlight-active="true"] { --rb-glow:.18; }
+
+@media (hover:none) { .rb-spotlight-field :is(.card,.decision-card,.decision-metric,.decision-empty) { background-image:none; } }
+@media (max-width:540px) { .rb-aurora { opacity:.46; } .rb-aurora i { filter:blur(54px); } }
+@media (prefers-reduced-motion:reduce) { .rb-aurora i,.rb-shiny-text,.rb-reveal { animation:none; } .rb-reveal { opacity:1; filter:none; transform:none; } }

@@ -2,6 +2,7 @@ import { t, useLanguage } from '../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
 import SavedPlans from './RescuePlanner/SavedPlans.jsx';
+import AsyncActionButton from '../components/AsyncActionButton.jsx';
 
 const actionLabels = { accelerate_collection: 'Request early collection', defer_payable: 'Request supplier extension', delay_expense: 'Postpone discretionary expense' };
 
@@ -42,7 +43,7 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) 
     <header><span className="decision-kicker">{t("CashFlow Copilot · Decision support")}</span><h1>{t("Build a cash rescue plan")}</h1><p className="decision-intro">{t("Explore earlier customer collections and flexible payment dates. Every option is checked across the entire cash forecast and remains conditional on agreement.")}</p></header>
     {!workspaceId ? <div className="decision-empty">{t("Create or select a workspace, verify its records, then return to find rescue options.")}</div> : <section className="decision-card"><div className="decision-controls">
       <label>{t("Cash objective")}<select value={objective} disabled={loading} onChange={event => { saveController.current?.abort(); setObjective(event.target.value); clear(); setSaveState({ planId: null, busy: false, message: '', error: '' }); }}><option value="nonnegative">{t("Keep cash at or above zero")}</option><option value="minimum_reserve">{t("Preserve the minimum reserve")}</option></select></label>
-      <button onClick={() => { saveController.current?.abort(); setSaveState({ planId: null, busy: false, message: '', error: '' }); run({ objective, maxCandidates: 12, maxPlans: 3 }); }} disabled={loading}>{t(loading ? 'Testing possible plans…' : 'Find rescue options')}</button>
+      <AsyncActionButton onClick={() => { saveController.current?.abort(); setSaveState({ planId: null, busy: false, message: '', error: '' }); run({ objective, maxCandidates: 12, maxPlans: 3 }); }} disabled={loading} busy={loading} idleLabel={t("Find rescue options")} doneLabel={t("Options ready")} steps={[t("Finding risky options…"), t("Testing collection timing…"), t("Comparing payment deferrals…"), t("Ranking practical plans…")]} />
     </div><p className="decision-muted">{t("Uses only owner-permitted changes to open invoices and payments. Viewing a plan does not change your records.")}</p></section>}
     {error && <p className="decision-error" role="alert">{t(error)}</p>}
     {loading && <p role="status">{t("Checking candidate combinations across every forecast day…")}</p>}

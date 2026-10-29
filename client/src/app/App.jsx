@@ -7,6 +7,8 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
+import LandingPage from '../components/LandingPage.jsx';
+import { AuroraBackdrop, ClickSpark, RevealContent, ShinyText, SpotlightField } from '../components/reactbits/ReactBitsEffects.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport],
@@ -30,6 +32,7 @@ const icons = {
 
 export default function App() {
   const language = useLanguage();
+  const [showLanding, setShowLanding] = useState(true);
   const [page, setPage] = useState('setup');
   const [operationsItemId, setOperationsItemId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('cashflowSidebarCollapsed') === '1');
@@ -51,10 +54,9 @@ export default function App() {
     return next;
   });
   const Page = pages[page][2];
-  return <div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+  return <><ClickSpark><AuroraBackdrop/><div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
-      <div className="sidebar-head"><div className="brand"><span className="brand-mark">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div>
-        <button className="sidebar-toggle" type="button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={sidebarCollapsed ? 'm9 18 6-6-6-6' : 'm15 18-6-6 6-6'} /></svg></button></div>
+      <div className="sidebar-head"><div className="brand"><span className="brand-mark"><img src="/brand/cashflow-copilot-logo.png" alt="" /></span><span><ShinyText>{t("CashFlow")}</ShinyText><br/><small>{t("Copilot")}</small></span></div></div>
       <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label]]) =>
         <button key={key} type="button" aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={() => setPage(key)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">{t(icons[key])}</svg><span>{t(label)}</span>
@@ -63,12 +65,19 @@ export default function App() {
     </aside>
     <div className="app-area">
       <header className="topbar">
-        <div className="page-title"><strong>{t(pages[page][0])}</strong></div>
+        <div className="topbar-leading">
+          <button className="sidebar-toggle" type="button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path d={sidebarCollapsed ? 'm13 9 3 3-3 3' : 'm16 9-3 3 3 3'} /></svg>
+          </button>
+          <div className="topbar-wordmark" aria-label={`${t('CashFlow')} ${t('Copilot')}`}>
+            <ShinyText className="topbar-brand-shine">{t("CashFlow")} {t("Copilot")}</ShinyText>
+          </div>
+        </div>
         <div className="topbar-actions"><label className="language-picker">Profile<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select profile</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
           <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label></div>
       </header>
-      <div className="content"><Page workspaceId={workspaceId} onWorkspaceCreated={selectWorkspace}
-        operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); setPage('operations'); }} /></div>
+      <SpotlightField className="content"><RevealContent key={page}><Page workspaceId={workspaceId} onWorkspaceCreated={selectWorkspace}
+        operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); setPage('operations'); }} /></RevealContent></SpotlightField>
     </div>
-  </div>;
+  </div></ClickSpark>{showLanding && <LandingPage onStart={() => setShowLanding(false)} />}</>;
 }

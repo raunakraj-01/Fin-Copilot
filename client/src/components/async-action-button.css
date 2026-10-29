@@ -1,0 +1,14 @@
+.async-action-button { position:relative; min-width:min(100%,190px); display:inline-flex; align-items:center; justify-content:center; gap:9px; overflow:hidden; transition:min-width .3s cubic-bezier(.22,1,.36,1),background .2s ease,border-color .2s ease,transform .15s ease; }
+.async-action-button.is-running { min-width:min(100%,270px); color:var(--text); background:var(--surface-solid); border-color:rgba(94,131,174,.42); box-shadow:0 8px 24px rgba(49,55,62,.1); }
+.async-action-button.is-done { color:#fff; background:#557b69; }
+.async-action-symbol { width:20px; height:20px; flex:0 0 20px; display:grid; place-items:center; }
+.async-action-symbol svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.async-action-copy { min-width:0; animation:async-copy-in .32s cubic-bezier(.22,1,.36,1) both; }
+.async-action-progress { display:flex; align-items:center; gap:4px; margin-left:2px; }
+.async-action-progress i { width:4px; height:4px; border-radius:50%; background:rgba(42,42,42,.2); transition:width .2s ease,background .2s ease; }
+.async-action-progress i.active { width:13px; border-radius:5px; background:var(--accent); }
+.async-action-spinner { width:18px; height:18px; border:2px solid rgba(94,131,174,.22); border-top-color:var(--accent); border-radius:50%; animation:async-spin .75s linear infinite; }
+@keyframes async-spin { to { transform:rotate(360deg); } }
+@keyframes async-copy-in { from { opacity:0; filter:blur(3px); transform:translateY(7px) scale(.96); } to { opacity:1; filter:blur(0); transform:none; } }
+@media(max-width:540px) { .async-action-button,.async-action-button.is-running { width:100%; min-width:0; } }
+@media(prefers-reduced-motion:reduce) { .async-action-button,.async-action-copy,.async-action-spinner { animation:none; transition:none; } }
