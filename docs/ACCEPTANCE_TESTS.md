@@ -37,7 +37,7 @@
 ### B1. Correct early partial receipt and no duplicated money
 - Use A3 timeline.
 - Owner permits bringing ₹2,00,000 from the Nov 26 customer invoice forward to Nov 4.
-- **Expected:** Nov 4 +₹2,00,000, Nov 26 now +₹2,00,000 (not +₹4,00,000); Nov 11 minimum cash = ₹0; original record unchanged by simulation.
+- **Expected:** Nov 4 +₹2,00,000 and −₹3,000 action fee; Nov 26 now +₹2,00,000 (not +₹4,00,000); Nov 11 minimum cash = −₹3,000, a partial mitigation; original record unchanged by simulation.
 
 ### B2. No illegal payable deferral
 - Payroll Nov 11 marked mandatory and non-negotiable.

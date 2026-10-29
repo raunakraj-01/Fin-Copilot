@@ -76,28 +76,29 @@ Returns:
 {
   "baseline":{"worstCashPaise":-20000000,"firstNegativeDate":"2026-11-06"},
   "objective":"nonnegative",
-  "candidateCount":5,
-  "plans":[{
+  "candidateCount":1,
+  "plans":[],
+  "partialMitigations":[{
     "planId":"simulation-1",
-    "fullyFeasible":true,
-    "worstCashPaiseAfter":0,
+    "fullyFeasible":false,
+    "feasibility":"insufficient",
+    "worstCashPaiseAfter":-300000,
     "knownActionCostPaise":300000,
     "containsUnknownCosts":false,
     "actions":[{
       "cashItemId":"...","externalId":"INV-R100",
       "type":"accelerate_collection","amountPaise":20000000,
       "fromDate":"2026-11-26","toDate":"2026-11-04",
-      "estimatedCostPaise":300000,"requiresAgreement":true
+      "estimatedCostPaise":300000,"feeDate":"2026-11-04","requiresAgreement":true
     }],
     "daily":[],
     "warnings":["Plan works only if agreed actions happen on assumed dates"]
   }],
-  "partialMitigations":[],
-  "message":null
+  "message":"No feasible plan found under entered constraints among the tested combinations across the full horizon"
 }
 ```
 
-`plans` is empty if none fully satisfies the objective; return clear `message` and partial mitigations instead. A plan is only `fullyFeasible` if **every** forecast day meets the selected objective. If costs unknown, do not claim global cheapest plan.
+This abbreviated example permits only early collection. The bundled fixture also permits supplier deferral and therefore returns other complete plans. `plans` is empty if none fully satisfies the objective; return clear `message` and partial mitigations instead. A plan is only `fullyFeasible` if **every** forecast day meets the selected objective after known dated fees. Unknown fees are excluded and may change feasibility; do not claim a globally cheapest plan. `constraints.actionCostDate` overrides the fee date; otherwise the proposed action date is explicitly assumed. Positive known fees must lie after the snapshot and within the forecast horizon.
 
 ### `POST /api/workspaces/:workspaceId/rescue/plans`
 

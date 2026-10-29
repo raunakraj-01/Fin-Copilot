@@ -1,13 +1,15 @@
+import { t, useLanguage, locale } from '../i18n/index.js';
 import React, { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
 import ManualRecords from '../components/ManualRecords.jsx';
 
 const fields = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDate', 'expectedDate', 'status',
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
-  'maxEarlyCollectionInr', 'estimatedActionCostInr'];
-const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value / 100);
+  'maxEarlyCollectionInr', 'estimatedActionCostInr', 'actionCostDate'];
+const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
 export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
+  useLanguage();
   const [form, setForm] = useState({ name: 'Demo Packaging Supplier', asOfDate: '2026-11-01', openingCashInr: '200000', minimumReserveInr: '0' });
   const [kind, setKind] = useState('receivables');
   const [file, setFile] = useState(null);
@@ -100,49 +102,49 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
   }
 
   return <section>
-    <h1>Setup & Import</h1>
-    <p>Use synthetic records for this demo. Enter opening cash and reserve in Indian rupees.</p>
+    <h1>{t("Setup & Import")}</h1>
+    <p>{t("Use synthetic records for this demo. Enter opening cash and reserve in Indian rupees.")}</p>
     <form onSubmit={createWorkspace} className="card form-grid">
-      <label>Business name<input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} required /></label>
-      <label>As-of date<input type="date" value={form.asOfDate} onChange={event => setForm({ ...form, asOfDate: event.target.value })} required /></label>
-      <label>Opening cash (₹)<input type="number" step="0.01" value={form.openingCashInr} onChange={event => setForm({ ...form, openingCashInr: event.target.value })} required /></label>
-      <label>Minimum reserve (₹)<input type="number" step="0.01" min="0" value={form.minimumReserveInr} onChange={event => setForm({ ...form, minimumReserveInr: event.target.value })} required /></label>
-      <button disabled={busy}>Create new workspace</button>
-      {workspaceId && <button type="button" disabled={busy} onClick={updateWorkspace}>Save active workspace</button>}
+      <label>{t("Business name")}<input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} required /></label>
+      <label>{t("As-of date")}<input type="date" value={form.asOfDate} onChange={event => setForm({ ...form, asOfDate: event.target.value })} required /></label>
+      <label>{t("Opening cash (₹)")}<input type="number" step="0.01" value={form.openingCashInr} onChange={event => setForm({ ...form, openingCashInr: event.target.value })} required /></label>
+      <label>{t("Minimum reserve (₹)")}<input type="number" step="0.01" min="0" value={form.minimumReserveInr} onChange={event => setForm({ ...form, minimumReserveInr: event.target.value })} required /></label>
+      <button disabled={busy}>{t("Create new workspace")}</button>
+      {workspaceId && <button type="button" disabled={busy} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
     </form>
-    <button type="button" disabled={busy} onClick={useSeed}>Use seeded demo workspace</button>
+    <button type="button" disabled={busy} onClick={useSeed}>{t("Use seeded demo workspace")}</button>
     {workspaceId && <>
-      <p>Active workspace: <code>{workspaceId}</code></p>
-      <p>CSV templates: <a href="/templates/receivables.csv" download>Receivables</a> · <a href="/templates/payables.csv" download>Payables</a></p>
+      <p>{t("Active workspace: ")}<code>{workspaceId}</code></p>
+      <p>{t("CSV templates: ")}<a href="/templates/receivables.csv" download>{t("Receivables")}</a> · <a href="/templates/payables.csv" download>{t("Payables")}</a></p>
       <form onSubmit={inspect} className="card form-grid">
-        <label>Import type<select value={kind} onChange={event => setKind(event.target.value)}><option value="receivables">Receivables</option><option value="payables">Payables</option></select></label>
-        <label>CSV or XLSX file<input type="file" accept=".csv,.xlsx" onChange={event => setFile(event.target.files[0])} required /></label>
-        <button disabled={busy || !file}>Inspect file</button>
+        <label>{t("Import type")}<select value={kind} onChange={event => setKind(event.target.value)}><option value="receivables">{t("Receivables")}</option><option value="payables">{t("Payables")}</option></select></label>
+        <label>{t("CSV or XLSX file")}<input type="file" accept=".csv,.xlsx" onChange={event => setFile(event.target.files[0])} required /></label>
+        <button disabled={busy || !file}>{t("Inspect file")}</button>
       </form>
     </>}
     {batchId && <div className="card">
-      <h2>Column mapping</h2>
-      <div className="form-grid">{fields.map(field => <label key={field}>{field}
+      <h2>{t("Column mapping")}</h2>
+      <div className="form-grid">{fields.map(field => <label key={field}>{t(field)}
         <select value={mapping[field] || ''} onChange={event => { setMapping({ ...mapping, [field]: event.target.value }); setRows([]); setCorrections({}); }}>
-          <option value="">Unmapped</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}
+          <option value="">{t("Unmapped")}</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}
         </select></label>)}</div>
-      <button disabled={busy} onClick={validateBatch}>Validate rows</button>
+      <button disabled={busy} onClick={validateBatch}>{t("Validate rows")}</button>
     </div>}
     {rows.length > 0 && <div className="card">
-      <h2>Review rows</h2>
-      <p>Correct flagged cells or exclude the row before committing. Accepted rows will be saved with entered expected dates.</p>
+      <h2>{t("Review rows")}</h2>
+      <p>{t("Correct flagged cells or exclude the row before committing. Accepted rows will be saved with entered expected dates.")}</p>
       {rows.map(row => <details key={row.rowNumber} open={row.state !== 'accepted'}>
-        <summary>Row {row.rowNumber}: {row.item.externalId || 'No ID'} · {row.item.amountPaise === undefined ? 'Invalid amount' : money(row.item.amountPaise)} · {row.state}</summary>
-        {row.issues.map(issue => <p className="issue" key={`${issue.field}-${issue.code}`}>{issue.field}: {issue.message}</p>)}
-        <label><input type="checkbox" checked={excluded.includes(row.rowNumber)} onChange={event => setExcluded(event.target.checked ? [...excluded, row.rowNumber] : excluded.filter(number => number !== row.rowNumber))} /> Exclude row</label>
-        <div className="form-grid">{fields.map(field => <label key={field}>{field}{!mapping[field] && ' (manual)'}
+        <summary>{t("Row ")}{t(row.rowNumber)}: {row.item.externalId || 'No ID'} · {t(row.item.amountPaise === undefined ? 'Invalid amount' : money(row.item.amountPaise))} · {t(row.state)}</summary>
+        {row.issues.map(issue => <p className="issue" key={`${issue.field}-${issue.code}`}>{t(issue.field)}: {t(issue.message)}</p>)}
+        <label><input type="checkbox" checked={excluded.includes(row.rowNumber)} onChange={event => setExcluded(event.target.checked ? [...excluded, row.rowNumber] : excluded.filter(number => number !== row.rowNumber))} />{t(" Exclude row")}</label>
+        <div className="form-grid">{fields.map(field => <label key={field}>{t(field)}{t(!mapping[field] && ' (manual)')}
           <input value={corrections[row.rowNumber]?.[field] ?? row.values[mapping[field]] ?? ''}
             onChange={event => setCorrections({ ...corrections, [row.rowNumber]: { ...corrections[row.rowNumber], [field]: event.target.value } })} />
         </label>)}</div>
       </details>)}
-      <button disabled={busy} onClick={commitBatch}>Commit reviewed rows</button>
+      <button disabled={busy} onClick={commitBatch}>{t("Commit reviewed rows")}</button>
     </div>}
     {workspaceId && <ManualRecords workspaceId={workspaceId} refreshKey={refreshKey} />}
-    {message && <p role="status" className="notice">{message}</p>}
+    {message && <p role="status" className="notice">{t(message)}</p>}
   </section>;
 }

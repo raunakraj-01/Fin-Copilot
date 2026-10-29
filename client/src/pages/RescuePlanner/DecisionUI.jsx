@@ -1,9 +1,10 @@
+import { t, useLanguage, locale } from '../../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import './decision.css';
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-export const rupees = paise => paise == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(paise / 100);
-export const displayDate = value => value ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)) : 'None within forecast';
+export const rupees = paise => paise == null ? '—' : new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(paise / 100);
+export const displayDate = value => value ? new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)) : t('None within forecast');
 export const decisionApiBase = apiBaseUrl => (apiBaseUrl || import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
 export function useAnalysis(workspaceId, feature, apiBaseUrl) {
@@ -33,7 +34,7 @@ export function useAnalysis(workspaceId, feature, apiBaseUrl) {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error?.message || 'Analysis failed. Please try again.');
-      if (!payload.baseline || (feature === 'rescue' ? !Array.isArray(payload.plans) || !Array.isArray(payload.partialMitigations) : !payload.withOrder || !payload.minimumAdvance)) throw new Error('The server returned an incomplete analysis. Please retry after checking the API.');
+      if (!payload.baseline || (feature === 'rescue' ? !Array.isArray(payload.plans) || !Array.isArray(payload.partialMitigations) : feature === 'shock' ? !payload.stressed || !Array.isArray(payload.priorities) : !payload.withOrder || !payload.minimumAdvance)) throw new Error('The server returned an incomplete analysis. Please retry after checking the API.');
       if (request === serial.current) setState({ result: payload, error: '', loading: false });
     } catch (error) {
       if (request === serial.current && error.name !== 'AbortError') setState({ result: null, error: error.message || 'Unable to reach the analysis service', loading: false });
@@ -43,14 +44,17 @@ export function useAnalysis(workspaceId, feature, apiBaseUrl) {
 }
 
 export function Metric({ label, value, note }) {
-  return <div className="decision-metric"><span>{label}</span><strong>{value}</strong>{note && <small>{note}</small>}</div>;
+  useLanguage();
+  return <div className="decision-metric"><span>{t(label)}</span><strong>{t(value)}</strong>{note && <small>{t(note)}</small>}</div>;
 }
 export function Notices({ warnings = [], assumptions = [] }) {
-  return <>{warnings.length > 0 && <aside className="decision-notice"><strong>Before using these results</strong><ul>{[...new Set(warnings)].map(text => <li key={text}>{text}</li>)}</ul></aside>}
-    {assumptions.length > 0 && <details className="decision-details"><summary>Assumptions behind this analysis</summary><ul>{[...new Set(assumptions)].map(text => <li key={text}>{text}</li>)}</ul></details>}</>;
+  useLanguage();
+  return <>{warnings.length > 0 && <aside className="decision-notice"><strong>{t("Before using these results")}</strong><ul>{[...new Set(warnings)].map(text => <li key={text}>{t(text)}</li>)}</ul></aside>}
+    {assumptions.length > 0 && <details className="decision-details"><summary>{t("Assumptions behind this analysis")}</summary><ul>{[...new Set(assumptions)].map(text => <li key={text}>{t(text)}</li>)}</ul></details>}</>;
 }
 
 export function CashChart({ series, reserve = 0, label = 'Daily cash comparison' }) {
+  useLanguage();
   const available = series.filter(series => series.daily?.length);
   if (!available.length) return null;
   const byDate = available.map(series => new Map(series.daily.map(day => [day.date, day.closingCashPaise])));
@@ -66,14 +70,15 @@ export function CashChart({ series, reserve = 0, label = 'Daily cash comparison'
         {available.map((series, index) => <Line key={series.label} type="stepAfter" dataKey={`series${index}`} name={series.label} stroke={series.color} strokeWidth={2.2} dot={false} isAnimationActive={false} />)}
       </LineChart>
     </ResponsiveContainer>
-    <figcaption>{available.map(series => <span key={series.label}><i style={{ background: series.color }} />{series.label}</span>)}<span>Dashed: reserve {rupees(reserve)}</span></figcaption>
+    <figcaption>{available.map(series => <span key={series.label}><i style={{ background: series.color }} />{series.label}</span>)}<span>{t("Dashed: reserve ")}{t(rupees(reserve))}</span></figcaption>
   </figure>;
 }
 
 export function DailyTable({ series }) {
+  useLanguage();
   const available = series.filter(series => series.daily?.length);
   if (!available.length) return null;
   const maps = available.map(series => new Map(series.daily.map(day => [day.date, day.closingCashPaise])));
-  return <details className="decision-details"><summary>Inspect every forecast day</summary><div className="decision-table-wrap"><table><caption>Daily closing cash in INR</caption><thead><tr><th scope="col">Date</th>{available.map(series => <th scope="col" key={series.label}>{series.label}</th>)}</tr></thead>
-    <tbody>{available[0].daily.map(day => <tr key={day.date}><th scope="row">{day.date}</th>{maps.map((map, index) => <td key={index}>{rupees(map.get(day.date))}</td>)}</tr>)}</tbody></table></div></details>;
+  return <details className="decision-details"><summary>{t("Inspect every forecast day")}</summary><div className="decision-table-wrap"><table><caption>{t("Daily closing cash in INR")}</caption><thead><tr><th scope="col">{t("Date")}</th>{available.map(series => <th scope="col" key={series.label}>{series.label}</th>)}</tr></thead>
+    <tbody>{available[0].daily.map(day => <tr key={day.date}><th scope="row">{t(day.date)}</th>{maps.map((map, index) => <td key={index}>{t(rupees(map.get(day.date)))}</td>)}</tr>)}</tbody></table></div></details>;
 }

@@ -2,6 +2,20 @@
 
 Student MVP for a synthetic Indian supplier's 90-day cash outlook. The app connects setup and import, Cash Outlook, Rescue Planner, and New Order Analyzer to the same workspace and forecast engine. Saved plans and order scenarios are hypothetical; viewing or saving them does not change cash records.
 
+The top-right language menu remembers English, Hindi or Kannada on this browser. Core navigation, forms, and decision labels are translated locally; entered business names and record IDs remain as supplied. Some detailed backend-generated explanations and warnings are still shown in English.
+
+## Presentation demo
+
+With client and server dependencies installed, run `npm run demo` from the repository root, then open `http://localhost:5000` and select **Use seeded demo workspace**. This builds the UI and starts the real API against an isolated temporary MongoDB. It never uses your configured business database. Demo edits disappear when it stops; use the normal setup below for persistence. The first run may need internet to download the MongoDB test binary. Port 5000 must be free; use the default client API URL for this launcher.
+
+Open **Cash Shock Lab** to delay one customer's receipts by 7, 15, or 30 days, compare daily cash, stress-test the top three baseline rescue plans, and rank permitted early collections by cash impact. Negotiated early portions are delayed too. Fees stay on their modeled dates; out-of-horizon receipts remain visible in the evidence. These are chosen scenarios, not learned probabilities.
+
+Known rescue fees now reduce forecast cash, including saved proposals. Enter **Fee payment date** in a record's constraints or leave it blank to assume the proposed action date. Unknown fees are explicitly excluded. Historical saved proposals keep their original snapshot: reanalyze and save a new proposal to include fees. CSV/XLSX imports accept an optional `Fee Payment Date` column.
+
+The three explanation buttons always work without AI. To enable AI-selected explanations, set both `OPENAI_API_KEY` and `OPENAI_MODEL` in `server/.env` to an API key and a model available to your account that supports Responses structured outputs, then restart the server. The key stays server-side. Selected calculated facts (including synthetic customer names, dates and amounts) are sent to OpenAI only when an explanation is requested. The model selects source-backed facts; the server supplies all sentences and monetary figures. No free-form chatbot, document RAG or trained payment model is claimed. Requests time out after eight seconds; failures, refusals and unsupported evidence return a clearly labeled calculated fallback. API shape follows [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).
+
+Demo sequence: original gap **₹2,00,000** → Acme delayed seven days, gap **₹2,50,000** → early collection card reduces the original gap to **₹3,000 after its fee** → inspect the rescue stress table → ask why and follow its invoice links. See `docs/DEMO_SCENARIO.md` for the full narrative.
+
 ## Run locally
 
 Use Node.js LTS. Start MongoDB Server locally or use a MongoDB Atlas URI. MongoDB Compass only inspects the database; it does not run the server.
@@ -33,6 +47,8 @@ The fixture forecast first goes negative on **2026-11-06** and reaches **−₹2
 - `GET/POST /api/workspaces/:workspaceId/items`; `PATCH/DELETE /api/workspaces/:workspaceId/items/:itemId`
 - `GET/POST /api/workspaces/:workspaceId/recurring-rules`
 - `GET /api/workspaces/:workspaceId/forecast?horizonDays=90`
+- `POST /api/workspaces/:workspaceId/shock/analyze` (`counterparty` optional, `delayDays`: 7/15/30)
+- `POST /api/workspaces/:workspaceId/shock/explain` (same inputs plus `question`: `shortage`, `collection`, or `stress`)
 - `POST /api/workspaces/:workspaceId/rescue/analyze`; `GET/POST .../rescue/plans`; `PATCH .../rescue/plans/:planId/actions/:actionId`
 - `POST /api/workspaces/:workspaceId/orders/analyze`; `GET/POST .../orders/scenarios`
 

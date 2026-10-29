@@ -46,3 +46,5 @@
 .decision-action-list li { padding:6px 0; }
 .decision-muted { color:var(--muted); font-size:14px; }
 @media(max-width:700px) { .decision-cost-line { grid-template-columns:1fr 1fr; border-bottom:1px solid var(--border); padding-bottom:16px; } .decision-cost-line label:first-child { grid-column:1 / -1; } }
+.shock-source { display: inline-block; margin: 0 12px 8px 0; }
+tr[id^="cash-source-"]:target { background: var(--accent-soft); outline: 2px solid var(--accent); }

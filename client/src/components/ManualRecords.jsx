@@ -1,16 +1,18 @@
+import { t, useLanguage, locale } from '../i18n/index.js';
 import React, { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
 
-const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value / 100);
+const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 const initialItem = {
   category: 'receivable', externalId: '', counterparty: '', amountInr: '', settledInr: '0',
   status: 'open', dueDate: '', expectedDate: '', mandatory: false, negotiable: false,
   discretionary: false, maxExtensionDays: '0', earliestCollectionDate: '',
-  maxEarlyCollectionInr: '', estimatedActionCostInr: '',
+  maxEarlyCollectionInr: '', estimatedActionCostInr: '', actionCostDate: '',
 };
 const toPaise = value => Math.round(Number(value) * 100);
 
 export default function ManualRecords({ workspaceId, refreshKey }) {
+  useLanguage();
   const [items, setItems] = useState([]);
   const [rules, setRules] = useState([]);
   const [itemForm, setItemForm] = useState(initialItem);
@@ -43,6 +45,7 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
       negotiable: !!constraints.negotiable, discretionary: !!constraints.discretionary,
       maxExtensionDays: String(constraints.maxExtensionDays || 0),
       earliestCollectionDate: constraints.earliestCollectionDate || '',
+      actionCostDate: constraints.actionCostDate || '',
       maxEarlyCollectionInr: constraints.maxEarlyCollectionPaise == null ? '' : String(constraints.maxEarlyCollectionPaise / 100),
       estimatedActionCostInr: constraints.estimatedActionCostPaise == null ? '' : String(constraints.estimatedActionCostPaise / 100) });
   }
@@ -57,6 +60,7 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
       constraints: { mandatory: itemForm.mandatory, negotiable: itemForm.negotiable,
         discretionary: itemForm.discretionary, maxExtensionDays: Number(itemForm.maxExtensionDays),
         earliestCollectionDate: itemForm.earliestCollectionDate || null,
+        actionCostDate: itemForm.actionCostDate || null,
         maxEarlyCollectionPaise: itemForm.maxEarlyCollectionInr ? toPaise(itemForm.maxEarlyCollectionInr) : null,
         estimatedActionCostPaise: itemForm.estimatedActionCostInr ? toPaise(itemForm.estimatedActionCostInr) : null },
     };
@@ -80,43 +84,44 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
 
   return <>
     <div className="card">
-      <h2>Manual cash items</h2>
-      <p>Add an item or select one below to correct its dates, settlement, or planning constraints.</p>
-      <p>When recording a real payment, also update the active workspace's opening bank cash snapshot; settled amounts are excluded from future cash movements.</p>
+      <h2>{t("Manual cash items")}</h2>
+      <p>{t("Add an item or select one below to correct its dates, settlement, or planning constraints.")}</p>
+      <p>{t("When recording a real payment, also update the active workspace's opening bank cash snapshot; settled amounts are excluded from future cash movements.")}</p>
       <form onSubmit={saveItem} className="form-grid">
-        <label>Category<select value={itemForm.category} onChange={event => setItemForm({ ...itemForm, category: event.target.value })}>
-          <option value="receivable">Receivable</option><option value="payable">Payable</option><option value="expense">Expense</option>
+        <label>{t("Category")}<select value={itemForm.category} onChange={event => setItemForm({ ...itemForm, category: event.target.value })}>
+          <option value="receivable">{t("Receivable")}</option><option value="payable">{t("Payable")}</option><option value="expense">{t("Expense")}</option>
         </select></label>
-        <label>Source ID<input value={itemForm.externalId} onChange={event => setItemForm({ ...itemForm, externalId: event.target.value })} /></label>
-        <label>Counterparty<input required value={itemForm.counterparty} onChange={event => setItemForm({ ...itemForm, counterparty: event.target.value })} /></label>
-        <label>Amount (₹)<input type="number" min="0.01" step="0.01" required value={itemForm.amountInr} onChange={event => setItemForm({ ...itemForm, amountInr: event.target.value })} /></label>
-        <label>Already settled (₹)<input type="number" min="0" step="0.01" required value={itemForm.settledInr} onChange={event => setItemForm({ ...itemForm, settledInr: event.target.value })} /></label>
-        <label>Status<select value={itemForm.status} onChange={event => setItemForm({ ...itemForm, status: event.target.value })}>
-          <option value="open">Open</option><option value="partial">Partial</option><option value="paid">Paid</option><option value="cancelled">Cancelled</option>
+        <label>{t("Source ID")}<input value={itemForm.externalId} onChange={event => setItemForm({ ...itemForm, externalId: event.target.value })} /></label>
+        <label>{t("Counterparty")}<input required value={itemForm.counterparty} onChange={event => setItemForm({ ...itemForm, counterparty: event.target.value })} /></label>
+        <label>{t("Amount (₹)")}<input type="number" min="0.01" step="0.01" required value={itemForm.amountInr} onChange={event => setItemForm({ ...itemForm, amountInr: event.target.value })} /></label>
+        <label>{t("Already settled (₹)")}<input type="number" min="0" step="0.01" required value={itemForm.settledInr} onChange={event => setItemForm({ ...itemForm, settledInr: event.target.value })} /></label>
+        <label>{t("Status")}<select value={itemForm.status} onChange={event => setItemForm({ ...itemForm, status: event.target.value })}>
+          <option value="open">{t("Open")}</option><option value="partial">{t("Partial")}</option><option value="paid">{t("Paid")}</option><option value="cancelled">{t("Cancelled")}</option>
         </select></label>
-        <label>Due date<input type="date" required value={itemForm.dueDate} onChange={event => setItemForm({ ...itemForm, dueDate: event.target.value })} /></label>
-        <label>Expected cash date<input type="date" value={itemForm.expectedDate} onChange={event => setItemForm({ ...itemForm, expectedDate: event.target.value })} /></label>
-        <label>Max extension days<input type="number" min="0" max="90" value={itemForm.maxExtensionDays} onChange={event => setItemForm({ ...itemForm, maxExtensionDays: event.target.value })} /></label>
-        <label>Earliest collection date<input type="date" value={itemForm.earliestCollectionDate} onChange={event => setItemForm({ ...itemForm, earliestCollectionDate: event.target.value })} /></label>
-        <label>Max early collection (₹)<input type="number" min="0" step="0.01" value={itemForm.maxEarlyCollectionInr} onChange={event => setItemForm({ ...itemForm, maxEarlyCollectionInr: event.target.value })} /></label>
-        <label>Estimated action cost (₹)<input type="number" min="0" step="0.01" value={itemForm.estimatedActionCostInr} onChange={event => setItemForm({ ...itemForm, estimatedActionCostInr: event.target.value })} /></label>
-        {['mandatory', 'negotiable', 'discretionary'].map(field => <label className="check" key={field}><input type="checkbox" checked={itemForm[field]} onChange={event => setItemForm({ ...itemForm, [field]: event.target.checked })} /> {field}</label>)}
-        <button>{editingId ? 'Save correction' : 'Add cash item'}</button>
-        {editingId && <button type="button" onClick={() => { setEditingId(''); setItemForm(initialItem); }}>Cancel edit</button>}
+        <label>{t("Due date")}<input type="date" required value={itemForm.dueDate} onChange={event => setItemForm({ ...itemForm, dueDate: event.target.value })} /></label>
+        <label>{t("Expected cash date")}<input type="date" value={itemForm.expectedDate} onChange={event => setItemForm({ ...itemForm, expectedDate: event.target.value })} /></label>
+        <label>{t("Max extension days")}<input type="number" min="0" max="90" value={itemForm.maxExtensionDays} onChange={event => setItemForm({ ...itemForm, maxExtensionDays: event.target.value })} /></label>
+        <label>{t("Earliest collection date")}<input type="date" value={itemForm.earliestCollectionDate} onChange={event => setItemForm({ ...itemForm, earliestCollectionDate: event.target.value })} /></label>
+        <label>{t("Max early collection (₹)")}<input type="number" min="0" step="0.01" value={itemForm.maxEarlyCollectionInr} onChange={event => setItemForm({ ...itemForm, maxEarlyCollectionInr: event.target.value })} /></label>
+        <label>{t("Estimated action cost (₹)")}<input type="number" min="0" step="0.01" value={itemForm.estimatedActionCostInr} onChange={event => setItemForm({ ...itemForm, estimatedActionCostInr: event.target.value })} /></label>
+        <label>{t("Fee payment date (optional)")}<input type="date" value={itemForm.actionCostDate} onChange={event => setItemForm({ ...itemForm, actionCostDate: event.target.value })} /><small>{t("Blank means the proposed action date. Known fees reduce forecast cash.")}</small></label>
+        {['mandatory', 'negotiable', 'discretionary'].map(field => <label className="check" key={field}><input type="checkbox" checked={itemForm[field]} onChange={event => setItemForm({ ...itemForm, [field]: event.target.checked })} /> {t(field)}</label>)}
+        <button>{t(editingId ? 'Save correction' : 'Add cash item')}</button>
+        {editingId && <button type="button" onClick={() => { setEditingId(''); setItemForm(initialItem); }}>{t("Cancel edit")}</button>}
       </form>
-      <ul>{items.map(item => <li key={item.id}>{item.externalId || item.counterparty} · {item.category} · {money(item.outstandingPaise)} outstanding · {item.expectedDate || 'date needs review'} <button type="button" onClick={() => edit(item)}>Edit</button></li>)}</ul>
+      <ul>{items.map(item => <li key={item.id}>{item.externalId || item.counterparty} · {t(item.category)} · {t(money(item.outstandingPaise))}{t(" outstanding · ")}{item.expectedDate || 'date needs review'} <button type="button" onClick={() => edit(item)}>{t("Edit")}</button></li>)}</ul>
     </div>
     <div className="card">
-      <h2>Monthly expenses</h2>
+      <h2>{t("Monthly expenses")}</h2>
       <form onSubmit={saveRule} className="form-grid">
-        <label>Description<input required value={ruleForm.description} onChange={event => setRuleForm({ ...ruleForm, description: event.target.value })} /></label>
-        <label>Amount (₹)<input type="number" min="0.01" step="0.01" required value={ruleForm.amountInr} onChange={event => setRuleForm({ ...ruleForm, amountInr: event.target.value })} /></label>
-        <label>Day of month (1–28)<input type="number" min="1" max="28" required value={ruleForm.dayOfMonth} onChange={event => setRuleForm({ ...ruleForm, dayOfMonth: event.target.value })} /></label>
-        <label>Starts on<input type="date" required value={ruleForm.startsOn} onChange={event => setRuleForm({ ...ruleForm, startsOn: event.target.value })} /></label>
-        <button>Add monthly expense</button>
+        <label>{t("Description")}<input required value={ruleForm.description} onChange={event => setRuleForm({ ...ruleForm, description: event.target.value })} /></label>
+        <label>{t("Amount (₹)")}<input type="number" min="0.01" step="0.01" required value={ruleForm.amountInr} onChange={event => setRuleForm({ ...ruleForm, amountInr: event.target.value })} /></label>
+        <label>{t("Day of month (1–28)")}<input type="number" min="1" max="28" required value={ruleForm.dayOfMonth} onChange={event => setRuleForm({ ...ruleForm, dayOfMonth: event.target.value })} /></label>
+        <label>{t("Starts on")}<input type="date" required value={ruleForm.startsOn} onChange={event => setRuleForm({ ...ruleForm, startsOn: event.target.value })} /></label>
+        <button>{t("Add monthly expense")}</button>
       </form>
-      <ul>{rules.map(rule => <li key={rule._id}>{rule.description} · {money(rule.amountPaise)} on day {rule.dayOfMonth}</li>)}</ul>
+      <ul>{rules.map(rule => <li key={rule._id}>{rule.description} · {t(money(rule.amountPaise))}{t(" on day ")}{t(rule.dayOfMonth)}</li>)}</ul>
     </div>
-    {message && <p role="status" className="notice">{message}</p>}
+    {message && <p role="status" className="notice">{t(message)}</p>}
   </>;
 }

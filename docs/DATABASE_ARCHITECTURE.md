@@ -71,7 +71,8 @@ Every persisted business collection includes `workspaceId`. Do not expose arbitr
     earliestCollectionDate: '2026-11-04', // receivables only, if owner permits testing
     maxEarlyCollectionPaise: 20000000,    // cap <= outstanding
     discretionary: false,          // expenses only
-    estimatedActionCostPaise: null // null = unknown; NOT zero-cost
+    estimatedActionCostPaise: null, // null = unknown; excluded, NOT zero-cost
+    actionCostDate: null // optional; otherwise assume proposed action date
   },
   reviewIssues: [],
   notes: '',
@@ -154,6 +155,7 @@ Expand into dated events **at forecast time** only. Do not insert expanded recur
       fromDate: '2026-11-26',
       toDate: '2026-11-04',
       estimatedCostPaise: null,
+      feeDate: '2026-11-04',         // stored date used for fee accounting
       status: 'proposed',           // 'proposed'|'requested'|'agreed'|'rejected'|'completed'
       ownerNotes: ''
     }
