@@ -6,7 +6,7 @@ const active = item => ['open', 'partial'].includes(item.status) && item.confide
 const firstBelow = (daily, threshold) => daily.find(day => day.closingCashPaise < threshold)?.date ?? null;
 const breachCount = (daily, threshold) => daily.filter(day => day.closingCashPaise < threshold).length;
 const agreementWarning = 'Plan works only if agreed actions happen on assumed dates';
-const costAssumption = 'Action costs are ranking estimates. Fee payment dates are unspecified, so these costs are not deducted from the cash timeline; enter dated fees before committing to a plan.';
+export const costAssumption = 'Known estimated fees are deducted on the entered fee date, or on the proposed action date if no fee date is entered. Unknown fees are excluded and may make a plan infeasible.';
 
 function candidatesFor(context) {
   const end = horizonEnd(context.asOfDate, context.horizonDays);
@@ -31,6 +31,9 @@ function candidatesFor(context) {
     // A permitted extension can end earlier than its maximum; never hide it beyond the horizon.
     const latest = addDays(fromDate, item.maxExtensionDays);
     return [{ ...common, type, amountPaise: outstanding(item), toDate: latest > end ? end : latest }];
+  }).map(action => {
+    const item = context.cashItems.find(item => item.id === action.cashItemId);
+    return { ...action, feeDate: item.actionCostDate || action.toDate };
   }).sort((a, b) => b.amountPaise - a.amountPaise || a.cashItemId.localeCompare(b.cashItemId));
 }
 
@@ -75,6 +78,21 @@ export function applyActions(context, actions) {
   });
 }
 
+export function actionFeeEvents(context, actions) {
+  const base = normalizeContext(context);
+  return actions.flatMap(action => {
+    const item = base.cashItems.find(item => item.id === action.cashItemId);
+    if (!item) fail('Unknown fee source', 'cashItemId');
+    const amountPaise = item.estimatedActionCostPaise;
+    if (amountPaise == null || amountPaise === 0) return [];
+    const feeDate = item.actionCostDate || action.toDate;
+    date(feeDate, 'actionCostDate');
+    if (feeDate <= base.asOfDate || feeDate > horizonEnd(base.asOfDate, base.horizonDays)) fail('Known action fees must fall after the snapshot and within the forecast horizon', 'actionCostDate');
+    return [{ id: `fee:${item.id}`, cashItemId: item.id, externalId: item.externalId,
+      date: feeDate, direction: 'out', amountPaise, reason: 'rescue_fee', confidenceState: 'owner_assumption' }];
+  });
+}
+
 export function analyzeRescue(rawContext, options = {}, buildForecast) {
   const context = normalizeContext(rawContext);
   const { objective, maxCandidates, maxPlans } = validateRescueOptions(options);
@@ -95,7 +113,7 @@ export function analyzeRescue(rawContext, options = {}, buildForecast) {
   for (let mask = 1; mask < 2 ** candidates.length; mask++) {
     const actions = candidates.filter((_, index) => mask & (1 << index));
     if (new Set(actions.map(action => action.cashItemId)).size !== actions.length) continue;
-    const forecast = runForecast(buildForecast, context, { cashItems: applyActions(context, actions) });
+    const forecast = runForecast(buildForecast, context, { cashItems: applyActions(context, actions), additionalEvents: actionFeeEvents(context, actions) });
     evaluatedCombinationCount++;
     const after = summarize(forecast, context.minimumReservePaise);
     const containsUnknownCosts = actions.some(action => action.estimatedCostPaise === null);

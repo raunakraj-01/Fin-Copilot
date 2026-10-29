@@ -86,7 +86,7 @@ test('saving a selected rescue action recalculates figures and leaves source ite
     .post(`/api/workspaces/${id}/rescue/plans`)
     .send({ objective: 'nonnegative', actions: [{ ...action, estimatedCostPaise: 0, status: 'completed' }] });
   expect(response.status).toBe(201);
-  expect(response.body).toMatchObject({ workspaceId: id, baselineWorstCashPaise: -20_000_000, simulatedWorstCashPaise: 0, feasibility: 'conditional', status: 'proposed' });
+  expect(response.body).toMatchObject({ workspaceId: id, baselineWorstCashPaise: -20_000_000, simulatedWorstCashPaise: -300_000, feasibility: 'insufficient', status: 'proposed' });
   expect(response.body.actions[0]).toMatchObject({ cashItemId: action.cashItemId, status: 'proposed', estimatedCostPaise: 300_000 });
   expect(context).toEqual(original);
   expect(createPlan).toHaveBeenCalledOnce();

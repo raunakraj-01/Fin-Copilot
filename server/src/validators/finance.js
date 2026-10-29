@@ -23,6 +23,7 @@ export const itemInput = z.object({
     mandatory: z.boolean().optional(), negotiable: z.boolean().optional(), discretionary: z.boolean().optional(),
     maxExtensionDays: z.number().int().min(0).max(90).optional(), earliestCollectionDate: dateOnly.nullable().optional(),
     maxEarlyCollectionPaise: paise.nullable().optional(), estimatedActionCostPaise: paise.nullable().optional(),
+    actionCostDate: dateOnly.nullable().optional(),
   }).strict().optional(),
 }).strict().refine(item => item.settledPaise <= item.amountPaise, { path: ['settledPaise'], message: 'Cannot exceed amountPaise' })
   .refine(item => item.status !== 'paid' || item.settledPaise === item.amountPaise, { path: ['status'], message: 'Paid item must be fully settled' })

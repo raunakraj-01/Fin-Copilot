@@ -41,9 +41,10 @@ try {
   const saved = await RescuePlan.findById(response.body._id).lean();
   assert.equal(String(saved.workspaceId), String(workspace._id));
   assert.equal(saved.status, 'proposed');
-  assert.equal(saved.feasibility, 'conditional');
+  assert.equal(saved.feasibility, 'insufficient');
   assert.equal(saved.baselineWorstCashPaise, -20_000_000);
-  assert.equal(saved.simulatedWorstCashPaise, 0);
+  assert.equal(saved.simulatedWorstCashPaise, -300_000);
+  assert.equal(saved.actions[0].feeDate, '2026-11-04');
   assert.equal(saved.estimatedTotalCostPaise, 300_000);
   assert.equal(saved.actions[0].status, 'proposed');
   assert.equal(String(saved.actions[0].cashItemId), String(invoice._id));

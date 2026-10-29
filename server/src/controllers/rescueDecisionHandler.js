@@ -11,7 +11,7 @@ export function decisionHandler(analyze, validate, dependencies = {}) {
       const context = await loadContext(req.params.workspaceId);
       if (!context) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Workspace not found', details: [] } });
       const buildForecast = dependencies.buildForecast ?? await loadSharedForecast();
-      return res.json(analyze(context, req.body, buildForecast));
+      return res.json(await analyze(context, req.body, buildForecast));
     } catch (error) {
       if (error instanceof DecisionValidationError) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.message, details: error.details } });
       (dependencies.logError ?? console.error)(error);

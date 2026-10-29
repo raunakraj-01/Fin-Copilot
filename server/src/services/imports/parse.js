@@ -34,6 +34,7 @@ const aliases = {
   mandatory: ['mandatory'], negotiable: ['negotiable'], discretionary: ['discretionary'],
   maxExtensionDays: ['max extension days'], earliestCollectionDate: ['earliest collection date'],
   maxEarlyCollectionInr: ['max early collection inr'], estimatedActionCostInr: ['estimated action cost inr'],
+  actionCostDate: ['action cost date', 'fee payment date'],
 };
 
 export function suggestMapping(headers) {

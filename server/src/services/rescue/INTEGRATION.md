@@ -163,7 +163,7 @@ Then run the full team's server tests, client build, seed workflow, and a real M
 ## Explicit assumptions and limits
 
 - Rescues search all compatible subsets of at most 12 generated actions. Each eligible item contributes one maximum permitted timing/amount proposal. This is a bounded search, not a global optimum across all possible dates and amounts. Truncation is reported.
-- Action costs have no payment-date field in the supplied contract. They rank plans but are not silently assigned a cash date or subtracted from invoices. Every plan discloses this. Add dated fees to the cash inputs before using results as a funding commitment. Unknown costs remain `null`, never “free.”
+- Known action costs are separate dated forecast outflows. `constraints.actionCostDate` sets their date; otherwise the proposed action date is explicitly assumed. Analysis and saving both use `actionFeeEvents`, deriving costs from current records rather than browser values. Unknown costs remain `null` and are excluded with a feasibility warning. Legacy saved snapshots require reanalysis.
 - Feasibility is based on every end-of-day balance within the horizon. Same-day intraday ordering is outside the supplied model. Events outside the horizon do not appear as current-horizon cash and are warned about for orders.
 - The as-of date is an opening-cash snapshot. Rescue candidates require future expected dates and future action dates; items dated on or before the snapshot stay available for review rather than becoming deferral candidates. Proposed order cash dates must also follow the snapshot date.
 - Deferred outflows remain inside the horizon. A maximum extension beyond the horizon is capped at its final day and still evaluated there.

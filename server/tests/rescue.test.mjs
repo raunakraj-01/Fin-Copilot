@@ -19,11 +19,11 @@ test('early partial receipt is moved, never duplicated, and source item stays in
   const input = context();
   const original = structuredClone(input);
   const result = analyzeRescue(input, {}, buildForecast);
-  const plan = result.plans.find(value => value.actions.length === 1 && value.actions[0].type === 'accelerate_collection');
+  const plan = result.partialMitigations.find(value => value.actions.length === 1 && value.actions[0].type === 'accelerate_collection');
   assert.ok(plan);
   assert.equal(plan.daily.find(day => day.date === '2026-11-04').receiptsPaise, 2 * lakh);
   assert.equal(plan.daily.find(day => day.date === '2026-11-26').receiptsPaise, 2 * lakh);
-  assert.equal(plan.daily.find(day => day.date === '2026-11-11').closingCashPaise, 0);
+  assert.equal(plan.daily.find(day => day.date === '2026-11-11').closingCashPaise, -300_000);
   assert.deepEqual(input, original);
 });
 
@@ -32,9 +32,8 @@ test('mandatory outflows are excluded and a short deferral is not called a full 
   input.cashItems[2].maxEarlyCollectionPaise = 0;
   const result = analyzeRescue(input, {}, buildForecast);
   assert.equal(result.plans.length, 0);
-  assert.ok(result.partialMitigations.length > 0);
-  assert.ok(result.partialMitigations.every(plan => plan.actions.every(action => action.cashItemId !== 'payroll')));
-  assert.equal(result.partialMitigations[0].daily.find(day => day.date === '2026-11-15').closingCashPaise, -2 * lakh);
+  assert.equal(result.partialMitigations.length, 0); // The fee makes the worst shortfall larger.
+  assert.ok(result.candidates.every(action => action.cashItemId !== 'payroll'));
 });
 
 test('unknown costs stay unknown and no action means no feasible plan', () => {

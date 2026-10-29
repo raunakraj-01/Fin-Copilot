@@ -12,7 +12,7 @@ const router = Router({ mergeParams: true });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
 const keys = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDate', 'expectedDate', 'status',
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
-  'maxEarlyCollectionInr', 'estimatedActionCostInr'];
+  'maxEarlyCollectionInr', 'estimatedActionCostInr', 'actionCostDate'];
 const validateInput = z.object({ mapping: z.record(z.string(), z.string()).refine(value => Object.keys(value).every(key => keys.includes(key)), 'Unknown mapping field'),
   sourceSystem: z.enum(['csv', 'excel', 'tally_export']).optional() }).strict();
 const correctionInput = z.object({ rowNumber: z.number().int().min(2), values: z.record(z.string(), z.string()) });

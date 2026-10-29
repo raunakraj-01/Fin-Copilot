@@ -9,6 +9,7 @@ const actionSchema = new mongoose.Schema({
   type: { type: String, enum: ['accelerate_collection', 'defer_payable', 'delay_expense'], required: true },
   amountPaise: { ...money, min: 1 }, fromDate: dateField, toDate: dateField,
   estimatedCostPaise: { type: Number, default: null, min: 0, validate: value => value == null || Number.isSafeInteger(value) },
+  feeDate: { type: String, validate: { validator: value => !value || isDateOnly(value) } },
   status: { type: String, enum: ['proposed', 'requested', 'agreed', 'rejected', 'completed'], default: 'proposed' },
   ownerNotes: { type: String, default: '' },
 }, { _id: false });

@@ -7,6 +7,7 @@ import items from './routes/items.js';
 import forecast from './routes/forecast.js';
 import rescue from './routes/rescue.js';
 import orders from './routes/orders.js';
+import shock from './routes/shock.js';
 import { errorResponse } from './utils/http.js';
 
 const app = express();
@@ -21,6 +22,7 @@ app.use('/api/workspaces/:workspaceId/forecast', forecast);
 
 app.use('/api/workspaces/:workspaceId/rescue', rescue);
 app.use('/api/workspaces/:workspaceId/orders', orders);
+app.use('/api/workspaces/:workspaceId/shock', shock);
 
 app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }));
 app.use((err, _req, res, next) => {

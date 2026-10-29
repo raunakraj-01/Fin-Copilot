@@ -1,20 +1,22 @@
 import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function fixtureContext() {
-  const root = new URL('../../fixtures/', import.meta.url);
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../fixtures');
   function rows(name) {
-    const [header, ...records] = readFileSync(new URL(name, root), 'utf8').trim().split(/\r?\n/);
+    const [header, ...records] = readFileSync(resolve(root, name), 'utf8').trim().split(/\r?\n/);
     const keys = header.split(',');
     return records.map(record => Object.fromEntries(record.split(',').map((value, index) => [keys[index], value])));
   }
   const receivables = rows('receivables.csv').map(row => ({
-    id: row['Invoice ID'], externalId: row['Invoice ID'], category: 'receivable',
+    id: row['Invoice ID'], externalId: row['Invoice ID'], category: 'receivable', counterparty: row.Customer,
     amountPaise: Number(row['Amount INR']) * 100, settledPaise: Number(row['Settled INR']) * 100,
     dueDate: row['Due Date'], expectedDate: row['Expected Date'], status: row.Status,
     constraints: { earliestCollectionDate: row['Earliest Collection Date'], maxEarlyCollectionPaise: Number(row['Max Early Collection INR']) * 100, estimatedActionCostPaise: row['Estimated Action Cost INR'] ? Number(row['Estimated Action Cost INR']) * 100 : null },
   }));
   const payables = rows('payables.csv').map(row => ({
-    id: row['Bill ID'], externalId: row['Bill ID'], category: 'payable',
+    id: row['Bill ID'], externalId: row['Bill ID'], category: 'payable', counterparty: row.Supplier,
     amountPaise: Number(row['Amount INR']) * 100, settledPaise: Number(row['Settled INR']) * 100,
     dueDate: row['Due Date'], expectedDate: row['Expected Date'], status: row.Status,
     constraints: { mandatory: row.Mandatory === 'yes', negotiable: row.Negotiable === 'yes', discretionary: row.Discretionary === 'yes', maxExtensionDays: Number(row['Max Extension Days']), estimatedActionCostPaise: row['Estimated Action Cost INR'] ? Number(row['Estimated Action Cost INR']) * 100 : null },

@@ -47,7 +47,7 @@ export function validateRescueOptions(value = {}) {
   return parseRequest(rescueOptionsSchema, value);
 }
 
-const constraintKeys = ['mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate', 'maxEarlyCollectionPaise', 'estimatedActionCostPaise'];
+const constraintKeys = ['mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate', 'maxEarlyCollectionPaise', 'estimatedActionCostPaise', 'actionCostDate'];
 export function normalizeContext(value) {
   object(value, 'context');
   const asOfDate = date(value.asOfDate, 'asOfDate');
@@ -84,6 +84,7 @@ export function normalizeContext(value) {
     }
     if (normalized.maxExtensionDays != null) boundedInteger(normalized.maxExtensionDays, `${field}.maxExtensionDays`, 0, 3660);
     if (normalized.earliestCollectionDate) date(normalized.earliestCollectionDate, `${field}.earliestCollectionDate`);
+    if (normalized.actionCostDate) date(normalized.actionCostDate, `${field}.actionCostDate`);
     return normalized;
   });
   const recurringRules = rules.map((rule, index) => {
@@ -92,7 +93,7 @@ export function normalizeContext(value) {
     return { ...rule };
   });
   // Conservative bound also covers recurring occurrences and signed opening cash.
-  safeTotal([Math.abs(openingCashPaise), minimumReservePaise, ...cashItems.map(item => item.amountPaise), ...recurringRules.map(rule => rule.amountPaise * Math.ceil(horizonDays / 28))], 'forecast amounts');
+  safeTotal([Math.abs(openingCashPaise), minimumReservePaise, ...cashItems.map(item => item.amountPaise), ...cashItems.map(item => item.estimatedActionCostPaise ?? 0), ...recurringRules.map(rule => rule.amountPaise * Math.ceil(horizonDays / 28))], 'forecast amounts');
   return { asOfDate, horizonDays, openingCashPaise, minimumReservePaise, cashItems, recurringRules };
 }
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { applyActions } from './analyze.js';
+import { applyActions, actionFeeEvents, costAssumption } from './analyze.js';
 import { normalizeContext, parseRequest, runForecast, safeTotal, summarize } from './validation.js';
 
 const actionSchema = z.object({
@@ -21,7 +21,7 @@ export function prepareSavedPlan(rawContext, rawRequest, buildForecast) {
   const request = validateSavePlanRequest(rawRequest);
   const items = applyActions(context, request.actions);
   const baseline = summarize(runForecast(buildForecast, context), context.minimumReservePaise);
-  const scenario = runForecast(buildForecast, context, { cashItems: items });
+  const scenario = runForecast(buildForecast, context, { cashItems: items, additionalEvents: actionFeeEvents(context, request.actions) });
   const after = summarize(scenario, context.minimumReservePaise);
   const threshold = request.objective === 'minimum_reserve' ? context.minimumReservePaise : 0;
   const actions = request.actions.map((action, index) => {
@@ -34,6 +34,7 @@ export function prepareSavedPlan(rawContext, rawRequest, buildForecast) {
       fromDate: action.fromDate,
       toDate: action.toDate,
       estimatedCostPaise: item.estimatedActionCostPaise ?? null,
+      feeDate: item.actionCostDate || action.toDate,
       status: 'proposed',
       ownerNotes: '',
     };
@@ -51,6 +52,6 @@ export function prepareSavedPlan(rawContext, rawRequest, buildForecast) {
     containsUnknownCosts,
     feasibility: after.worstCashPaise >= threshold ? 'conditional' : 'insufficient',
     actions,
-    planWarnings: [...new Set([...(scenario.warnings ?? []), 'Actions require agreement; saving this plan does not change cash records', 'Estimated action fees have no payment dates and are not deducted from the forecast'])],
+    planWarnings: [...new Set([...(scenario.warnings ?? []), 'Actions require agreement; saving this plan does not change cash records', costAssumption])],
   };
 }

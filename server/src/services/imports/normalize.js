@@ -48,6 +48,10 @@ export function normalizeRows(rawRows, mapping, kind, sourceSystem) {
       if (!isDateOnly(get('earliestCollectionDate'))) issues.push({ rowNumber, field: 'earliestCollectionDate', code: 'INVALID_DATE', severity: 'error', message: 'Invalid earliest date' });
       else constraints.earliestCollectionDate = get('earliestCollectionDate');
     }
+    if (get('actionCostDate')) {
+      if (!isDateOnly(get('actionCostDate'))) issues.push({ rowNumber, field: 'actionCostDate', code: 'INVALID_DATE', severity: 'error', message: 'Invalid fee payment date' });
+      else constraints.actionCostDate = get('actionCostDate');
+    }
     for (const [field, target] of [['maxEarlyCollectionInr', 'maxEarlyCollectionPaise'], ['estimatedActionCostInr', 'estimatedActionCostPaise']]) {
       if (get(field)) {
         try { constraints[target] = parseInrPaise(get(field)); if (constraints[target] < 0) throw new Error(); }

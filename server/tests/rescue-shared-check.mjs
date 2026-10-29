@@ -7,7 +7,7 @@ import { draftOrder, fixtureContext, isolatedContext } from './rescueFixtureSupp
 const rescue = analyzeRescue(fixtureContext(), {}, buildForecast);
 assert.equal(rescue.baseline.firstNegativeDate, '2026-11-06');
 assert.equal(rescue.baseline.worstCashPaise, -20_000_000);
-assert.ok(rescue.plans.some(plan => plan.actions.length === 1 && plan.actions[0].cashItemId === 'INV-R100' && plan.worstCashPaiseAfter === 0));
+assert.ok(rescue.plans.some(plan => plan.actions.length === 2 && plan.actions.some(action => action.cashItemId === 'INV-R100') && plan.worstCashPaiseAfter === 14_500_000));
 assert.equal(analyzeNewOrder(isolatedContext(), draftOrder(), buildForecast).minimumAdvance.amountPaise, 40_000_000);
 assert.equal(analyzeNewOrder(fixtureContext(), draftOrder(), buildForecast).minimumAdvance.amountPaise, 70_000_000);
 console.log('Shared forecast integration checks passed. Both engines used the same finance/forecast.js module.');

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { analyzeRescue, applyActions, makeCandidates } from '../src/services/rescue/analyze.js';
+import { analyzeRescue, applyActions, actionFeeEvents, makeCandidates } from '../src/services/rescue/analyze.js';
 import { buildForecast } from './rescueForecastStub.mjs';
 import { buildForecast as buildSharedForecast } from '../src/services/finance/forecast.js';
 import { fixtureContext } from './rescueFixtureSupport.mjs';
@@ -12,11 +12,11 @@ describe('rescue safety and fixture evidence', () => {
     const result = analyze(context);
     expect(result.baseline.firstNegativeDate).toBe('2026-11-06');
     expect(result.baseline.worstCashPaise).toBe(-20_000_000);
-    const plan = result.plans.find(plan => plan.actions.length === 1 && plan.actions[0].cashItemId === 'INV-R100');
-    expect(plan.worstCashPaiseAfter).toBe(0);
+    const plan = result.plans.find(plan => plan.actions.length === 2 && plan.actions.some(action => action.cashItemId === 'INV-R100'));
+    expect(plan.worstCashPaiseAfter).toBe(14_500_000);
     expect(plan.daily.find(day => day.date === '2026-11-26').receiptsPaise).toBe(20_000_000);
-    expect(plan.actions[0]).toMatchObject({ requiresAgreement: true, status: 'proposed', estimatedCostPaise: 300_000 });
-    expect(plan.warnings.join(' ')).toContain('not deducted');
+    expect(plan.actions.find(action => action.cashItemId === 'INV-R100')).toMatchObject({ requiresAgreement: true, status: 'proposed', estimatedCostPaise: 300_000, feeDate: '2026-11-04' });
+    expect(plan.warnings.join(' ')).toContain('deducted');
     expect(context).toEqual(original);
   });
   test('partial paid invoices accelerate only their outstanding balance', () => {
@@ -77,8 +77,10 @@ describe('rescue safety and fixture evidence', () => {
     const result = analyze(context);
     expect(result.candidates[0].toDate).toBe('2027-01-29');
     expect(result.plans).toEqual([]);
-    expect(result.partialMitigations[0].daily.at(-1).paymentsPaise).toBe(30_000_000);
-    expect(result.partialMitigations[0].daily.at(-1).closingCashPaise).toBe(-10_000_000);
+    const forecast = buildForecast({ ...context, cashItems: applyActions(context, result.candidates), additionalEvents: actionFeeEvents(context, result.candidates) });
+    expect(forecast.daily.at(-1).paymentsPaise).toBe(30_200_000);
+    expect(forecast.daily.at(-1).closingCashPaise).toBe(-10_200_000);
+    expect(result.partialMitigations).toEqual([]);
   });
   test('reserve objective is stricter than nonnegative cash', () => {
     const context = fixtureContext(); context.minimumReservePaise = 10_000_000;
@@ -155,5 +157,5 @@ test('snapshot-day bills remain review warnings and do not abort valid rescue an
   expect(makeCandidates(context).some(action => action.cashItemId === 'snapshot-bill')).toBe(false);
   const result = analyzeRescue(context, {}, buildSharedForecast);
   expect(result.warnings.join(' ')).toContain('BILL-SNAPSHOT needs a future expected date');
-  expect(result.plans.some(plan => plan.worstCashPaiseAfter === 0)).toBe(true);
+  expect(result.plans.some(plan => plan.worstCashPaiseAfter === 14_500_000)).toBe(true);
 });

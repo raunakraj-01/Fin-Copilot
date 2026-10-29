@@ -7,6 +7,7 @@ const constraints = new mongoose.Schema({
   earliestCollectionDate: { type: String, validate: { validator: value => !value || isDateOnly(value) } },
   maxEarlyCollectionPaise: { type: Number, min: 0, validate: value => value == null || Number.isSafeInteger(value) },
   estimatedActionCostPaise: { type: Number, default: null, min: 0 },
+  actionCostDate: { type: String, validate: { validator: value => !value || isDateOnly(value) } },
 }, { _id: false });
 
 const schema = new mongoose.Schema({

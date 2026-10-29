@@ -69,9 +69,15 @@ it('seeds fixture records and runs the complete decision flow without changing c
   const rescue = await request(app).post(`${base}/rescue/analyze`)
     .send({ objective: 'nonnegative', maxCandidates: 12, maxPlans: 3 }).expect(200);
   expect(rescue.body.plans.length).toBeGreaterThan(0);
+  const shock = await request(app).post(`${base}/shock/analyze`).send({ counterparty: 'Acme Retail Pvt Ltd', delayDays: 15 }).expect(200);
+  expect(shock.body.priorities[0].remainingGapPaise).toBe(300_000);
+  expect(shock.body.plans.every(plan => plan.scenarios.length === 3)).toBe(true);
+  expect(shock.body.plans.some(plan => plan.scenarios.some(scenario => !scenario.passes))).toBe(true);
   const savedPlan = await request(app).post(`${base}/rescue/plans`)
     .send({ objective: 'nonnegative', actions: rescue.body.plans[0].actions }).expect(201);
   const plans = await request(app).get(`${base}/rescue/plans`).expect(200);
+  expect(savedPlan.body.actions.every(action => !!action.feeDate)).toBe(true);
+  expect(savedPlan.body.simulatedWorstCashPaise).toBe(rescue.body.plans[0].worstCashPaiseAfter);
   expect(plans.body.plans.some(plan => plan._id === savedPlan.body._id)).toBe(true);
   const actionId = savedPlan.body.actions[0].actionId;
   const tracked = await request(app).patch(`${base}/rescue/plans/${savedPlan.body._id}/actions/${actionId}`)
