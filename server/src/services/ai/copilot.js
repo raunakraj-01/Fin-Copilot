@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { buildForecast } from '../finance/forecast.js';
 import { loadDecisionContext } from '../rescue/decisionContext.js';
+import { answerWithOllama } from './ollama.js';
 
 export const chatInput = z.object({ message: z.string().trim().min(1).max(2000), sessionId: z.string().uuid() });
 const sessions = new Map();
@@ -23,7 +24,7 @@ function localIntent(message) {
 }
 
 async function intent(message) {
-  if (!process.env.GEMINI_API_KEY) return localIntent(message);
+  if (process.env.OLLAMA_MODEL || !process.env.GEMINI_API_KEY) return localIntent(message);
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -77,6 +78,27 @@ export async function answerChat(workspaceId, { message, sessionId }) {
     tool = 'simulate_order';
     reply = 'Use New Order Analyzer to enter the order value, advance and dates, and dated production costs. I can then rely on its deterministic simulation; this question alone lacks the required inputs.';
   }
-  sessions.set(key, { entity: named?.counterparty || entity || active?.entity, updatedAt: Date.now() });
-  return { reply, facts, tool, mode: process.env.GEMINI_API_KEY ? 'grounded' : 'offline', assumptions: ['Based on workspace records and the workspace as-of date'] };
+  let mode = process.env.GEMINI_API_KEY ? 'grounded' : 'offline';
+  let model;
+  let modelWarning;
+  if (process.env.OLLAMA_MODEL) {
+    try {
+      const forecast = buildForecast(context);
+      const modelContext = { ...context,
+        cashItems: context.cashItems.map(({ category, externalId, counterparty, amountPaise, settledPaise, status, dueDate, expectedDate, confidenceState }) =>
+          ({ category, externalId, counterparty, amountPaise, settledPaise, status, dueDate, expectedDate, confidenceState })),
+        recurringRules: context.recurringRules.map(({ description, amountPaise, startsOn, endsOn, dayOfMonth, mandatory }) =>
+          ({ description, amountPaise, startsOn, endsOn, dayOfMonth, mandatory })),
+        forecast: { risk: forecast.risk, warnings: forecast.warnings, assumptions: forecast.assumptions } };
+      const result = await answerWithOllama({ message, context: modelContext,
+        calculatedAnswer: { reply, facts, tool }, entity, history: active?.history });
+      if (result) { reply = result.reply; model = result.model; mode = 'ollama'; }
+    } catch {
+      mode = 'offline';
+      modelWarning = 'Local Ollama is unavailable or timed out. Showing the calculated workspace answer.';
+    }
+  }
+  sessions.set(key, { entity: named?.counterparty || entity || active?.entity, updatedAt: Date.now(),
+    history: [...(active?.history || []), { role: 'user', content: message }, { role: 'assistant', content: reply }].slice(-4) });
+  return { reply, facts, tool, mode, ...(model ? { model } : {}), ...(modelWarning ? { modelWarning } : {}), assumptions: ['Based on workspace records and the workspace as-of date'] };
 }

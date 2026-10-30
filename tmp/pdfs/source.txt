@@ -1,0 +1,569 @@
+Data Visualisation of Student Performance Using 
+Qwen2.5:3B and Linear Regression 
+Nehal Buxy 
+Symbiosis Institute of Technology, Nagpur Campus 
+Symbiosis International (Deemed University), Pune, India 
+Computer Science and Engineering 
+nehal.buxy.batch2025@sitnagpur.siu.edu.in 
+Aryan Marghade 
+Symbiosis Institute of Technology, Nagpur Campus 
+Symbiosis International (Deemed University), Pune, India 
+Computer Science and Engineering 
+aryan.marghade.batch2025@sitnagpur.siu.edu.in 
+Atharva Ghodki 
+Symbiosis Institute of Technology, Nagpur Campus 
+Symbiosis International (Deemed University), Pune, India 
+Computer Science and Engineering 
+athrava.ghodki.batch2025@sitnagpur.siu.edu.in 
+Dr. Bhupesh Kumar Dewangan 
+Symbiosis Institute of Technology, Nagpur Campus 
+Symbiosis International (Deemed University), India 
+Computer Science and Engineering 
+bhupesh.dewangan@gmail.com 
+ 
+Abstract—A student profile platform must reconcile assessment 
+records, portfolio evidence, and the different responsibilities of 
+institutional users. This paper examines an implementation that 
+combines these functions through a React interface, an Express 
+application, and a PostgreSQL academic ledger. Student, teacher, 
+administrator, and placement views share the same records while 
+applying role and assignment checks at selected server routes. The 
+platform also includes assessment trend analysis, credit -weighted 
+academic history, evidence -backed candidate matching, and 
+optional local language -model assistance. We trace the active 
+execution path and evaluate numerical behavior using the two 
+repository unit tests and 16 supplementary function checks. All 
+checks pass ag ainst their stated expectations. Constructed 
+examples reproduce increasing, decreasing, and constant score 
+trends, while exposing differences in missing -mark treatment 
+between services. A separate rubric example shows that the 
+deterministic fallback can as sign half marks to unrelated 
+nonempty text. These findings establish reproducible 
+implementation behavior and identify the validation work 
+required before institutional use. The study does not measure 
+learning outcomes, model accuracy, deployment latency, or 
+security effectiveness. 
+Index Terms—academic analytics, student profiles, role -based 
+access control, evidence provenance, assessment management, 
+local language models 
+I. INTRODUCTION 
+An academic profile contains records with different 
+meanings and different levels of authority. A teacher -entered 
+mark contributes to an assessment ledger. An uploaded 
+marksheet may supply an official grade -point value. A project 
+description records a stud ent’s claim, while a synchronized 
+repository provides an external observation. Combining these 
+items requires explicit rules about ownership, calculation, and 
+evidence. A dashboard can otherwise present values together 
+even when their underlying assumptions differ. 
+The implementation examined here connects academic and 
+portfolio records in a shared web application. Students manage 
+profiles and inspect their records. Teachers enter assessments 
+and examine assigned groups. Administrators manage 
+institutional data and visibility settings. Placement staff inspect 
+candidate evidence and compare it with job requirements. The 
+design includes optional local language -model support for 
+selected tasks, alongside deterministic calculations that operate 
+without a model response. 
+The engineering question is whether these functions preserve 
+interpretable record semantics across their service boundaries. 
+Missing work, a recorded zero, and an unassessed submission 
+require different treatment. Likewise, an extrapolated score and 
+a veri fied academic result have different evidential status. 
+These distinctions affect the interpretation of every chart and 
+recommendation. 
+II. RELATED WORK 
+A. Educational data mining and learning dashboards 
+Using student data to understand learning is not a new idea. 
+Baker and Yacef [1] followed the growth of educational data 
+mining as it separated from general data mining and became a 
+field of its own, and they described how its attention moved 
+from simple d escription of student behaviour towards 
+prediction, clustering and the discovery of relationships 
+between variables. Romero and Ventura [2] later revisited the 
+field and showed how much wider the tools, data sources and 
+applications had become by 2020. Tak en together, these 
+surveys show that the community has been good at asking what 
+can be learned from academic data. They say much less about 
+a quieter question that matters once the data reaches a screen: 
+does a number mean the same thing everywhere it is shown? 
+Dashboards are where that question becomes practical. 
+Verbert et al. [3] examined a set of learning analytics dashboard 
+applications and compared what they put in front of teachers 
+and learners, such as activity, time spent and resource use. A 
+chart tends to look authoritative, so a choice hidden behind it, 
+for example how a missing mark is counted, is easy to overlook. 
+Our results on pending assessments and denominators sit in 
+
+exactly this gap between a clean visual and the calculation 
+underneath it. We do not suggest that the cited work is wrong 
+about dashboards. It simply was not written to check individual 
+calculations. 
+B. Ethics, feedback and teacher judgement 
+Analytics about students is never only a technical matter. 
+Slade and Prinsloo [4] discuss the ethical side of learning 
+analytics, including consent, privacy, and the risk that students 
+are categorised on the basis of partial data. That concern applies 
+directly to any system that extrapolates scores, because a 
+predicted next value can easily be read as a statement about the 
+student rather than about a short sequence of numbers. For this 
+reason we describe our regression output only as a descriptive 
+continuation of the supplied records. 
+Research on feedback points the same way. Hattie and 
+Timperley [5] argue that feedback helps most when it is 
+specific, tied to the task, and tells the learner what to do next, 
+and that a bare score does much less. Panadero and Jönsson [6] 
+reach a related conclusion about rubrics: their educational value 
+depends on how they are used, for instance alongside feedback 
+and self -assessment, and not on their mere presence. A 
+keyword-based fallback cannot offer either of these things. This 
+is why the platform keeps suggested marks apart from reviewed 
+marks, and why we argue that the final decision should stay 
+with the teacher. 
+C. Access control and provenance 
+A shared platform for students, teachers, administrators and 
+placement staff raises an access question from the start: who 
+may see which record? Sandhu et al. [7] described role -based 
+access control, in which permissions attach to roles and users 
+are assigned to those roles. Ferraiolo et al. [8] later proposed a 
+standard model for it through NIST. A role is a coarse 
+permission, though. It says what kind of user is asking, not 
+whether this particular user should see this particular record. In 
+practice it has to be paired with checks on the requested object, 
+and the lack of such checks in a few routes is one of the 
+weaknesses we report. 
+Provenance deals with a neighbouring problem, which is 
+knowing where a piece of data came from. Buneman et al. [9] 
+separate the question of why a value appears in a result from 
+the question of where it was copied from. For a student profile 
+this has a plai n consequence. A faculty -verified grade, a 
+synchronized repository and a self -written project description 
+do not deserve equal trust, and the interface should show which 
+of them it is displaying. 
+D. Language models in education 
+Large language models have found a natural place in 
+education, and some obvious risks have come with them. 
+Kasneci et al. [10] describe opportunities for teaching and 
+assessment but stress fact checking and human oversight, partly 
+because learners may trust a fluent answer too readily. Ji et al. 
+[11] explain part of the reason: generated text can read 
+smoothly while saying things the source does not support. 
+Small models that run locally sharpen this trade -off. The 
+Qwen2.5 family [12] is released in several sizes, including a 3-
+billion-parameter version that can run on modest hardware. 
+That makes it attractive for institutions that prefer not to send 
+student data to an outside service. A smaller model also has less 
+capacity, however, so its output needs care ful checking before 
+anyone relies on it. 
+Reproducibility is the last strand. Kapoor and Narayanan 
+[13] collected cases in which data leakage inflated the reported 
+performance of machine -learning studies across many fields. 
+This is one reason we do not claim any predictive accuracy 
+from our constructed examples. 
+E. Research gap 
+The work above covers analytics methods, ethics, access 
+control, provenance and language models, mostly one at a time. 
+What is seldom examined is how these concerns behave 
+together inside a single working codebase, and whether the 
+same percentage means the  same thing in every service that 
+reports it. This paper addresses that gap through source tracing 
+and executed function-level checks. 
+III. IMPLEMENTATION SCOPE AND ARCHITECTURE 
+A. Execution path and system boundary 
+The evaluated platform follows a three -tier architecture 
+comprising a React and TypeScript presentation layer, an 
+Express application layer, and PostgreSQL persistence. During 
+startup, the backend initializes the academic database, 
+schedules external -profile synchronization, mounts six role -
+scoped API groups, and serves the web interface through 
+development middleware or an optimized production build. 
+The evaluation follows the active application path and 
+considers only components reachable during normal execution, 
+preventing obsolete or unused modules from influencing the 
+reported findings. 
+Fig. 1 shows the request path shared by the four application 
+roles. Credentials enter JWT validation, after which role and 
+record-scope checks determine the accessible dashboard. The 
+implementation uses role -specific React views, Express route 
+groups, PostgreSQL services, optional local Ollama requests, 
+and external-profile synchronization. 
+
+ 
+Fig. 1. Role-based workflow from authentication to scope-limited dashboards. The diagram shows intended access paths; it does not assert complete authorization 
+coverage. 
+B. Roles and access decisions 
+The authentication middleware verifies a bearer token, 
+reloads the corresponding account, rejects inactive accounts, 
+and refreshes the student identifier where applicable. Route 
+middleware restricts teacher endpoints to the teacher role. 
+Several handlers t hen check a teacher’s class, subject, and 
+semester assignment before querying or modifying marks. 
+Fig. 2 separates authentication from the record -level 
+decisions required for academic data. A request is accepted 
+only after token, role, assignment, and ownership checks 
+establish a scoped query; a failed check returns an authorization 
+error before data retrieval. 
+ 
+Fig. 2. Authorization sequence for a record-scoped request. The dashed branch 
+represents rejection with an HTTP 401 or 403 response. 
+These mechanisms describe the intended access model. 
+Their presence does not prove complete authorization 
+coverage. The rubric -read, submission -read, and AI -marking 
+handlers accept an assessment identifier without performing the 
+same assignment check used by the principal marks -entry 
+route. Their route-level role check therefore needs an additional 
+record-level authorization review. The schema includes 
+colleges and departments, but this study does not establish 
+isolation between separate institutional tenants. 
+C. Operational separation 
+The application separates profile synchronization, academic 
+computation, and optional generation. A synchronization 
+failure should retain an explicit unavailable state rather than 
+imply a lack of student activity. Model availability is also 
+separate from l edger availability. The role intelligence engine 
+has deterministic responses, while some fallback paths report 
+that local AI is unavailable. This distinction allows the interface 
+to explain why a narrative is absent without replacing a 
+recorded academic fact. 
+IV. DATA MODEL AND EVIDENCE SEMANTICS 
+A. Academic records 
+The schema links users to student profiles, classes, subjects, 
+semesters, teacher assignments, and marks. Assessment 
+definitions add maximum marks, dates, weights, answer keys, 
+and rubric criteria. Mark entries can retain suggested scores, 
+teacher feedback , review information, and publication state. 
+These relationships support the scoped authorization sequence 
+in Fig. 2 and the analytics pipeline in Fig. 3. 
+The marking service represents absence and pending work 
+through explicit statuses. It stores null marks for several 
+missing-work states and stores zero for the zero state. The batch 
+save routine checks class membership and numeric bounds, 
+then writes accepted entries inside a database transaction. Rows 
+rejected during application validation can be skipped while 
+accepted rows commit. A database exception triggers rollback. 
+This is a partially accepted batch policy, not an all -or-nothing 
+validation policy. 
+B. Provenance and freshness 
+The evidence service distinguishes self -reported 
+information, externally retrieved records, and faculty -verified 
+material. It carries verification and freshness fields, together 
+with source links and missing -information descriptions. These 
+fields help a re viewer decide how much weight to place on a 
+profile item. Tracking the origin and derivation of records 
+addresses the provenance concerns described by Buneman et 
+al. [9]. 
+
+
+The platform’s evidence labels require careful interpretation. 
+A repository language or description match is an observation 
+about an artifact. It does not establish a student’s proficiency. 
+In the candidate -matching implementation, such a match can 
+contribute to a DEMONSTRATED requirement classification. 
+That label should be read as a result of the implemented 
+matching rule, pending technical review of the underlying 
+artifact. 
+C. Academic authority 
+Academic history distinguishes calculated grade -point 
+values from positive official values stored with uploaded 
+marksheets. The returned record includes flags describing this 
+choice. The service tracks failed subject attempts and the latest 
+recorded attemp t for each subject when counting active 
+backlogs. An absent external profile or an unavailable model 
+response supplies no evidence about academic eligibility. 
+V. ANALYTICAL AND ASSISTANCE METHODS 
+Fig. 3 traces the academic analytics path from mark entry to 
+teacher review. Status and numeric validation precede ledger 
+storage. Aggregation policy then determines the statistics and 
+trends presented in role -scoped dashboards, so missing -mark 
+and weighting rules influence every downstream result. 
+ 
+Fig. 3. Academic analytics pipeline. Validation and aggregation policy are 
+explicit stages between record entry and intervention. 
+A. Score aggregation and grade points 
+For a recorded mark mi with a positive maximum Mi, the 
+teacher analytics route computes 
+ pi = 100 mi / Mi,     p̄  = (1/n) Σi=1n pi (1) 
+This mean gives each assessment percentage equal weight. 
+The class -subject service first aggregates obtained and 
+maximum marks for each assessed student, then averages the 
+resulting student percentages. The academic -history service 
+aggregates marks by subj ect and semester. These definitions 
+agree only under particular distributions of maxima and 
+missing records. For subject credit cj and grade point gj, the 
+calculated semester grade-point average is 
+ G = (Σj cj gj) / (Σj cj). (2) 
+The academic service retrieves institutional rules and 
+otherwise uses its embedded grading scale. A positive official 
+marksheet value takes precedence over the calculated value. 
+Although assessment definitions contain weights, this 
+aggregation path sums obtained and maximum marks directly; 
+it does not apply those stored weights. 
+TABLE I 
+COMPARISON OF ANALYTICS PATHS IN THE ANALYZED IMPLEMENTATION 
+Property General teacher analytics Class-subject analytics Academic history 
+Unit of aggregation Individual assessment percentages Aggregated marks per assessed student Subject totals within each semester 
+Treatment of null 
+marks 
+JavaScript numeric conversion maps null 
+to zero in score statistics 
+Null obtained marks and their maxima 
+are excluded 
+Null adds no obtained marks; maximum 
+remains in denominator 
+Weighting Equal weight per assessment percentage Maximum-mark weighting within a 
+student; equal weight between assessed 
+students 
+Maximum-mark aggregation; credits 
+weight grade points 
+Primary outputs Mean, median, deviation, grade buckets, 
+index-based regression 
+Coverage, pass/fail counts, status counts, 
+intervention list 
+SGPA/CGPA, subject results, official-
+value flags, backlog history 
+Evidence in this study Source inspection; shared helper 
+execution 
+Executed with controlled query responses Executed with controlled query responses 
+Main interpretation 
+issue 
+Record order and missing-score 
+conversion 
+Coverage can differ from the full enrolled 
+population 
+Pending maxima can depress results and 
+derived grade points 
+
+
+B. Longitudinal score trends 
+The regression helper fits a straight line to points (xi, pi) using 
+ordinary least squares: 
+ a = (n Σi xipi − Σi xi Σi pi) / (n Σi xi2 − (Σi xi)2), (3) 
+ b = p̄  − ax̄ . 
+It returns no fit for fewer than two points or a zero 
+denominator. The next value is a(maxi xi + 1) + b, clamped to 
+[0, 100]. The helper returns the coefficient of determination R2. 
+For a constant response series, its explicit convention is R2 = 1. 
+The teacher route builds single -student points from marks 
+ordered by creation time. Cohort points use averages grouped 
+by exam type in first -encounter order. The horizontal axis is 
+therefore a record or milestone index. It does not measure 
+elapsed time. A trend may reflect assessment order, difficulty, 
+or selection, so the extrapolation is a descriptive continuation 
+of the supplied sequence. 
+C. Rubric suggestions and teacher review 
+The marking service constructs a prompt from submission 
+content, a teacher -defined rubric, and an optional answer key. 
+In the configuration examined here, the optional local model is 
+Qwen2.5:3B served through Ollama [12]. A usable local 
+response supplies p er-criterion suggestions that the code caps 
+to criterion maxima. Submitted code is statically inspected 
+through text; this path does not execute it. The data model 
+retains suggestions separately from reviewed marks and 
+published feedback. 
+When the model call fails or its result is unusable, a 
+deterministic fallback counts rubric -description keywords 
+longer than four characters. If q is the fraction of matched 
+keywords and R is the criterion maximum, a nonempty 
+response receives approximately 
+ s = R max(0.5, q), (4) 
+rounded to one decimal place. An empty submission returns 
+zero. If the criterion has no qualifying keywords, the fallback 
+uses q = 0.6. Keyword coverage provides a reproducible score 
+but cannot establish conceptual correctness. 
+D. Candidate requirement matching 
+The placement service evaluates grade -point, backlog, and 
+branch conditions separately from portfolio alignment. For D 
+demonstrated requirements, P partially met requirements, and 
+K requirements in total, it computes 
+ A = round(100 (D + 0.5P) / max(K, 1)). (5) 
+The result is capped at 100. It is a rule-based alignment index 
+and has no measured interpretation as a hiring probability. The 
+inspected matcher permits an unknown CGPA to pass its 
+CGPA condition. An institution would need an explicit 
+eligibility policy f or that case before using the result in a 
+shortlist. 
+VI. REPRODUCIBLE CODE-LEVEL EVALUATION 
+A. Protocol and evidence boundaries 
+The evaluation executes the repository’s two regression unit 
+tests and 16 supplementary checks against the pinned source 
+snapshot using Node.js 24.11.1. The supplementary harness 
+strips TypeScript annotations and substitutes controlled query 
+responses for database access. The rubric examples force an 
+unsuccessful model response to exercise the fallback. The 
+application source remains unchanged. 
+Table II defines the coverage. All supplementary checks pass 
+against their declared expected outputs, including checks that 
+intentionally reproduce undesirable behavior. These counts 
+measure agreement with function -level expectations. They do 
+not measure t he fraction of the application that is correct. 
+Database constraints, middleware execution, browser behavior, 
+live model output, and concurrent requests are outside this test 
+boundary. 
+TABLE II 
+EXECUTED VERIFICATION SCOPE 
+Check group Cases Passed 
+Repository regression unit tests 2 2 
+Additional regression edge cases 6 6 
+Median and population deviation 3 3 
+Academic and missing-mark semantics 5 5 
+Rubric fallback boundary cases 2 2 
+Total 18 18 
+ 
+B. Trend behavior 
+Fig. 4 uses the constructed sequences [60, 70, 80], [80, 70, 
+60], and [70, 70, 70]. The helper returns slopes of 10, −10, and 
+0, with next values of 90, 50, and 70. Each series has R2 = 1 
+under the implementation’s convention. Additional checks 
+confirm the prediction clamps at both bounds and rejection of 
+empty or singular inputs. 
+ 
+Fig. 4. Constructed regression fixtures. Filled circles are input scores; open 
+diamonds are next -index extrapolations. These values are not observations 
+from students. 
+Perfect fits in these examples follow from deliberately 
+simple inputs. They provide no estimate of forecasting error. 
+Assessing predictive use would require time -ordered held-out 
+records, a stated target, and comparison with a simple baseline 
+such as the m ost recent score. A valid study would separate 
+students and assessment periods to avoid information leakage, 
+which can inflate reported predictive performance [13]. 
+
+
+C. Missing-mark sensitivity 
+For Fig. 5, one constructed student has a recorded score of 
+80/100. Between zero and four pending assessments, each with 
+maximum 100 and a null obtained mark, are added. The class -
+subject service excludes their maxima and continues to report 
+80%. The acade mic-history service includes those maxima, 
+producing 80, 40, 26.67, 20, and 16%. 
+ 
+Fig. 5. Executed missing-mark fixture. One recorded 80/100 result is held fixed 
+while pending rows are added. The divergence comes from denominator 
+selection. 
+The difference can alter a student’s apparent passing status. 
+It arises before any language -model interpretation. A separate 
+zero-mark check confirms that the class-subject service counts 
+a recorded zero as an assessed result. Table I compares the 
+inspected paths and identifies why a common chart label cannot 
+guarantee a common statistic. 
+D. Rubric and grading boundaries 
+Fig. 6 evaluates a single criterion worth ten marks with three 
+qualifying keywords. Constructed responses match zero, one, 
+two, or all three keywords. The suggestions are 5, 5, 6.7, and 
+10 marks; an empty response receives zero. Thus unrelated 
+nonempty tex t can receive the same score as a response 
+containing one relevant keyword. Teacher review is necessary 
+for any use of these suggestions. 
+ 
+Fig. 6. Executed deterministic rubric fallback with a three -keyword criterion. 
+The half-mark floor applies to nonempty responses, including zero keyword 
+matches. 
+Another supplementary check evaluates the default grade 
+lookup at 89.99, 89.995, and 90%. The function returns A+, P, 
+and O, respectively. The middle input lies between the explicit 
+upper bound of one interval and the lower bound of the next, so 
+the fallback grade applies. This behavior concerns the default 
+rules and unrounded input; database -configured rules can 
+differ. Grading should use continuous intervals or a specified 
+rounding policy before lookup. 
+VII. DISCUSSION AND DEPLOYMENT REQUIREMENTS 
+A. What the implementation establishes 
+The source connects profiles, academic records, and 
+candidate evidence through explicit services and role -specific 
+interfaces. Its deterministic methods are simple enough to 
+reproduce. Official-value flags and evidence metadata can help 
+users inspect the b asis of a result. The executed examples 
+establish how selected functions behave for controlled inputs, 
+including boundary cases that ordinary dashboard screenshots 
+would conceal. 
+B. Consistency and authorization priorities 
+The highest priority for academic interpretation is a common 
+policy for pending work, absence, zero marks, and excused 
+assessments. Each service should state its population, 
+denominator, and weighting rule. A shared, tested aggregation 
+policy would prevent  a student’s percentage from changing 
+merely because a different screen calls a different service. The 
+default grade-boundary gap requires a separate correction. 
+Authorization requires route-by-route testing with unrelated 
+users and assessment identifiers. Teacher -role membership 
+alone cannot establish ownership of a requested rubric or 
+submission. The analysis does not establish tenant isolation, 
+document confiden tiality, or secure handling of all memory 
+records. Those properties require executable integration and 
+security tests against a configured deployment. 
+C. Limits of model assistance and external evidence 
+The student -generation path checks response length and a 
+short list of suspicious strings before accepting model text. 
+These checks cannot prove factual grounding or resistance to 
+prompt injection. A response field named 
+isGroundingVerified is an application assertion, not an 
+independent validation result. Numeric claims should be 
+checked against retrieved records, and narrative quality should 
+be assessed with a labeled task set. Educational language -
+model research emphasizes fact checking and human oversight 
+[10]; fluency alone does not establish factual faithfulness [11]. 
+Rubric fallback scores need particular caution because the 
+keyword floor can reward unrelated content. A practical policy 
+would mark unavailable qualitative evaluation for teacher 
+completion instead of interpreting the heuristic as a validated 
+grade. Candi date alignment has similar limits: repository 
+metadata and self-reported projects require review, and missing 
+academic evidence needs an explicit eligibility status. 
+VIII. CONCLUSION 
+The examined platform combines academic ledgers, student 
+profiles, teacher workflows, and placement evidence in a role -
+
+
+oriented web application. Source tracing identifies the active 
+service boundaries and distinguishes them from older 
+implementations in the repository. Two existing unit tests and 
+16 supplementary checks reproduce the selected numerical 
+behaviors. The results show both predictable trend calculations 
+and consequential inconsistencies: pending marks change 
+denominators across services, default grading has an interval 
+gap, and the rubric fallback assigns a half -mark floor to 
+nonempty answers. A common academic policy, complete 
+record-level authorization, and independent evaluation of 
+generated text are required before the implementation can 
+support reliable institutional decisions. 
+REFERENCES 
+[1] R. S. J. d. Baker and K. Yacef, “The state of educational data mining in 
+2009: A review and future visions,” Journal of Educational Data Mining, 
+vol. 1, no. 1, pp. 3–17, 2009. 
+[2] C. Romero and S. Ventura, “Educational data mining and learning 
+analytics: An updated survey,” WIREs Data Mining and Knowledge 
+Discovery, vol. 10, no. 3, Art. no. e1355, 2020, doi: 10.1002/widm.1355. 
+[3] K. Verbert, E. Duval, J. Klerkx, S. Govaerts, and J. L. Santos, “Learning 
+analytics dashboard applications,” American Behavioral Scientist , vol. 
+57, no. 10, pp. 1500–1509, 2013, doi: 10.1177/0002764213479363. 
+[4] S. Slade and P. Prinsloo, “Learning analytics: Ethical issues and 
+dilemmas,” American Behavioral Scientist , vol. 57, no. 10, pp. 1510 –
+1529, 2013, doi: 10.1177/0002764213479366. 
+[5] J. Hattie and H. Timperley, “The power of feedback,” Review of 
+Educational Research , vol. 77, no. 1, pp. 81 –112, 2007, doi: 
+10.3102/003465430298487. 
+[6] E. Panadero and A. Jönsson, “The use of scoring rubrics for formative 
+assessment purposes revisited: A review,” Educational Research Review, 
+vol. 9, pp. 129–144, 2013, doi: 10.1016/j.edurev.2013.01.002. 
+[7] R. S. Sandhu, E. J. Coyne, H. L. Feinstein, and C. E. Youman, “Role -
+based access control models,” Computer, vol. 29, no. 2, pp. 38 –47, Feb. 
+1996, doi: 10.1109/2.485845. 
+[8] D. F. Ferraiolo, R. Sandhu, S. Gavrila, D. R. Kuhn, and R. Chandramouli, 
+“Proposed NIST standard for role -based access control,” ACM 
+Transactions on Information and System Security, vol. 4, no. 3, pp. 224–
+274, 2001, doi: 10.1145/501978.501980. 
+[9] P. Buneman, S. Khanna, and W. -C. Tan, “Why and where: A 
+characterization of data provenance,” in Database Theory—ICDT 2001, 
+Lecture Notes in Computer Science, vol. 1973. Berlin, Germany: 
+Springer, 2001, pp. 316–330, doi: 10.1007/3-540-44503-X_20. 
+[10] E. Kasneci et al., “ChatGPT for good? On opportunities and challenges 
+of large language models for education,” Learning and Individual 
+Differences, vol. 103, Art. no. 102274, 2023, doi: 
+10.1016/j.lindif.2023.102274. 
+[11] Z. Ji et al., “Survey of hallucination in natural language generation,” ACM 
+Computing Surveys, vol. 55, no. 12, Art. no. 248, pp. 1 –38, 2023, doi: 
+10.1145/3571730. 
+[12] Qwen Team, “Qwen2.5 technical report,” arXiv:2412.15115, 2024. 
+[13] S. Kapoor and A. Narayanan, “Leakage and the reproducibility crisis in 
+machine-learning-based science,” Patterns, vol. 4, no. 9, Art. no. 100804, 
+2023, doi: 10.1016/j.patter.2023.100804. 

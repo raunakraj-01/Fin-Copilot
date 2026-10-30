@@ -11,6 +11,7 @@ import Workspace from '../src/models/Workspace.js';
 import SyncBatch from '../src/models/SyncBatch.js';
 import PaymentObservation from '../src/models/PaymentObservation.js';
 import { pseudonym } from '../src/services/finance/reliability.js';
+import { ensureLocalOllama } from '../src/services/ai/startOllama.js';
 
 const clientDist = fileURLToPath(new URL('../../client/dist/', import.meta.url));
 let database;
@@ -21,6 +22,7 @@ async function stop() {
   await database?.stop();
 }
 try {
+  await ensureLocalOllama();
   await access(`${clientDist}/index.html`);
   database = await MongoMemoryServer.create();
   const uri = database.getUri();

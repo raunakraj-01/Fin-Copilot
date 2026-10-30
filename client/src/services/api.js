@@ -3,7 +3,13 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/a
 export async function api(path, options) {
   const response = await fetch(`${baseUrl}${path}`, options);
   const data = response.status === 204 ? null : await response.json();
-  if (!response.ok) throw new Error(data.error?.message || `Request failed (${response.status})`);
+  if (!response.ok) {
+    const labels = { status: 'Status', expectedDate: 'Expected cash date', dueDate: 'Due date',
+      amountPaise: 'Amount', settledPaise: 'Already settled', counterparty: 'Counterparty',
+      'constraints.maxEarlyCollectionPaise': 'Max early collection', 'constraints.maxExtensionDays': 'Max extension days' };
+    const details = data.error?.details?.map(issue => `${labels[issue.field] || issue.field}: ${issue.message}`).join('; ');
+    throw new Error(details || data.error?.message || `Request failed (${response.status})`);
+  }
   return data;
 }
 

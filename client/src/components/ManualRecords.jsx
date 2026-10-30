@@ -19,6 +19,8 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
   const [editingId, setEditingId] = useState('');
   const [ruleForm, setRuleForm] = useState({ description: '', amountInr: '', dayOfMonth: '5', startsOn: '2026-11-01' });
   const [message, setMessage] = useState('');
+  const [itemMessage, setItemMessage] = useState('');
+  const [savingItem, setSavingItem] = useState(false);
 
   async function reload() {
     const [itemResult, ruleResult] = await Promise.all([
@@ -51,7 +53,21 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
   }
 
   async function saveItem(event) {
-    event.preventDefault(); setMessage('');
+    event.preventDefault();
+    if (savingItem) return;
+    setItemMessage('');
+    const amountPaise = toPaise(itemForm.amountInr);
+    const settledPaise = toPaise(itemForm.settledInr);
+    if (settledPaise > amountPaise) { setItemMessage('Already settled cannot exceed the invoice amount.'); return; }
+    if (itemForm.status === 'open' && settledPaise > 0) {
+      setItemMessage(settledPaise === amountPaise
+        ? 'This invoice is fully settled. Choose Paid status, or set Already settled to 0 for an open invoice.'
+        : 'This invoice has a part payment. Choose Partial status, or set Already settled to 0 for an open invoice.');
+      return;
+    }
+    if (itemForm.status === 'paid' && settledPaise !== amountPaise) { setItemMessage('Paid status requires Already settled to equal the invoice amount.'); return; }
+    if (itemForm.status === 'partial' && (settledPaise <= 0 || settledPaise >= amountPaise)) { setItemMessage('Partial status requires Already settled to be greater than 0 and less than the invoice amount.'); return; }
+    if (itemForm.maxEarlyCollectionInr && toPaise(itemForm.maxEarlyCollectionInr) > amountPaise - settledPaise) { setItemMessage('Max early collection cannot exceed the outstanding amount (Amount minus Already settled).'); return; }
     const payload = {
       category: itemForm.category, counterparty: itemForm.counterparty, amountPaise: toPaise(itemForm.amountInr),
       settledPaise: toPaise(itemForm.settledInr), status: itemForm.status, dueDate: itemForm.dueDate,
@@ -64,10 +80,13 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
         maxEarlyCollectionPaise: itemForm.maxEarlyCollectionInr ? toPaise(itemForm.maxEarlyCollectionInr) : null,
         estimatedActionCostPaise: itemForm.estimatedActionCostInr ? toPaise(itemForm.estimatedActionCostInr) : null },
     };
+    setSavingItem(true);
     try {
       await json(`/workspaces/${workspaceId}/items${editingId ? `/${editingId}` : ''}`, editingId ? 'PATCH' : 'POST', payload);
-      setEditingId(''); setItemForm(initialItem); await reload(); setMessage('Cash item saved.');
-    } catch (error) { setMessage(error.message); }
+      setEditingId(''); setItemForm(initialItem); setItemMessage('Cash item saved.');
+      try { await reload(); } catch { setItemMessage('Cash item saved. Reload the page to refresh the list.'); }
+    } catch (error) { setItemMessage(error.message); }
+    finally { setSavingItem(false); }
   }
 
   async function saveRule(event) {
@@ -87,7 +106,7 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
       <h2>{t("Manual cash items")}</h2>
       <p>{t("Add an item or select one below to correct its dates, settlement, or planning constraints.")}</p>
       <p>{t("When recording a real payment, also update the active workspace's opening bank cash snapshot; settled amounts are excluded from future cash movements.")}</p>
-      <form onSubmit={saveItem} className="form-grid">
+      <form onSubmit={saveItem} onChange={() => setItemMessage('')} className="form-grid">
         <label>{t("Category")}<select value={itemForm.category} onChange={event => setItemForm({ ...itemForm, category: event.target.value })}>
           <option value="receivable">{t("Receivable")}</option><option value="payable">{t("Payable")}</option><option value="expense">{t("Expense")}</option>
         </select></label>
@@ -106,7 +125,8 @@ export default function ManualRecords({ workspaceId, refreshKey }) {
         <label>{t("Estimated action cost (₹)")}<input type="number" min="0" step="0.01" value={itemForm.estimatedActionCostInr} onChange={event => setItemForm({ ...itemForm, estimatedActionCostInr: event.target.value })} /></label>
         <label>{t("Fee payment date (optional)")}<input type="date" value={itemForm.actionCostDate} onChange={event => setItemForm({ ...itemForm, actionCostDate: event.target.value })} /><small>{t("Blank means the proposed action date. Known fees reduce forecast cash.")}</small></label>
         {['mandatory', 'negotiable', 'discretionary'].map(field => <label className="check" key={field}><input type="checkbox" checked={itemForm[field]} onChange={event => setItemForm({ ...itemForm, [field]: event.target.checked })} /> {t(field)}</label>)}
-        <button>{t(editingId ? 'Save correction' : 'Add cash item')}</button>
+        {itemMessage && <p role="status" className="notice">{t(itemMessage)}</p>}
+        <button disabled={savingItem}>{t(savingItem ? 'Saving…' : editingId ? 'Save correction' : 'Add cash item')}</button>
         {editingId && <button type="button" onClick={() => { setEditingId(''); setItemForm(initialItem); }}>{t("Cancel edit")}</button>}
       </form>
       <ul>{items.map(item => <li key={item.id}>{item.externalId || item.counterparty} · {t(item.category)} · {t(money(item.outstandingPaise))}{t(" outstanding · ")}{item.expectedDate || 'date needs review'} <button type="button" onClick={() => edit(item)}>{t("Edit")}</button></li>)}</ul>

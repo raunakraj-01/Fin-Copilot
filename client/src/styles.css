@@ -94,7 +94,9 @@ a { color: var(--accent); text-underline-offset: 3px; }
 .operations .form-grid { margin-top:16px; }
 .operations .form-grid > button { margin-top:0; }
 .operations .card > div > button { margin:6px 8px 0 0; }
-.copilot-history { min-height: 260px; max-height: 55vh; overflow-y: auto; }
+.card.copilot-history { min-height: min(260px, 45vh); max-height: 55vh; overflow-y: scroll; overflow-x: hidden; scrollbar-gutter: stable; scrollbar-width: auto; scrollbar-color: var(--accent) var(--surface-2); overscroll-behavior-y: contain; }
+.copilot-history-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.copilot-history article { overflow-wrap: anywhere; }
 .copilot-history article { padding: 12px 0; border-bottom: 1px solid var(--border); }
 .copilot-history article:last-child { border-bottom: 0; }
 .copilot-history p { color: var(--muted); }
