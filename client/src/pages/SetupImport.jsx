@@ -153,9 +153,9 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
       </details>)}
       <AsyncActionButton disabled={busy} busy={busy && activity === 'commit'} onClick={commitBatch} idleLabel={t("Commit reviewed rows")} doneLabel={t("Import complete")} steps={[t("Saving reviewed rows…"), t("Updating cash records…"), t("Refreshing forecast…")]} />
     </div>}
-    {workspaceId && <ManualRecords workspaceId={workspaceId} refreshKey={refreshKey} />}
-    {workspaceId && <BankReconciliation key={workspaceId} workspaceId={workspaceId} refreshKey={refreshKey} onChanged={() => setRefreshKey(value => value + 1)} />}
-    {workspaceId && businessRole === 'owner' && <BusinessAccess key={workspaceId} workspaceId={workspaceId} />}
+    {workspaceId && <ManualRecords key={`records-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} />}
+    {workspaceId && <BankReconciliation key={`bank-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} onChanged={() => setRefreshKey(value => value + 1)} />}
+    {workspaceId && businessRole === 'owner' && <BusinessAccess key={`access-${workspaceId}`} workspaceId={workspaceId} />}
     {message && <p role="status" className="notice">{t(message)}</p>}
   </section>;
 }

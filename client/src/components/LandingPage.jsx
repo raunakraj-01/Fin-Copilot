@@ -1,24 +1,7 @@
 import React, { useEffect } from 'react';
-import LightRays from './reactbits/LightRays/LightRays.jsx';
-import SpecularButton from './reactbits/SpecularButton/SpecularButton.jsx';
 import './landing-page.css';
 
-class EffectBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { failed: false };
-  }
-
-  static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch(error) { console.warn('Animated landing effect unavailable; using fallback.', error); }
-  render() { return this.state.failed ? this.props.fallback : this.props.children; }
-}
-
-const StartFallback = ({ onStart }) => <button className="landing-get-started landing-get-started--fallback" type="button" onClick={onStart}>Get Started <span aria-hidden="true">→</span></button>;
-
 export default function LandingPage({ onStart }) {
-  const supportsWebGL = typeof WebGL2RenderingContext !== 'undefined';
-
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -26,56 +9,24 @@ export default function LandingPage({ onStart }) {
   }, []);
 
   return <main className="landing-page" aria-label="CashFlow Copilot welcome">
-    <div className="landing-page__ambient" aria-hidden="true" />
-    {supportsWebGL && <EffectBoundary fallback={null}><LightRays
-        className="landing-page__rays"
-        raysOrigin="top-center"
-        raysColor="#7ea3cc"
-        raysSpeed={0.72}
-        lightSpread={0.72}
-        rayLength={2.8}
-        rayDensity={1.15}
-        raySharpness={0.42}
-        glow={0.74}
-        haze={0.36}
-        atmosphere={0.9}
-        intensity={1.25}
-        pulsating
-        fadeDistance={1.2}
-        mouseInfluence={0.18}
-        cursorShadow
-        clickPulse
-        opacity={0.92}
-      /></EffectBoundary>}
-    <div className="landing-page__content">
-      <img className="landing-page__logo" src="/brand/cashflow-copilot-logo.png" alt="" />
-      <p className="landing-page__eyebrow">Financial decision system</p>
-      <h1><span>CashFlow</span> <span>Copilot</span></h1>
-      <p className="landing-page__subtitle">See the pressure before it reaches your cash.</p>
-    </div>
-    <div className="landing-page__action">
-      {supportsWebGL ? <EffectBoundary fallback={<StartFallback onStart={onStart} />}><SpecularButton
-          className="landing-get-started"
-          size="lg"
-          radius={24}
-          tint="#5e83ae"
-          tintOpacity={0.16}
-          blur={12}
-          textColor="#f9f5ed"
-          lineColor="#d6e7f8"
-          baseColor="#5e83ae"
-          intensity={1.25}
-          idleIntensity={0.7}
-          shineSize={12}
-          shineFade={38}
-          thickness={1.4}
-          glow={1.25}
-          followMouse
-          autoAnimate
-          onClick={onStart}
-        >Get Started <span aria-hidden="true">→</span></SpecularButton></EffectBoundary> :
-        <StartFallback onStart={onStart} />}
-      <span className="landing-page__hint">Enter your workspace</span>
+    <header className="landing-page__header">
+      <div className="landing-page__wordmark"><span aria-hidden="true">₹</span> CashFlow Copilot</div>
+      <span>Cash decisions, in view</span>
+    </header>
+    <div className="landing-page__body">
+      <section className="landing-page__content">
+        <p className="landing-page__eyebrow">For Indian suppliers</p>
+        <h1>See the cash gap before it arrives</h1>
+        <p className="landing-page__subtitle">Review a 90-day outlook, test payment delays, and compare ways to protect your reserve.</p>
+        <button className="landing-get-started" type="button" onClick={onStart}>Open workspace <span aria-hidden="true">→</span></button>
+      </section>
+      <div className="landing-preview" aria-label="Illustrative cash outlook preview">
+        <div className="landing-preview__top"><span>Cash outlook</span><span>Next 90 days</span></div>
+        <div className="landing-preview__summary"><div><small>Opening cash</small><strong>₹2,00,000</strong></div><div><small>Lowest balance</small><strong>−₹2,00,000</strong><span>11 Nov</span></div></div>
+        <div className="landing-preview__chart"><div className="landing-preview__axis"><span>₹2L</span><span>₹0</span><span>−₹2L</span></div><svg viewBox="0 0 500 220" preserveAspectRatio="none" role="img" aria-label="Illustrative cash balance falls below zero and recovers"><path className="landing-preview__grid" d="M0 24H500M0 110H500M0 196H500"/><path className="landing-preview__zero" d="M0 110H500"/><path className="landing-preview__line" d="M0 40 L54 42 L90 66 L126 92 L162 114 L200 172 L244 194 L280 194 L318 150 L354 106 L396 86 L440 48 L500 44"/><circle cx="244" cy="194" r="5"/></svg></div>
+        <div className="landing-preview__dates"><span>01 Nov</span><span>11 Nov</span><span>26 Nov</span><span>31 Jan</span></div>
+        <div className="landing-preview__foot"><span><i/>Reserve breach · 06 Nov</span><span>Entered-date scenario</span></div>
+      </div>
     </div>
   </main>;
 }

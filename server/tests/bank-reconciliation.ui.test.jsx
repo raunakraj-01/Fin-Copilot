@@ -1,13 +1,27 @@
 // @vitest-environment jsdom
-import React from 'react';
+import React, { StrictMode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import BankReconciliation from '../../client/src/components/BankReconciliation.jsx';
+import SetupImport from '../../client/src/pages/SetupImport.jsx';
 afterEach(() => { cleanup(); sessionStorage.clear(); vi.unstubAllGlobals(); });
 const transaction = { id: 'b', transactionId: 'UTR-1', accountKey: 'MAIN', date: '2026-11-03', description: 'Buyer INV-001', creditPaise: 10000, debitPaise: 0,
   availablePaise: 10000, reviewState: 'open', allocations: [], suggestions: [{ cashItemId: 'i', reasons: ['Invoice reference appears in bank description'] }] };
 const invoice = { id: 'i', externalId: 'INV-001', counterparty: 'Buyer', outstandingPaise: 20000, promises: [{ id: 'p', remainingPaise: 10000, promisedDate: '2026-11-04' }] };
 const listing = (t = transaction) => ({ asOfDate: '2026-11-01', limit: 500, transactions: [t], invoices: [invoice] });
+it('renders one bank reconciliation section in the complete Setup page under development Strict Mode', async () => {
+  vi.stubGlobal('fetch', vi.fn(async url => ({ ok: true, status: 200, json: async () => {
+    if (url.includes('/bank?')) return { asOfDate: '2026-11-01', limit: 500, offset: 0, total: 0, transactions: [], invoices: [] };
+    if (url.endsWith('/members')) return { members: [], invitations: [] };
+    if (url.endsWith('/sync/devices')) return { devices: [] };
+    if (url.endsWith('/items')) return { items: [] };
+    if (url.endsWith('/recurring-rules')) return { recurringRules: [] };
+    return { workspace: { id: 'w', name: 'Business A', asOfDate: '2026-11-01', openingCashPaise: 100000, minimumReservePaise: 10000 } };
+  } })));
+  render(<StrictMode><SetupImport workspaceId="w" businessRole="owner" onWorkspaceCreated={() => {}} /></StrictMode>);
+  await screen.findByText('No bank transactions imported.');
+  expect(screen.getAllByRole('heading', { name: 'Bank receipts & invoice matching' })).toHaveLength(1);
+});
 it('requires approval of suggested matches and sends partial amounts with optional promise allocation', async () => {
   const changed = vi.fn();
   const fetch = vi.fn(async (_url, options) => ({ ok: true, status: 200, json: async () => options?.method ? {} : listing() }));

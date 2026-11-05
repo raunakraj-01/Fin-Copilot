@@ -53,7 +53,7 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) 
       {result.message && <p className="decision-notice" role="status">{t(result.message)}</p>}
       {result.rankingRationale && <p className="decision-muted">{t(result.rankingRationale)}</p>}
       {shownPlans.map((plan, index) => {
-        const series = [{ label: 'Current forecast', daily: result.baseline.daily, color: '#2a2a2a' }, { label: 'Conditional plan', daily: plan.daily, color: '#5e83ae' }];
+        const series = [{ label: 'Current forecast', daily: result.baseline.daily, color: '#68747c' }, { label: 'Conditional plan', daily: plan.daily, color: '#275e80' }];
         return <article className="decision-card" key={plan.planId}>
           <span className={`decision-badge${plan.fullyFeasible ? '' : ' partial'}`}>{t(plan.fullyFeasible ? 'Conditional plan · agreement required' : 'Partial mitigation · shortage remains')}</span>
           <h2>{t(plan.fullyFeasible ? 'Plan' : 'Mitigation')} {t(index + 1)}</h2>

@@ -40,9 +40,9 @@ export default function AsyncActionButton({
     aria-label={idleLabel}
     className={`async-action-button is-${phase}${className ? ` ${className}` : ''}`}
   >
-    <span className="async-action-symbol" aria-hidden="true">
-      {phase === 'done' ? <svg viewBox="0 0 20 20"><path d="m4.5 10.5 3.3 3.2 7.7-8"/></svg> : phase === 'running' ? <span className="async-action-spinner"/> : <svg viewBox="0 0 20 20"><path d="m11.2 2.5-6 8h4.5l-.9 7 6-9h-4.4z"/></svg>}
-    </span>
+    {phase !== 'idle' && <span className="async-action-symbol" aria-hidden="true">
+      {phase === 'done' ? <svg viewBox="0 0 20 20"><path d="m4.5 10.5 3.3 3.2 7.7-8"/></svg> : <span className="async-action-spinner"/>}
+    </span>}
     <span className="async-action-copy" key={`${phase}-${step}`}>{label}</span>
     {phase === 'running' && <span className="async-action-progress" aria-hidden="true">{steps.map((_, index) => <i className={index === step ? 'active' : ''} key={index}/>)}</span>}
   </button>;

@@ -6,6 +6,7 @@
     "test": "npm --prefix server test",
     "build": "npm --prefix client run build",
     "db:check": "npm --prefix server run db:check --",
+    "test:atlas-isolation": "npm --prefix server run test:atlas-isolation --",
     "demo": "npm run build && npm --prefix server run demo"
   }
 }

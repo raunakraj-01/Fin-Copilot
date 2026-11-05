@@ -10,7 +10,6 @@ import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
 import LandingPage from '../components/LandingPage.jsx';
-import { AuroraBackdrop, ClickSpark, RevealContent, ShinyText, SpotlightField } from '../components/reactbits/ReactBitsEffects.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport],
@@ -63,9 +62,9 @@ function BusinessApp({ user, onLogout }) {
     return next;
   });
   const Page = pages[page][2];
-  return <><ClickSpark><AuroraBackdrop/><div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+  return <><div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
-      <div className="sidebar-head"><div className="brand"><span className="brand-mark"><img src="/brand/cashflow-copilot-logo.png" alt="" /></span><span><ShinyText>{t("CashFlow")}</ShinyText><br/><small>{t("Copilot")}</small></span></div></div>
+      <div className="sidebar-head"><div className="brand"><span className="brand-mark" aria-hidden="true">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div></div>
       <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label]]) =>
         <button key={key} type="button" aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={() => setPage(key)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">{t(icons[key])}</svg><span>{t(label)}</span>
@@ -79,15 +78,15 @@ function BusinessApp({ user, onLogout }) {
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path d={sidebarCollapsed ? 'm13 9 3 3-3 3' : 'm16 9-3 3 3 3'} /></svg>
           </button>
           <div className="topbar-wordmark" aria-label={`${t('CashFlow')} ${t('Copilot')}`}>
-            <ShinyText className="topbar-brand-shine">{t("CashFlow")} {t("Copilot")}</ShinyText>
+            <span className="topbar-brand-shine">{t("CashFlow")} {t("Copilot")}</span>
           </div>
         </div>
         <div className="topbar-actions"><span>{user.name}</span><button type="button" className="secondary" onClick={onLogout}>Sign out</button><label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
           <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label></div>
       </header>
-      <SpotlightField className="content">{accessError && <p role="alert">{accessError}</p>}<RevealContent key={`${page}:${workspaceId}`}><Page workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace}
-        operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); setPage('operations'); }} /></RevealContent></SpotlightField>
+      <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace}
+        operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); setPage('operations'); }} /></main>
     </div>
-  </div></ClickSpark>{showLanding && <LandingPage onStart={() => setShowLanding(false)} />}</>;
+  </div>{showLanding && <LandingPage onStart={() => setShowLanding(false)} />}</>;
 }
 export default function App() { return <AuthGate>{(user, logout) => <BusinessApp key={user.id} user={user} onLogout={logout} />}</AuthGate>; }

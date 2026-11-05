@@ -50,7 +50,7 @@ export default function Outlook({ workspaceId }) {
       <ResponsiveContainer width="100%" height="100%"><LineChart data={forecast.daily} margin={{ top: 12, right: 20, left: 15, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" tickFormatter={value => value.slice(5)} minTickGap={20} />
         <YAxis tickFormatter={value => `${Math.round(value / 100000)}k`} />
-        <Tooltip formatter={value => money(value)} /><Line type="monotone" dataKey="closingCashPaise" stroke="#5e83ae" strokeWidth={3} dot={false} name={t("Closing cash")} />
+        <Tooltip formatter={value => money(value)} /><Line type="monotone" dataKey="closingCashPaise" stroke="#275e80" strokeWidth={2.5} dot={false} name={t("Closing cash")} />
       </LineChart></ResponsiveContainer>
     </div>
     {risk.contributingItems.length > 0 && <div className="card"><h2>{t("Largest outgoing drivers")}</h2><ul>{risk.contributingItems.slice(0, 5).map((item, index) =>
