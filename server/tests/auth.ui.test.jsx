@@ -99,3 +99,27 @@ test('business selector uses server memberships and ignores forged cached busine
   expect(screen.queryByRole('option', { name: /Other private business/ })).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Business access' })).toBeNull();
 });
+
+test('gives every dashboard page a bookmarkable URL and follows browser navigation', async () => {
+  window.history.replaceState(null, '', '/cash-outlook');
+  vi.stubGlobal('fetch', vi.fn(async url => response(url.endsWith('/auth/me') ? { user, csrfToken: 'csrf' } : { workspaces: [] })));
+  render(<App />);
+  await screen.findByRole('heading', { name: 'Cash Outlook' });
+  expect(screen.queryByRole('button', { name: 'Open workspace' })).toBeNull();
+  expect(screen.getByRole('link', { name: 'Cash Outlook' }).getAttribute('aria-current')).toBe('page');
+  fireEvent.click(screen.getByRole('link', { name: 'New Order Analyzer' }));
+  expect(window.location.pathname).toBe('/new-order-analyzer');
+  await screen.findByRole('heading', { name: 'Can this order fit your cash plan?' });
+  window.history.pushState(null, '', '/rescue-planner');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  await screen.findByRole('heading', { name: 'Build a cash rescue plan' });
+  expect(screen.getByRole('link', { name: 'Rescue Planner' }).getAttribute('aria-current')).toBe('page');
+});
+
+test('moves from the root landing page to the setup endpoint', async () => {
+  vi.stubGlobal('fetch', vi.fn(async url => response(url.endsWith('/auth/me') ? { user, csrfToken: 'csrf' } : { workspaces: [] })));
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: /Open workspace/ }));
+  expect(window.location.pathname).toBe('/setup-import');
+  await screen.findByRole('heading', { name: 'Setup & Import' });
+});

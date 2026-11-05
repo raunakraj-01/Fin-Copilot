@@ -50,16 +50,16 @@ code { padding: 2px 5px; border-radius: 4px; color: var(--text); background: var
 .brand small { color: #b6c2c8; font-size: 12px; font-weight: 400; }
 .brand-mark { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #53636d; border-radius: 8px; color: #c8dce8; font-family: 'IBM Plex Mono', monospace; font-size: 18px; }
 .sidebar nav { display: grid; gap: 4px; margin-top: 28px; }
-.sidebar nav button { width: 100%; min-width: 0; min-height: 36px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #b6c2c8; text-align: left; font-size: 14px; font-weight: 400; line-height: 1.25; transition: color .15s ease, background-color .15s ease, border-color .15s ease; }
-.sidebar nav button span { min-width: 0; }
-.sidebar nav button:hover { color: #fff; background: #2a353c; }
-.sidebar nav button[aria-current="page"] { color: #fff; background: #344149; border-color: #52616a; }
+.sidebar nav a { width: 100%; min-width: 0; min-height: 36px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #b6c2c8; text-align: left; text-decoration: none; font-size: 14px; font-weight: 400; line-height: 1.25; transition: color .15s ease, background-color .15s ease, border-color .15s ease; }
+.sidebar nav a span { min-width: 0; }
+.sidebar nav a:hover { color: #fff; background: #2a353c; }
+.sidebar nav a[aria-current="page"] { color: #fff; background: #344149; border-color: #52616a; }
 .sidebar nav svg { width: 18px; height: 18px; flex: 0 0 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .sidebar-note { margin-top: auto; padding: 12px; display: grid; gap: 4px; border-top: 1px solid #435159; font-size: 12px; line-height: 1.45; color: #aab8c0; }
 .sidebar-note strong { color: #e5ebee; font-weight: 500; }
 .sidebar-collapsed .brand { justify-content: center; padding: 0; }
-.sidebar-collapsed .brand > span:last-child, .sidebar-collapsed .sidebar nav button span, .sidebar-collapsed .sidebar-note { display: none; }
-.sidebar-collapsed .sidebar nav button { justify-content: center; padding-inline: 0; }
+.sidebar-collapsed .brand > span:last-child, .sidebar-collapsed .sidebar nav a span, .sidebar-collapsed .sidebar-note { display: none; }
+.sidebar-collapsed .sidebar nav a { justify-content: center; padding-inline: 0; }
 .app-area { min-height: 100vh; margin-left: var(--sidebar); transition: margin-left .18s cubic-bezier(.22,1,.36,1); }
 .topbar { min-height: 64px; padding: 8px 32px; position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.96); }
 .topbar-leading { min-width: 0; display: flex; align-items: center; gap: 12px; }
@@ -201,8 +201,8 @@ body > #root > .decision-page .form-grid { display: block; }
   .sidebar-toggle { display: none; }
   .sidebar { padding-inline: 8px; }
   .brand { justify-content: center; padding: 0; }
-  .brand > span:last-child, .sidebar nav button span, .sidebar-note { display: none; }
-  .sidebar nav button { justify-content: center; padding: 0; }
+  .brand > span:last-child, .sidebar nav a span, .sidebar-note { display: none; }
+  .sidebar nav a { justify-content: center; padding: 0; }
   .topbar { padding-inline: 16px; }
   .content { padding: 24px 16px 48px; }
 }
@@ -212,8 +212,8 @@ body > #root > .decision-page .form-grid { display: block; }
   .brand, .sidebar-note { display: none; }
   .sidebar nav { height: 100%; margin: 0; grid-template-columns: repeat(7, minmax(48px, 1fr)); gap: 4px; overflow-x: auto; scrollbar-width: none; }
   .sidebar nav::-webkit-scrollbar { display: none; }
-  .sidebar nav button { min-height: 48px; }
-  .sidebar nav button[aria-current="page"] { border-bottom-color: #8cb4c9; }
+  .sidebar nav a { min-height: 48px; }
+  .sidebar nav a[aria-current="page"] { border-bottom-color: #8cb4c9; }
   .app-area { margin-left: 0; padding-bottom: 64px; }
   .topbar { min-height: 104px; padding: 8px 12px; flex-direction: column; align-items: stretch; gap: 8px; }
   .topbar-leading { justify-content: center; }

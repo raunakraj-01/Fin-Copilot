@@ -34,6 +34,8 @@ To verify the configured Atlas connection, use `npm run db:check`. To verify rea
 
 To test owner/accountant isolation against the running development app and Atlas, use `npm run test:atlas-isolation`. See [the live test results and manual walkthrough](docs/ATLAS_ISOLATION_TEST.md). The test uses separate fabricated accounts and businesses; it does not edit existing business records.
 
+Dashboard pages have bookmarkable browser routes: `/setup-import`, `/cash-outlook`, `/cash-shock-lab`, `/rescue-planner`, `/new-order-analyzer`, `/cash-copilot`, and `/operations`. Browser back/forward navigation and direct refreshes are supported.
+
 Use Node.js LTS. Start MongoDB Server locally or use a MongoDB Atlas URI. MongoDB Compass only inspects the database; it does not run the server.
 
 1. Copy `server/.env.example` to `server/.env`; set `MONGODB_URI` and optionally `CLIENT_ORIGIN`.

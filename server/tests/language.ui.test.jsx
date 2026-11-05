@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import App from '../../client/src/app/App.jsx';
 import { setLanguage, t } from '../../client/src/i18n/index.js';
 
-afterEach(() => { cleanup(); setLanguage('en'); localStorage.clear(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); setLanguage('en'); localStorage.clear(); window.history.replaceState(null, '', '/'); vi.unstubAllGlobals(); });
 
 test('top-right language control switches navigation and persists selection', async () => {
   localStorage.clear(); setLanguage('en');
@@ -13,12 +13,12 @@ test('top-right language control switches navigation and persists selection', as
   render(<App />);
   await screen.findByLabelText('Language');
   fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'hi' } });
-  expect(screen.getByRole('button', { name: 'नकदी तनाव परीक्षण' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'नकदी तनाव परीक्षण' })).toBeTruthy();
   expect(document.documentElement.lang).toBe('hi');
   expect(localStorage.getItem('cashflowLanguage')).toBe('hi');
   fireEvent.change(screen.getByLabelText('भाषा'), { target: { value: 'kn' } });
-  expect(screen.getByRole('button', { name: 'ನಗದು ಒತ್ತಡ ಪರೀಕ್ಷೆ' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'ನಗದು ಒತ್ತಡ ಪರೀಕ್ಷೆ' })).toBeTruthy();
   expect(t('Whom should I call first?')).toBe('ಮೊದಲು ಯಾರಿಗೆ ಕರೆ ಮಾಡಲಿ?');
   fireEvent.change(screen.getByLabelText('ಭಾಷೆ'), { target: { value: 'en' } });
-  expect(screen.getByRole('button', { name: 'Cash Shock Lab' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Cash Shock Lab' })).toBeTruthy();
 });

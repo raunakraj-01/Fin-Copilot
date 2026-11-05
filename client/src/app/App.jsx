@@ -12,14 +12,15 @@ import Operations from '../pages/Operations.jsx';
 import LandingPage from '../components/LandingPage.jsx';
 
 const pages = {
-  setup: ['Setup & Import', 'Configure your cash workspace', SetupImport],
-  outlook: ['Cash Outlook', 'Monitor the next 90 days', Outlook],
-  shock: ['Cash Shock Lab', 'Test delays and protect your cash reserve', CashShockLab],
-  rescue: ['Rescue Planner', 'Find practical ways through a shortfall', RescuePlanner],
-  orders: ['New Order Analyzer', 'Test an opportunity before committing', OrderAnalyzer],
-  copilot: ['Cash Copilot', 'Ask about your cash records', Copilot],
-  operations: ['Operations', 'Review sync and collection drafts', Operations],
+  setup: ['Setup & Import', 'Configure your cash workspace', SetupImport, '/setup-import'],
+  outlook: ['Cash Outlook', 'Monitor the next 90 days', Outlook, '/cash-outlook'],
+  shock: ['Cash Shock Lab', 'Test delays and protect your cash reserve', CashShockLab, '/cash-shock-lab'],
+  rescue: ['Rescue Planner', 'Find practical ways through a shortfall', RescuePlanner, '/rescue-planner'],
+  orders: ['New Order Analyzer', 'Test an opportunity before committing', OrderAnalyzer, '/new-order-analyzer'],
+  copilot: ['Cash Copilot', 'Ask about your cash records', Copilot, '/cash-copilot'],
+  operations: ['Operations', 'Review sync and collection drafts', Operations, '/operations'],
 };
+const pageFromPath = pathname => Object.entries(pages).find(([, page]) => page[3] === pathname)?.[0];
 
 const icons = {
   setup: <><path d="M4 6h16M7 12h10M10 18h4"/><circle cx="7" cy="6" r="1"/><circle cx="17" cy="12" r="1"/><circle cx="10" cy="18" r="1"/></>,
@@ -33,8 +34,8 @@ const icons = {
 
 function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
-  const [showLanding, setShowLanding] = useState(true);
-  const [page, setPage] = useState('setup');
+  const [showLanding, setShowLanding] = useState(() => window.location.pathname === '/');
+  const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'setup');
   const [operationsItemId, setOperationsItemId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('cashflowSidebarCollapsed') === '1');
   const [workspaceId, setWorkspaceId] = useState('');
@@ -48,6 +49,27 @@ function BusinessApp({ user, onLogout }) {
     refresh(); window.addEventListener('focus', refresh);
     return () => { active = false; window.removeEventListener('focus', refresh); };
   }, [user.id]);
+  useEffect(() => {
+    if (window.location.pathname !== '/' && !pageFromPath(window.location.pathname))
+      window.history.replaceState(null, '', pages.setup[3]);
+    const followBrowserHistory = () => {
+      const next = pageFromPath(window.location.pathname);
+      setShowLanding(window.location.pathname === '/');
+      setPage(next || 'setup');
+    };
+    window.addEventListener('popstate', followBrowserHistory);
+    return () => window.removeEventListener('popstate', followBrowserHistory);
+  }, []);
+  useEffect(() => { document.title = showLanding ? 'CashFlow Copilot' : `${pages[page][0]} · CashFlow Copilot`; }, [page, showLanding]);
+  const navigate = (nextPage, replace = false) => {
+    const path = pages[nextPage][3];
+    window.history[replace ? 'replaceState' : 'pushState'](null, '', path);
+    setShowLanding(false); setPage(nextPage);
+  };
+  const followLink = (event, nextPage) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault(); navigate(nextPage);
+  };
   const selectWorkspace = value => {
     if (!value) { localStorage.removeItem(`cashflowWorkspace:${user.id}`); setWorkspaceId(''); return; }
     const profile = typeof value === 'string' ? profiles.find(item => item.id === value) : value;
@@ -65,10 +87,10 @@ function BusinessApp({ user, onLogout }) {
   return <><div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
       <div className="sidebar-head"><div className="brand"><span className="brand-mark" aria-hidden="true">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div></div>
-      <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label]]) =>
-        <button key={key} type="button" aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={() => setPage(key)}>
+      <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label, , , path]]) =>
+        <a key={key} href={path} aria-label={t(label)} title={t(label)} aria-current={!showLanding && page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">{t(icons[key])}</svg><span>{t(label)}</span>
-        </button>)}</nav>
+        </a>)}</nav>
       <div className="sidebar-note"><strong>{t("Synthetic workspace")}</strong><span>{t("Use demo financial records only.")}</span></div>
     </aside>
     <div className="app-area">
@@ -85,8 +107,8 @@ function BusinessApp({ user, onLogout }) {
           <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label></div>
       </header>
       <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace}
-        operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); setPage('operations'); }} /></main>
+        operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }} /></main>
     </div>
-  </div>{showLanding && <LandingPage onStart={() => setShowLanding(false)} />}</>;
+  </div>{showLanding && <LandingPage onStart={() => navigate('setup', true)} />}</>;
 }
 export default function App() { return <AuthGate>{(user, logout) => <BusinessApp key={user.id} user={user} onLogout={logout} />}</AuthGate>; }
