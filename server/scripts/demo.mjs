@@ -12,11 +12,14 @@ import SyncBatch from '../src/models/SyncBatch.js';
 import PaymentObservation from '../src/models/PaymentObservation.js';
 import { pseudonym } from '../src/services/finance/reliability.js';
 import { ensureLocalOllama } from '../src/services/ai/startOllama.js';
+import { startFollowupWorker } from '../src/services/finance/followups.js';
 
 const clientDist = fileURLToPath(new URL('../../client/dist/', import.meta.url));
 let database;
 let server;
+let stopFollowups;
 async function stop() {
+  stopFollowups?.();
   server?.close();
   await mongoose.disconnect();
   await database?.stop();
@@ -32,6 +35,7 @@ try {
   await mongoose.connect(uri);
   process.env.TELEMETRY_HMAC_KEY = randomBytes(32).toString('hex');
   app.locals.demoMode = true;
+  stopFollowups = startFollowupWorker();
   const demoWorkspaceId = '650000000000000000000001';
   await SyncBatch.create({ workspaceId: demoWorkspaceId, companyId: 'Synthetic Tally company', batchId: '00000000-0000-4000-8000-000000000001', count: 5 });
   const buyerHash = pseudonym('22AAAAA0000A1Z5');

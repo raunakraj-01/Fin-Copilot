@@ -94,6 +94,12 @@ a { color: var(--accent); text-underline-offset: 3px; }
 .operations .form-grid { margin-top:16px; }
 .operations .form-grid > button { margin-top:0; }
 .operations .card > div > button { margin:6px 8px 0 0; }
+.proactive-collections .page-actions { margin: 12px 0; align-items: center; }
+.proactive-collections .proactive-priorities { display: grid; gap: 12px; }
+.proactive-collections article h3 { margin-top: 0; }
+.proactive-collections article button { margin: 4px 8px 4px 0; }
+.proactive-collections details { margin-top: 12px; }
+.proactive-collections .form-grid { margin: 20px 0; }
 .card.copilot-history { min-height: min(260px, 45vh); max-height: 55vh; overflow-y: scroll; overflow-x: hidden; scrollbar-gutter: stable; scrollbar-width: auto; scrollbar-color: var(--accent) var(--surface-2); overscroll-behavior-y: contain; }
 .copilot-history-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .copilot-history article { overflow-wrap: anywhere; }

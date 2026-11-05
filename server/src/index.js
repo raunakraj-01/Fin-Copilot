@@ -2,6 +2,7 @@ import 'dotenv/config';
 import app from './app.js';
 import { connectDb } from './config/db.js';
 import { ensureLocalOllama } from './services/ai/startOllama.js';
+import { startFollowupWorker } from './services/finance/followups.js';
 
 const port = Number(process.env.PORT || 5000);
 app.locals.localSyntheticDev = process.env.LOCAL_SYNTHETIC_DEV === '1'
@@ -10,6 +11,7 @@ app.locals.localSyntheticDev = process.env.LOCAL_SYNTHETIC_DEV === '1'
 try {
   await ensureLocalOllama();
   await connectDb(process.env.MONGODB_URI);
+  startFollowupWorker();
   app.listen(port, () => console.log(`API listening at http://localhost:${port}/api`));
 } catch (error) {
   console.error('Unable to start API:', error);

@@ -1,0 +1,345 @@
+{
+  "name": "CashFlow Copilot - proactive WhatsApp follow-ups",
+  "active": false,
+  "nodes": [
+    {
+      "id": "every-minute",
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "test-manually",
+      "name": "Test manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        180
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "configuration",
+      "name": "Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "base",
+              "name": "appBaseUrl",
+              "value": "http://localhost:5000",
+              "type": "string"
+            },
+            {
+              "id": "meta",
+              "name": "metaMessagesUrl",
+              "value": "https://graph.facebook.com/v23.0/REPLACE_PHONE_NUMBER_ID/messages",
+              "type": "string"
+            },
+            {
+              "id": "template",
+              "name": "templateName",
+              "value": "cashflow_payment_reminder",
+              "type": "string"
+            },
+            {
+              "id": "language",
+              "name": "language",
+              "value": "en",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "claim-due-follow-ups",
+      "name": "Claim due follow-ups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').first().json.appBaseUrl + '/api/followup-automation/claim' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURE_CASHFLOW_AUTH",
+          "name": "CashFlow automation bearer"
+        }
+      }
+    },
+    {
+      "id": "jobs",
+      "name": "Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return ($input.first().json.jobs || []).map(job => ({ json: job, pairedItem: { item: 0 } }));"
+      }
+    },
+    {
+      "id": "recheck-invoice-and-claim",
+      "name": "Recheck invoice and claim",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').first().json.appBaseUrl + '/api/followup-automation/jobs/' + $json.claimId + '/validate' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURE_CASHFLOW_AUTH",
+          "name": "CashFlow automation bearer"
+        }
+      }
+    },
+    {
+      "id": "still-allowed-to-send",
+      "name": "Still allowed to send",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "allowed",
+              "leftValue": "={{ $json.send }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "send-approved-whatsapp-template",
+      "name": "Send approved WhatsApp template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').first().json.metaMessagesUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.phone, type: 'template', template: { name: $('Configuration').first().json.templateName, language: { code: $('Configuration').first().json.language }, components: [{ type: 'body', parameters: [{ type: 'text', text: $json.message }] }] } }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURE_WHATSAPP_AUTH",
+          "name": "WhatsApp Business bearer"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    },
+    {
+      "id": "record-send-result",
+      "name": "Record send result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').first().json.appBaseUrl + '/api/followup-automation/jobs/' + $('Jobs').item.json.claimId + '/ack' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.messages?.[0]?.id ? { outcome: 'accepted', providerMessageId: $json.messages[0].id } : { outcome: 'failed' }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURE_CASHFLOW_AUTH",
+          "name": "CashFlow automation bearer"
+        }
+      }
+    },
+    {
+      "id": "setup-instructions",
+      "name": "Setup instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -390
+      ],
+      "parameters": {
+        "width": 1100,
+        "height": 280,
+        "content": "## Configure before publishing\n1. Keep inactive until the app, recipients, and approved WhatsApp template are configured.\n2. Set Configuration URLs (Docker: appBaseUrl may need host.docker.internal).\n3. Select Header Auth credentials on all HTTP nodes: Authorization: Bearer <token>. App token must match FOLLOWUP_AUTOMATION_TOKEN; WhatsApp token is separate.\n4. Use an approved utility template whose body has one text parameter for the reminder. Match its name and language.\n5. Set FOLLOWUP_ALLOW_SEND=1 on the app server, restart, and explicitly schedule an opted-in recipient in n8n mode.\nNo automatic retries: unknown/failed sends pause for review. Accepted means API accepted, not delivered. Paid invoices are rechecked before sending. See docs/WHATSAPP_FOLLOWUPS.md."
+      }
+    }
+  ],
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test manually": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration": {
+      "main": [
+        [
+          {
+            "node": "Claim due follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim due follow-ups": {
+      "main": [
+        [
+          {
+            "node": "Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jobs": {
+      "main": [
+        [
+          {
+            "node": "Recheck invoice and claim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recheck invoice and claim": {
+      "main": [
+        [
+          {
+            "node": "Still allowed to send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still allowed to send": {
+      "main": [
+        [
+          {
+            "node": "Send approved WhatsApp template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send approved WhatsApp template": {
+      "main": [
+        [
+          {
+            "node": "Record send result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "tags": []
+}

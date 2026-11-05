@@ -12,7 +12,7 @@ import PaymentOffer from '../models/PaymentOffer.js';
 const router = Router({ mergeParams: true });
 const input = z.object({ cashItemId: z.string().regex(/^[a-f\d]{24}$/i), amountPaise: z.number().int().safe().positive().optional(), discountBps: z.number().int().min(0).max(10000),
   settleBy: dateOnly, phone: z.string().regex(/^\+?\d{10,15}$/, 'Use 10–15 digits; a leading + is optional').transform(value => value.replace(/^\+/, '')) }).strict();
-function requireOwner(req) {
+export function requireOwner(req) {
   const localPreview = req.app.locals.localSyntheticDev === true && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
   if (req.app.locals.demoMode !== true && !localPreview && (!process.env.FEATURE_ADMIN_TOKEN || req.get('Authorization') !== `Bearer ${process.env.FEATURE_ADMIN_TOKEN}`)) fail(401, 'UNAUTHORIZED', 'Owner authorization required');
 }

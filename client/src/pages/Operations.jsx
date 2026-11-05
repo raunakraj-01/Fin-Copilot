@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { inputRupees, parseRupees } from './OrderAnalyzer/money.js';
+import ProactiveCollections from '../components/ProactiveCollections.jsx';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
@@ -87,6 +88,7 @@ export default function Operations({ workspaceId, operationsItemId }) {
     <h1>Operations</h1><p>Review Tally sync, payment reliability, and a proposed early-payment message. Real financial data requires an authorized deployment.</p>
     {!workspaceId ? <p>Select a workspace first.</p> : <>
       {demoMode ? <p className="decision-notice">Synthetic demo mode: sample sync and payment observations. No message or payment is sent.</p> : localSyntheticDev ? <p className="decision-notice">Local synthetic dev: offer previews are available without a token. No message or payment is sent.</p> : <div className="card"><label>Owner access token<input type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} /></label><p>Kept in this page only. The server must have FEATURE_ADMIN_TOKEN configured.</p></div>}
+      <ProactiveCollections workspaceId={workspaceId} token={token} enabled={canPreview} />
       <div className="card"><h2>Feature 1 → Feature 2 connection test</h2><p>Enroll a device for this supplier profile, enable consent, then submit a paid Tally row. Use five independent profiles with the same buyer GSTIN to unlock its pooled score.</p>
         <p>Payment telemetry: <strong>{consent ? 'enabled' : 'disabled'}</strong> <button type="button" className="secondary" onClick={async () => { try { const data = await ownerRequest('reliability/consent', 'PATCH', { share: !consent }); setConsent(data.share); } catch (cause) { setError(cause.message); } }}>{consent ? 'Withdraw consent' : 'Enable consent'}</button></p>
         <label>Device name<input value={deviceName} onChange={event => setDeviceName(event.target.value)} /></label><button type="button" onClick={async () => { try { const data = await ownerRequest('sync/devices', 'POST', { name: deviceName }); setDeviceToken(data.token); setSyncMessage('Device enrolled. Its token is shown below only for this session.'); } catch (cause) { setError(cause.message); } }}>Enroll sync device</button>

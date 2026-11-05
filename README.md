@@ -69,3 +69,5 @@ All API monetary values are integer paise. Imports are reviewed before commit, r
 This is a single-workspace demo without authentication. Do not upload real financial records or expose this API publicly.
 
 For the RTX 4050 Windows demo, the local configuration uses a separate Ollama service on port 11435 with `OLLAMA_LLM_LIBRARY=cuda_v12`, `OLLAMA_NUM_GPU=26`, and `OLLAMA_NUM_CTX=4096`. This avoids the observed CUDA 13 warm-up crash and offloads 26 model layers while keeping VRAM usage within 6 GB. Set `OLLAMA_EXECUTABLE` and `OLLAMA_MODELS` to your local installation and model directory; `npm run demo` and the backend start command automatically start that service if needed. The ordinary Ollama service on port 11434 is unchanged.
+
+Operations includes proactive collection priorities and scheduled local follow-up drafts, with pause controls, attempt limits, current-balance checks and follow-up history. Download the inactive n8n workflow from Operations for optional WhatsApp Business automation. Live sends stay disabled by default. See [the demo and n8n setup guide](docs/WHATSAPP_FOLLOWUPS.md).
