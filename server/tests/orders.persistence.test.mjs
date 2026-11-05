@@ -10,7 +10,7 @@ const workspaceId = '0123456789abcdef01234567';
 const planId = '0123456789abcdef01234568';
 function appFor(dependencies) {
   const app = express(); app.use(express.json());
-  const deps = { buildForecast, workspaceExists: async () => true, logError: vi.fn(), ...dependencies };
+  const deps = { buildForecast, workspaceExists: async () => true, loadContext: async () => isolatedContext(), logError: vi.fn(), ...dependencies };
   app.use('/api/workspaces/:workspaceId/orders', createOrdersRouter(deps));
   app.use('/api/workspaces/:workspaceId/rescue', createRescueRouter(deps));
   return app;

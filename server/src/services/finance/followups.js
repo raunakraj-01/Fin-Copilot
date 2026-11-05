@@ -48,7 +48,7 @@ export function recommendCollections(context) {
     suggestions: suggestions.sort((a, b) => b.gapReductionPaise - a.gapReductionPaise || b.overdueDays - a.overdueDays || b.outstandingPaise - a.outstandingPaise) };
 }
 
-export const liveFollowupsEnabled = () => process.env.FOLLOWUP_ALLOW_SEND === '1' && Boolean(process.env.FOLLOWUP_AUTOMATION_TOKEN);
+export const liveFollowupsEnabled = () => process.env.FOLLOWUP_ALLOW_SEND === '1';
 
 async function currentMessage(rule) {
   const [item, workspace] = await Promise.all([
@@ -64,12 +64,13 @@ async function currentMessage(rule) {
   return { item, message: collectionMessage(item, workspace.asOfDate, rule.attempts + 1) };
 }
 
-export async function finishFollowup(claimId, outcome, providerMessageId) {
-  const rule = await CollectionFollowUp.findOne({ claimId });
+export async function finishFollowup(claimId, outcome, providerMessageId, workspaceId) {
+  const scope = workspaceId ? { workspaceId } : {};
+  const rule = await CollectionFollowUp.findOne({ claimId, ...scope });
   if (!rule) return null;
   const attempts = rule.attempts + 1;
   // Atomic claim consumption makes repeated callbacks harmless.
-  return CollectionFollowUp.findOneAndUpdate({ _id: rule._id, claimId }, {
+  return CollectionFollowUp.findOneAndUpdate({ _id: rule._id, claimId, ...scope }, {
     $set: { claimId: null, attempts, state: rule.state !== 'active' ? rule.state : outcome === 'failed' ? 'paused' : attempts >= rule.maxAttempts ? 'exhausted' : 'active',
       nextRunAt: new Date(Date.now() + rule.cadenceDays * day), lastOutcome: outcome },
     $push: { history: { $each: [{ at: new Date(), message: rule.lastMessage, outcome, ...(providerMessageId ? { providerMessageId } : {}) }], $slice: -20 } },
@@ -96,8 +97,8 @@ export async function runFollowups({ mode = 'demo', workspaceId, ruleId, now = n
   return jobs;
 }
 
-export async function validateDispatch(claimId) {
-  const rule = await CollectionFollowUp.findOne({ claimId, mode: 'n8n', state: 'active', recipientOptIn: true });
+export async function validateDispatch(claimId, workspaceId) {
+  const rule = await CollectionFollowUp.findOne({ claimId, mode: 'n8n', state: 'active', recipientOptIn: true, ...(workspaceId ? { workspaceId } : {}) });
   if (!rule || !liveFollowupsEnabled()) return null;
   if (Date.now() - rule.claimedAt.getTime() > 10 * 60000) return null;
   const current = await currentMessage(rule);

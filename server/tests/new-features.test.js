@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import request from 'supertest';
-import { beforeAll, afterAll, expect, it, vi } from 'vitest';
+import request from './authenticatedRequest.js';
+import { beforeAll, afterAll, afterEach, expect, it, vi } from 'vitest';
 import app from '../src/app.js';
 import Workspace from '../src/models/Workspace.js';
 import CashItem from '../src/models/CashItem.js';
@@ -10,6 +10,7 @@ import { reliability } from '../src/services/finance/reliability.js';
 import { createHmac } from 'node:crypto';
 
 let mongo, id;
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
@@ -60,7 +61,7 @@ it('connects five supplier sync devices to an eligible pooled buyer score', asyn
   }
   const score = await request(app).get(`/api/workspaces/${id}/reliability/buyers/${buyerGstin}`)
     .set('Authorization', 'Bearer owner-secret').expect(200);
-  expect(score.body).toMatchObject({ available: true, supplierCount: 5, invoiceCount: 5 });
+  expect(score.body.available).toBe(false); // cross-business pooling is deliberately disabled
 });
 
 it('suppresses buyer scores below five independent suppliers', () => {
@@ -75,12 +76,12 @@ it('requires owner consent and a verified source token for observations', async 
   vi.stubEnv('TELEMETRY_HMAC_KEY', 'test-hmac-secret');
   vi.stubEnv('OBSERVATION_TOKEN', 'source-secret');
   const consent = `/api/workspaces/${id}/reliability/consent`;
-  await request(app).patch(consent).send({ share: true }).expect(401);
+  await request(app).patch(consent).anonymous().send({ share: true }).expect(401);
   await request(app).patch(consent).set('Authorization', 'Bearer owner-secret').send({ share: true }).expect(200);
   const observation = { buyerGstin: '22AAAAA0000A1Z5', sourceId: 'payment-1', invoiceDate: '2026-01-01',
     dueDate: '2026-02-15', clearedDate: '2026-03-10', amountPaise: 10000, source: 'bank_verified' };
   const endpoint = `/api/workspaces/${id}/reliability/observations`;
-  await request(app).post(endpoint).send(observation).expect(401);
+  await request(app).post(endpoint).anonymous().send(observation).expect(401);
   await request(app).post(endpoint).set('Authorization', 'Bearer source-secret').send(observation).expect(202);
   await request(app).patch(consent).set('Authorization', 'Bearer owner-secret').send({ share: false }).expect(200);
 });
@@ -90,7 +91,7 @@ it('uses exact paise discount arithmetic and protects previews', async () => {
   const item = await CashItem.create({ workspaceId: id, category: 'receivable', counterparty: 'Rajesh', sourceSystem: 'manual', amountPaise: 40000000, dueDate: '2026-11-26', expectedDate: '2026-11-26' });
   const path = `/api/workspaces/${id}/offers/preview`;
   const payload = { cashItemId: String(item._id), discountBps: 200, settleBy: '2026-11-04', phone: '919999999999' };
-  await request(app).post(path).send(payload).expect(401);
+  await request(app).post(path).anonymous().send(payload).expect(401);
   const result = await request(app).post(path).set('Authorization', 'Bearer owner-secret').send(payload).expect(200);
   expect(result.body.buyerPaysPaise).toBe(39200000);
   expect(result.body.whatsappUrl).toMatch(/^https:\/\/wa.me\//);
@@ -119,7 +120,7 @@ it('accepts an international + number in local synthetic dev only', async () => 
     amountPaise: 10000, dueDate: '2026-11-20', expectedDate: '2026-11-20' });
   const endpoint = `/api/workspaces/${id}/offers/preview`;
   const body = { cashItemId: String(item._id), discountBps: 200, settleBy: '2026-11-04', phone: '+919999999999' };
-  await request(app).post(endpoint).send(body).expect(401);
+  await request(app).post(endpoint).anonymous().send(body).expect(401);
   app.locals.localSyntheticDev = true;
   try {
     const result = await request(app).post(endpoint).send(body).expect(200);
@@ -130,6 +131,9 @@ it('accepts an international + number in local synthetic dev only', async () => 
 });
 
 it('creates a Razorpay link and settles a verified paid webhook exactly once', async () => {
+  // Keep the existing dated payment fixture valid regardless of the day tests run.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-03T12:00:00Z'));
   vi.stubEnv('RAZORPAY_KEY_ID', 'rzp_test_fake');
   vi.stubEnv('RAZORPAY_KEY_SECRET', 'test-api-secret');
   vi.stubEnv('RAZORPAY_WEBHOOK_SECRET', 'test-webhook-secret');

@@ -14,6 +14,8 @@ node_modules/
 
 # Testing and Coverage
 coverage/
+/tmp/auth-tests/
+/tmp/mongo-tests/
 
 # Build and Preview artifacts
 dist/

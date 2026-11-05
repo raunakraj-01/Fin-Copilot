@@ -1,3 +1,4 @@
+import { sessionFetch } from '../services/session.js';
 import { t, useLanguage } from '../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
@@ -15,7 +16,7 @@ function Explanations({ workspaceId, apiBaseUrl, report }) {
     const controller = new AbortController(); active.current = controller;
     setState({ busy: true, result: null, error: '' });
     try {
-      const response = await fetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/shock/explain`, {
+      const response = await sessionFetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/shock/explain`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
         body: JSON.stringify({ ...(report.counterparty ? { counterparty: report.counterparty } : {}), delayDays: report.delayDays, question }),
       });

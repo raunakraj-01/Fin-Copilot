@@ -12,6 +12,9 @@ const actionSchema = new mongoose.Schema({
   feeDate: { type: String, validate: { validator: value => !value || isDateOnly(value) } },
   status: { type: String, enum: ['proposed', 'requested', 'agreed', 'rejected', 'completed'], default: 'proposed' },
   ownerNotes: { type: String, default: '' },
+  promiseId: { type: String, default: null },
+  baselineSettledPaise: { type: Number, min: 0, validate: Number.isSafeInteger },
+  history: { type: [{ at: Date, asOfDate: String, fromStatus: String, toStatus: String, ownerNotes: String, promiseId: String }], default: [] },
 }, { _id: false });
 
 const schema = new mongoose.Schema({

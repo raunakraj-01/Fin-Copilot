@@ -37,6 +37,7 @@ export function prepareSavedPlan(rawContext, rawRequest, buildForecast) {
       feeDate: item.actionCostDate || action.toDate,
       status: 'proposed',
       ownerNotes: '',
+      baselineSettledPaise: item.settledPaise,
     };
   });
   const containsUnknownCosts = actions.some(action => action.estimatedCostPaise == null);

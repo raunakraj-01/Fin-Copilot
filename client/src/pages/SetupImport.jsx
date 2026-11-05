@@ -3,13 +3,15 @@ import React, { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
 import ManualRecords from '../components/ManualRecords.jsx';
 import AsyncActionButton from '../components/AsyncActionButton.jsx';
+import BankReconciliation from '../components/BankReconciliation.jsx';
+import BusinessAccess from '../components/BusinessAccess.jsx';
 
 const fields = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDate', 'expectedDate', 'status',
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
   'maxEarlyCollectionInr', 'estimatedActionCostInr', 'actionCostDate'];
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
-export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
+export default function SetupImport({ workspaceId, onWorkspaceCreated, businessRole = 'owner' }) {
   useLanguage();
   const [form, setForm] = useState({ name: 'Demo Packaging Supplier', businessGstin: '', asOfDate: '2026-11-01', openingCashInr: '200000', minimumReserveInr: '0' });
   const [kind, setKind] = useState('receivables');
@@ -66,8 +68,8 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
 
   function useSeed() {
     run('seed', async () => {
-      const id = '650000000000000000000001';
-      const { workspace } = await api(`/workspaces/${id}`);
+      const { workspace } = await json('/workspaces', 'POST', { name: 'Demo Packaging Supplier', asOfDate: '2026-11-01', openingCashPaise: 20000000, minimumReservePaise: 0 });
+      await json(`/workspaces/${workspace.id}/demo-data`, 'POST', {});
       onWorkspaceCreated(workspace);
       setMessage(`Using seeded workspace: ${workspace.name}`);
     });
@@ -99,6 +101,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
         excludedRowNumbers: excluded,
       });
       setMessage(`Saved ${result.savedCount} records. Skipped ${result.skippedCount}.`);
+      if (result.duplicateConflicts?.length) setMessage(`Saved ${result.savedCount} records. Skipped ${result.skippedCount}. Duplicate invoice IDs were preserved; ${result.duplicateConflicts.filter(c => c.changed).length} have changed details. Review the existing records before editing.`);
       setRefreshKey(value => value + 1);
       setBatchId(''); setRows([]);
     });
@@ -115,7 +118,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
       <label>{t("Minimum reserve (₹)")}<input type="number" step="0.01" min="0" value={form.minimumReserveInr} onChange={event => setForm({ ...form, minimumReserveInr: event.target.value })} required /></label>
       <div className="form-actions">
         <button disabled={busy}>{t("Create new workspace")}</button>
-        {workspaceId && <button type="button" className="secondary" disabled={busy} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
+        {workspaceId && <button type="button" className="secondary" disabled={busy || businessRole !== 'owner'} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
       </div>
     </form>
     <div className="page-actions"><button type="button" className="secondary" disabled={busy} onClick={useSeed}>{t("Use seeded demo workspace")}</button></div>
@@ -151,6 +154,8 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated }) {
       <AsyncActionButton disabled={busy} busy={busy && activity === 'commit'} onClick={commitBatch} idleLabel={t("Commit reviewed rows")} doneLabel={t("Import complete")} steps={[t("Saving reviewed rows…"), t("Updating cash records…"), t("Refreshing forecast…")]} />
     </div>}
     {workspaceId && <ManualRecords workspaceId={workspaceId} refreshKey={refreshKey} />}
+    {workspaceId && <BankReconciliation key={workspaceId} workspaceId={workspaceId} refreshKey={refreshKey} onChanged={() => setRefreshKey(value => value + 1)} />}
+    {workspaceId && businessRole === 'owner' && <BusinessAccess key={workspaceId} workspaceId={workspaceId} />}
     {message && <p role="status" className="notice">{t(message)}</p>}
   </section>;
 }

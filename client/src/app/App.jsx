@@ -1,5 +1,7 @@
 import { t, useLanguage, setLanguage } from '../i18n/index.js';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import AuthGate from '../components/AuthGate.jsx';
+import { api } from '../services/api.js';
 import SetupImport from '../pages/SetupImport.jsx';
 import Outlook from '../pages/Outlook.jsx';
 import RescuePlanner from '../pages/RescuePlanner.jsx';
@@ -30,22 +32,29 @@ const icons = {
   operations: <><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="7" cy="7" r="1"/><circle cx="16" cy="12" r="1"/></>,
 };
 
-export default function App() {
+function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
   const [showLanding, setShowLanding] = useState(true);
   const [page, setPage] = useState('setup');
   const [operationsItemId, setOperationsItemId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('cashflowSidebarCollapsed') === '1');
-  const [workspaceId, setWorkspaceId] = useState(localStorage.getItem('cashflowWorkspaceId') || '');
-  const [profiles, setProfiles] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('cashflowProfiles') || '[]'); } catch { return []; }
-  });
+  const [workspaceId, setWorkspaceId] = useState('');
+  const [profiles, setProfiles] = useState([]);
+  const [accessError, setAccessError] = useState('');
+  useEffect(() => {
+    let active = true;
+    const refresh = () => api('/workspaces').then(data => { if (!active) return; setProfiles(data.workspaces);
+      setWorkspaceId(current => { const desired = current || localStorage.getItem(`cashflowWorkspace:${user.id}`); return data.workspaces.some(w => w.id === desired) ? desired : ''; });
+    }).catch(e => { if (active) setAccessError(e.message); });
+    refresh(); window.addEventListener('focus', refresh);
+    return () => { active = false; window.removeEventListener('focus', refresh); };
+  }, [user.id]);
   const selectWorkspace = value => {
-    if (!value) { localStorage.removeItem('cashflowWorkspaceId'); setWorkspaceId(''); return; }
-    const profile = typeof value === 'string' ? { id: value, name: profiles.find(item => item.id === value)?.name || value } : value;
-    const next = [...profiles.filter(item => item.id !== profile.id), { id: profile.id, name: profile.name }];
-    localStorage.setItem('cashflowProfiles', JSON.stringify(next));
-    localStorage.setItem('cashflowWorkspaceId', profile.id);
+    if (!value) { localStorage.removeItem(`cashflowWorkspace:${user.id}`); setWorkspaceId(''); return; }
+    const profile = typeof value === 'string' ? profiles.find(item => item.id === value) : value;
+    if (!profile) return;
+    const next = [...profiles.filter(item => item.id !== profile.id), profile];
+    localStorage.setItem(`cashflowWorkspace:${user.id}`, profile.id);
     setProfiles(next); setWorkspaceId(profile.id);
   };
   const toggleSidebar = () => setSidebarCollapsed(current => {
@@ -73,11 +82,12 @@ export default function App() {
             <ShinyText className="topbar-brand-shine">{t("CashFlow")} {t("Copilot")}</ShinyText>
           </div>
         </div>
-        <div className="topbar-actions"><label className="language-picker">Profile<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select profile</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+        <div className="topbar-actions"><span>{user.name}</span><button type="button" className="secondary" onClick={onLogout}>Sign out</button><label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
           <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label></div>
       </header>
-      <SpotlightField className="content"><RevealContent key={page}><Page workspaceId={workspaceId} onWorkspaceCreated={selectWorkspace}
+      <SpotlightField className="content">{accessError && <p role="alert">{accessError}</p>}<RevealContent key={`${page}:${workspaceId}`}><Page workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace}
         operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); setPage('operations'); }} /></RevealContent></SpotlightField>
     </div>
   </div></ClickSpark>{showLanding && <LandingPage onStart={() => setShowLanding(false)} />}</>;
 }
+export default function App() { return <AuthGate>{(user, logout) => <BusinessApp key={user.id} user={user} onLogout={logout} />}</AuthGate>; }

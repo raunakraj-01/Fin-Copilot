@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import request from 'supertest';
+import request from './authenticatedRequest.js';
 import { beforeAll, afterAll, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import app from '../src/app.js';
 import Workspace from '../src/models/Workspace.js';
@@ -23,9 +23,9 @@ const input = () => ({ cashItemId: String(item._id), phone: '+919999999999', cad
 const schedule = async extra => (await request(app).post(path).set('Authorization', 'Bearer owner').send({ ...input(), ...extra }).expect(201)).body.rule;
 
 it('requires owner access and rejects live mode when it is not configured', async () => {
-  await request(app).get(path).expect(401);
+  await request(app).get(path).anonymous().expect(401);
   await request(app).post(path).set('Authorization', 'Bearer owner').send({ ...input(), mode: 'n8n', recipientOptIn: true }).expect(400);
-  await request(app).post('/api/followup-automation/claim').expect(401);
+  await request(app).post('/api/followup-automation/claim').anonymous().expect(401);
 });
 it('recommends overdue invoices and excludes paid and other-workspace records', async () => {
   const result = await request(app).get(path).set('Authorization', 'Bearer owner').expect(200);

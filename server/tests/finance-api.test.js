@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import request from 'supertest';
+import request from './authenticatedRequest.js';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import app from '../src/app.js';
 import Workspace from '../src/models/Workspace.js';

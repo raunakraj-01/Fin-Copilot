@@ -1,5 +1,6 @@
 import { isDateOnly } from '../../utils/dates.js';
 import { parseInrPaise } from '../../utils/money.js';
+import { canonicalId } from './identity.js';
 
 const truthy = value => ['yes', 'true', '1'].includes(String(value).trim().toLowerCase());
 
@@ -16,7 +17,7 @@ export function normalizeRows(rawRows, mapping, kind, sourceSystem) {
     const externalId = get('externalId');
     if (!externalId) issues.push({ rowNumber, field: 'externalId', code: 'MISSING_ID', severity: 'review', message: 'Source ID needs review' });
     if (externalId) {
-      const key = `${kind}:${sourceSystem}:${externalId}`;
+      const key = `${kind}:${canonicalId(externalId)}`;
       if (seen.has(key)) issues.push({ rowNumber, field: 'externalId', code: 'DUPLICATE_IN_FILE', severity: 'error', message: 'Repeated source ID in file' });
       seen.add(key);
     }

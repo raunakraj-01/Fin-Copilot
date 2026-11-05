@@ -137,7 +137,7 @@ All paths below are relative to `/api/workspaces/:workspaceId`:
 - `GET /rescue/plans`: returns `{ plans, limit: 50 }`, newest first.
 - `PATCH /rescue/plans/:planId/actions/:actionId`: accepts `{ status?, ownerNotes? }`, with at least one field. Status is `proposed`, `requested`, `agreed`, `rejected`, or `completed`; notes are limited to 2,000 characters. Other fields are rejected. Returns the updated saved plan.
 
-Unknown workspaces, plans, or actions return 404. Lists and edits are scoped to the requested workspace. This demo's shared app still needs any future authentication/membership layer; workspace scoping does not establish user identity. Tracking records owner reports and does not automatically change the overall saved plan status. The existing OrderScenario schema saves original payment terms; the delay stress test is described in warnings rather than stored as a separately replayable scenario. Saved metrics are snapshots; reanalyze before making a current decision.
+Unknown workspaces, plans, or actions return 404. Lists and edits are scoped to the requested workspace. The app now enforces authenticated owner/accountant membership before these routes; see docs/AUTHENTICATION.md for permissions and migration. Tracking records owner reports and does not automatically change the overall saved plan status. The existing OrderScenario schema saves original payment terms; the delay stress test is described in warnings rather than stored as a separately replayable scenario. Saved metrics are snapshots; reanalyze before making a current decision.
 
 ### Verify after integration
 

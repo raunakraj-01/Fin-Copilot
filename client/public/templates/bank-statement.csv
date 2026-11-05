@@ -1,0 +1,3 @@
+Transaction ID,Date,Description,Credit,Debit
+UTR-DEMO-001,2026-11-04,Customer receipt for INV-R100,10000,0
+UTR-DEMO-002,2026-11-05,Bank fee recorded separately,0,100

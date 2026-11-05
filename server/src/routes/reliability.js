@@ -5,16 +5,12 @@ import { dateOnly, paise } from '../validators/finance.js';
 import Workspace from '../models/Workspace.js';
 import PaymentObservation from '../models/PaymentObservation.js';
 import { calendarDays, pseudonym, reliability } from '../services/finance/reliability.js';
+import { requireOwner } from '../middleware/auth.js';
 
 const router = Router({ mergeParams: true });
 const gstin = z.string().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/);
 const input = z.object({ buyerGstin: gstin, sourceId: z.string().min(1).max(150), invoiceDate: dateOnly,
   dueDate: dateOnly, clearedDate: dateOnly, amountPaise: paise.positive(), source: z.enum(['tally_verified', 'bank_verified', 'gateway_verified']) }).strict();
-function requireOwner(req) {
-  if (req.app.locals.demoMode === true || req.app.locals.localSyntheticDev === true) return;
-  if (!process.env.FEATURE_ADMIN_TOKEN || req.get('Authorization') !== `Bearer ${process.env.FEATURE_ADMIN_TOKEN}`)
-    fail(401, 'UNAUTHORIZED', 'Owner authorization required');
-}
 router.patch('/consent', asyncRoute(async (req, res) => {
   requireOwner(req);
   if (!process.env.TELEMETRY_HMAC_KEY) fail(503, 'UNAVAILABLE', 'Telemetry is disabled');
@@ -31,7 +27,7 @@ router.get('/consent', asyncRoute(async (req, res) => {
   res.json({ share: workspace.sharePaymentTelemetry === true });
 }));
 router.post('/observations', asyncRoute(async (req, res) => {
-  if (!process.env.TELEMETRY_HMAC_KEY || !process.env.OBSERVATION_TOKEN || req.get('Authorization') !== `Bearer ${process.env.OBSERVATION_TOKEN}`) fail(401, 'UNAUTHORIZED', 'Verified source required');
+  if (!process.env.TELEMETRY_HMAC_KEY || req.service?.kind !== 'sync') fail(401, 'UNAUTHORIZED', 'Business-scoped sync credential required');
   const workspace = await workspaceOr404(req.params.workspaceId);
   if (!workspace.sharePaymentTelemetry) fail(403, 'FORBIDDEN', 'Telemetry consent required');
   const data = validate(input, req.body);
@@ -48,7 +44,7 @@ router.get('/buyers/:gstin', asyncRoute(async (req, res) => {
   await workspaceOr404(req.params.workspaceId);
   const buyer = validate(gstin, req.params.gstin);
   const since = new Date(); since.setUTCFullYear(since.getUTCFullYear() - 1);
-  const observations = await PaymentObservation.find({ buyerHash: pseudonym(buyer), clearedDate: { $gte: since.toISOString().slice(0, 10) } }).lean();
+  const observations = await PaymentObservation.find({ workspaceId: req.params.workspaceId, buyerHash: pseudonym(buyer), clearedDate: { $gte: since.toISOString().slice(0, 10) } }).lean();
   const result = reliability(observations);
   res.json(result ? { available: true, ...result } : { available: false, reason: 'Insufficient independent suppliers' });
 }));

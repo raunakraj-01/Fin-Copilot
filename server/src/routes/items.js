@@ -30,6 +30,9 @@ router.patch('/items/:itemId', asyncRoute(async (req, res) => {
   const current = item.toObject();
   const editable = ['category', 'externalId', 'counterparty', 'description', 'sourceSystem', 'amountPaise', 'settledPaise', 'status', 'dueDate', 'expectedDate', 'confidenceState', 'constraints'];
   const patch = Object.fromEntries(Object.entries(req.body).filter(([key]) => editable.includes(key)));
+  const recordedReceipts = (current.gatewayReceipts || []).reduce((sum, r) => sum + r.amountPaise, 0);
+  if (patch.settledPaise != null && patch.settledPaise < recordedReceipts) fail(409, 'CONFLICT', 'Settlement cannot be reduced below confirmed receipts');
+  if (recordedReceipts && patch.category && patch.category !== current.category) fail(409, 'CONFLICT', 'A record with confirmed receipts cannot change category');
   if (Object.keys(patch).length !== Object.keys(req.body).length || !Object.keys(patch).length) fail(400, 'VALIDATION_ERROR', 'Invalid item fields');
   const merged = { ...Object.fromEntries(editable.filter(key => current[key] !== undefined).map(key => [key, current[key]])), ...patch,
     constraints: { ...(current.constraints || {}), ...(patch.constraints || {}) } };
@@ -40,7 +43,9 @@ router.patch('/items/:itemId', asyncRoute(async (req, res) => {
 router.delete('/items/:itemId', asyncRoute(async (req, res) => {
   await workspaceOr404(req.params.workspaceId);
   if (!mongoose.isValidObjectId(req.params.itemId)) fail(404, 'NOT_FOUND', 'Cash item not found');
-  const deleted = await CashItem.findOneAndDelete({ _id: req.params.itemId, workspaceId: req.params.workspaceId });
+  const current = await CashItem.findOne({ _id: req.params.itemId, workspaceId: req.params.workspaceId }).lean();
+  if (current?.gatewayReceipts?.length) fail(409, 'CONFLICT', 'A record with confirmed receipts cannot be deleted');
+  const deleted = await CashItem.findOneAndDelete({ _id: req.params.itemId, workspaceId: req.params.workspaceId, 'gatewayReceipts.0': { $exists: false } });
   if (!deleted) fail(404, 'NOT_FOUND', 'Cash item not found');
   res.status(204).end();
 }));

@@ -25,6 +25,7 @@ async function stop() {
   await database?.stop();
 }
 try {
+  process.env.CLIENT_ORIGIN = 'http://localhost:5000';
   await ensureLocalOllama();
   await access(`${clientDist}/index.html`);
   database = await MongoMemoryServer.create();
@@ -47,11 +48,12 @@ try {
       amountPaise: 1000000, source: 'tally_verified' });
   }
   const demo = express();
+  demo.use((_req, res, next) => { res.set('Referrer-Policy', 'no-referrer'); res.set('X-Frame-Options', 'DENY'); next(); });
   demo.use(express.static(clientDist));
   demo.use(app);
   server = demo.listen(5000, 'localhost');
   await new Promise((resolve, reject) => { server.once('listening', resolve); server.once('error', reject); });
-  console.log('Synthetic demo ready: http://localhost:5000 — choose Use seeded demo workspace.');
+  console.log('Synthetic demo ready: http://localhost:5000 — create an account, then choose Use seeded demo workspace to create your own sample business.');
   console.log('Uses an isolated temporary database. Demo edits disappear when this process stops.');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { stop().then(() => process.exit(0)); });
 } catch {

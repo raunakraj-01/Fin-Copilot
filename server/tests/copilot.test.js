@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import request from 'supertest';
+import request from './authenticatedRequest.js';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import app from '../src/app.js';
 import Workspace from '../src/models/Workspace.js';

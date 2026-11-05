@@ -1,5 +1,5 @@
 import { t, useLanguage } from '../i18n/index.js';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
 import { inputRupees, parseRupees } from './OrderAnalyzer/money.js';
 import SavedScenarios, { SaveScenario } from './OrderAnalyzer/SavedScenarios.jsx';
@@ -10,12 +10,22 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
   const [form, setForm] = useState({ label: '', orderValue: '', advance: '0', advanceDate: '', finalCollectionDate: '', delayedCollectionDays: '14' });
   const [costLines, setCostLines] = useState([{ description: '', amount: '', paymentDate: '' }]);
   const [inputError, setInputError] = useState('');
+  const [editNotice, setEditNotice] = useState('');
+  const formRef = useRef(null);
   const [analyzedOrder, setAnalyzedOrder] = useState(null);
   const [savedVersion, setSavedVersion] = useState(0);
   const { result, error, loading, run, clear } = useAnalysis(workspaceId, 'orders', apiBaseUrl);
-  function changed() { clear(); setInputError(''); }
+  function changed() { clear(); setInputError(''); setEditNotice(''); }
   const change = event => { changed(); setForm(current => ({ ...current, [event.target.name]: event.target.value })); };
   const changeCost = (index, field, value) => { changed(); setCostLines(current => current.map((line, position) => position === index ? { ...line, [field]: value } : line)); };
+  function editSaved(scenario) {
+    changed(); setAnalyzedOrder(null);
+    setForm({ label: scenario.label, orderValue: inputRupees(scenario.orderValuePaise), advance: inputRupees(scenario.advancePaise),
+      advanceDate: scenario.advanceDate, finalCollectionDate: scenario.finalCollectionDate, delayedCollectionDays: String(scenario.delayedCollectionDays ?? 0) });
+    setCostLines(scenario.costLines.map(line => ({ description: line.description || '', amount: inputRupees(line.amountPaise), paymentDate: line.paymentDate })));
+    setEditNotice('Saved order loaded into the form. Review its dates and terms, then analyze again. Saving creates a separate scenario.');
+    formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }
   async function analyze(event) {
     event.preventDefault();
     setInputError('');
@@ -38,7 +48,7 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
   ] : [];
   return <main className="decision-page">
     <header><span className="decision-kicker">{t("CashFlow Copilot · Decision support")}</span><h1>{t("Can this order fit your cash plan?")}</h1><p className="decision-intro">{t("Enter payment dates and production costs to compare daily cash, test a delayed customer payment, and find the minimum advance needed to preserve your reserve.")}</p></header>
-    {!workspaceId ? <div className="decision-empty">{t("Create or select a workspace first. Your opening cash, reserve, and existing obligations are needed for this analysis.")}</div> : <form onSubmit={analyze} className="decision-card">
+    {!workspaceId ? <div className="decision-empty">{t("Create or select a workspace first. Your opening cash, reserve, and existing obligations are needed for this analysis.")}</div> : <form ref={formRef} onSubmit={analyze} className="decision-card">
       <fieldset disabled={loading}><div className="decision-form-grid">
         {[
           ['label', 'Order label', 'text'], ['orderValue', 'Order value (₹)', 'text'], ['advance', 'Proposed advance (₹)', 'text'],
@@ -55,6 +65,7 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
       <div className="decision-actions"><AsyncActionButton type="submit" busy={loading} idleLabel={t("Analyze order")} doneLabel={t("Analysis ready")} steps={[t("Checking daily cash…"), t("Adding production payments…"), t("Stressing customer delay…"), t("Finding minimum advance…")]} /></div></fieldset>
     </form>}
     {(error || inputError) && <p className="decision-error" role="alert">{t(inputError || error)}</p>}
+    {editNotice && <p role="status">{editNotice}</p>}
     {loading && <p role="status">{t("Testing cash coverage and the minimum possible advance…")}</p>}
     {result && <section aria-label={t("Order analysis results")}>
       <div className="decision-metrics"><Metric label={t("Current lowest cash")} value={rupees(result.baseline.worstCashPaise)} /><Metric label={t("Lowest cash with order")} value={rupees(result.withOrder.worstCashPaise)} /><Metric label={t("Largest additional cash requirement")} value={rupees(result.withOrder.maxIncrementalCashRequirementPaise)} /></div>
@@ -67,6 +78,6 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
       <Notices warnings={result.warnings} assumptions={result.assumptions} />
       <SaveScenario key={`${workspaceId}:${apiBaseUrl}`} order={analyzedOrder} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} onSaved={() => setSavedVersion(value => value + 1)} />
     </section>}
-    <SavedScenarios key={`${workspaceId}:${apiBaseUrl}`} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} reloadKey={savedVersion} />
+    <SavedScenarios key={`${workspaceId}:${apiBaseUrl}`} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} reloadKey={savedVersion} onEdit={editSaved} />
   </main>;
 }

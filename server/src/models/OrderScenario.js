@@ -14,6 +14,12 @@ const schema = new mongoose.Schema({
   orderValuePaise: { ...money, min: 1 }, advancePaise: money,
   advanceDate: dateField, finalCollectionDate: dateField,
   costLines: { type: [costLineSchema], default: [] },
+  delayedCollectionDays: { type: Number, default: 0, min: 0, max: 366, validate: Number.isInteger },
+  analyzedAt: Date,
+  analysisContext: { version: Number, fingerprint: String, asOfDate: String, minimumReservePaise: Number, horizonDays: Number },
+  analysisHistory: { type: [{ analyzedAt: Date, minimumAdvancePaise: Number, analysisContext: {
+    version: Number, fingerprint: String, asOfDate: String, minimumReservePaise: Number, horizonDays: Number,
+  } }], default: [] },
   simulatedMinimumAdvancePaise: { type: Number, default: null, min: 0, validate: value => value == null || Number.isSafeInteger(value) },
   scenarioWarnings: { type: [String], default: [] },
 }, { timestamps: true });

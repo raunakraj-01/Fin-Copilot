@@ -2,6 +2,8 @@ import { t, useLanguage, locale } from '../i18n/index.js';
 import React, { useEffect, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../services/api.js';
+import PaymentPromises from '../components/PaymentPromises.jsx';
+import SpendingCheck from '../components/SpendingCheck.jsx';
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
@@ -9,13 +11,14 @@ export default function Outlook({ workspaceId }) {
   useLanguage();
   const [forecast, setForecast] = useState(null);
   const [error, setError] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     if (!workspaceId) return;
     let active = true;
     api(`/workspaces/${workspaceId}/forecast`).then(value => { if (active) setForecast(value); })
       .catch(reason => { if (active) setError(reason.message); });
     return () => { active = false; };
-  }, [workspaceId]);
+  }, [workspaceId, refreshKey]);
 
   if (!workspaceId) return <section><h1>{t("Cash Outlook")}</h1><p>{t("Create a workspace and import records first.")}</p></section>;
   if (error) return <section><h1>{t("Cash Outlook")}</h1><p role="alert">{t(error)}</p></section>;
@@ -26,12 +29,14 @@ export default function Outlook({ workspaceId }) {
     <h1>{t("Cash Outlook")}</h1>
     <p>{t("This forecast assumes the entered expected payment dates. It is a scenario, not a guaranteed prediction.")}</p>
     <p className="notice">{t(risk.explanation)}</p>
+    <SpendingCheck key={`spending-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} />
     <div className="metrics">
       <div className="card"><small>{t("Opening cash")}</small><strong>{t(money(forecast.openingCashPaise))}</strong></div>
       <div className="card"><small>{t("First negative day")}</small><strong>{t(risk.firstNegativeDate || 'None')}</strong></div>
       <div className="card"><small>{t("First reserve breach")}</small><strong>{t(risk.firstReserveBreachDate || 'None')}</strong></div>
       <div className="card"><small>{t("Worst balance")}</small><strong>{t(money(risk.worstCashPaise))}</strong><span>{t(risk.worstDate)}</span></div>
     </div>
+    <PaymentPromises key={workspaceId} workspaceId={workspaceId} onChanged={() => setRefreshKey(value => value + 1)} />
     {events.length === 0 && <p className="notice">{t("No future cash movements are scheduled. Add or import records on Setup & Import, and check any data warnings below.")}</p>}
     {events.length > 0 && <div className="card"><h2>{t("Scheduled receipts and payments")}</h2><div className="table-scroll"><table>
       <thead><tr><th>{t("Date")}</th><th>{t("Record")}</th><th>{t("Direction")}</th><th>{t("Amount")}</th><th>{t("Evidence")}</th></tr></thead>

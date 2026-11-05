@@ -1,4 +1,5 @@
 import { addDays, horizonEnd } from './dates.js';
+import { currentPromises } from '../finance/promises.js';
 import { date, fail, isMoney, money, normalizeContext, runForecast, summarize, validateRescueOptions } from './validation.js';
 
 const outstanding = item => item.amountPaise - item.settledPaise;
@@ -18,6 +19,8 @@ function candidatesFor(context) {
       estimatedCostPaise: item.estimatedActionCostPaise ?? null, requiresAgreement: true, status: 'proposed',
     };
     if (item.category === 'receivable' && item.earliestCollectionDate && isMoney(item.maxEarlyCollectionPaise)) {
+      // Invoice-level acceleration cannot safely rewrite multiple installment promises.
+      if (currentPromises(item, context.asOfDate).some(p => p.forecastPaise > 0)) return [];
       // Opening cash already includes the snapshot day; a proposed receipt must occur later.
       const firstForecastDay = addDays(context.asOfDate, 1);
       const toDate = item.earliestCollectionDate < firstForecastDay ? firstForecastDay : item.earliestCollectionDate;
@@ -55,6 +58,7 @@ export function applyActions(context, actions) {
     money(action.amountPaise, 'actions.amountPaise');
     if (action.fromDate !== item.expectedDate || !item.expectedDate || item.expectedDate <= base.asOfDate || action.toDate <= base.asOfDate || action.toDate > end) fail('Action date is outside the allowed timeline', 'actions.toDate');
     if (action.type === 'accelerate_collection') {
+      if (currentPromises(item, base.asOfDate).some(p => p.forecastPaise > 0)) fail('Revise this invoice’s payment promises before simulating early collection', 'actions');
       if (item.category !== 'receivable' || !item.earliestCollectionDate || !isMoney(item.maxEarlyCollectionPaise) || action.toDate < item.earliestCollectionDate || action.toDate >= item.expectedDate || action.amountPaise <= 0 || action.amountPaise > Math.min(outstanding(item), item.maxEarlyCollectionPaise)) fail('Collection action exceeds invoice constraints', 'actions');
     } else {
       const allowed = action.type === 'defer_payable' && item.category === 'payable' && item.negotiable === true
@@ -73,7 +77,7 @@ export function applyActions(context, actions) {
     usedIds.add(splitId);
     return [
       { ...structuredClone(item), amountPaise: item.amountPaise - action.amountPaise },
-      { ...structuredClone(item), id: splitId, _id: splitId, sourceId: item.id, sourceCashItemId: item.id, amountPaise: action.amountPaise, settledPaise: 0, status: 'open', expectedDate: action.toDate },
+      { ...structuredClone(item), id: splitId, _id: splitId, sourceId: item.id, sourceCashItemId: item.id, amountPaise: action.amountPaise, settledPaise: 0, gatewayReceipts: [], status: 'open', expectedDate: action.toDate },
     ];
   });
 }

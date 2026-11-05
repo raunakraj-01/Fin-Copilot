@@ -1,3 +1,4 @@
+import { sessionFetch } from '../services/session.js';
 import React, { useEffect, useRef, useState } from 'react';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
@@ -13,7 +14,7 @@ export default function ProactiveCollections({ workspaceId, token, enabled }) {
   const currentWorkspace = useRef(workspaceId);
   currentWorkspace.current = workspaceId;
   async function request(path = '', method = 'GET', body) {
-    const response = await fetch(`${base}/workspaces/${workspaceId}/followups${path}`, { method,
+    const response = await sessionFetch(`${base}/workspaces/${workspaceId}/followups${path}`, { method,
       headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}) });
     const result = await response.json();

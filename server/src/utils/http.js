@@ -2,7 +2,7 @@ import { ZodError } from 'zod';
 import mongoose from 'mongoose';
 import Workspace from '../models/Workspace.js';
 
-export const asyncRoute = handler => (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
+export const asyncRoute = handler => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 
 export function fail(status, code, message, details) {
   const error = new Error(message);
@@ -24,6 +24,7 @@ export async function workspaceOr404(id) {
 }
 
 export function errorResponse(err, _req, res, _next) {
+  if (err.name === 'VersionError') return res.status(409).json({ error: { code: 'CONFLICT', message: 'Record changed. Refresh before trying again.' } });
   if (err instanceof ZodError) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid request data' } });
   if (err.code === 11000) return res.status(409).json({ error: { code: 'DUPLICATE_RECORD', message: 'A record with this source ID already exists' } });
   if (err.name === 'ValidationError' || err.name === 'CastError') return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: err.message } });

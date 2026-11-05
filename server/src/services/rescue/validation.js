@@ -72,6 +72,8 @@ export function normalizeContext(value) {
     if (settledPaise > item.amountPaise) fail('Settlement exceeds the item amount', `${field}.settledPaise`);
     if (item.expectedDate) date(item.expectedDate, `${field}.expectedDate`);
     const normalized = { ...item, id, ...(item._id ? { _id: String(item._id) } : {}), settledPaise };
+    if (item.paymentPromises) normalized.paymentPromises = item.paymentPromises.map(p => ({ ...p,
+      ...(p._id ? { _id: String(p._id) } : {}) }));
     for (const key of constraintKeys) {
       const constraint = item[key] !== undefined ? item[key] : item.constraints?.[key];
       if (constraint !== undefined) normalized[key] = constraint;
@@ -94,7 +96,8 @@ export function normalizeContext(value) {
   });
   // Conservative bound also covers recurring occurrences and signed opening cash.
   safeTotal([Math.abs(openingCashPaise), minimumReservePaise, ...cashItems.map(item => item.amountPaise), ...cashItems.map(item => item.estimatedActionCostPaise ?? 0), ...recurringRules.map(rule => rule.amountPaise * Math.ceil(horizonDays / 28))], 'forecast amounts');
-  return { asOfDate, horizonDays, openingCashPaise, minimumReservePaise, cashItems, recurringRules };
+  return { asOfDate, horizonDays, openingCashPaise, minimumReservePaise, cashItems, recurringRules,
+    ...(value.bankReviewIssues ? { bankReviewIssues: value.bankReviewIssues } : {}) };
 }
 
 export function runForecast(buildForecast, context, overrides = {}) {

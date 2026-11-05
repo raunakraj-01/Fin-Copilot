@@ -1,3 +1,4 @@
+import { sessionFetch } from '../services/session.js';
 import { t, useLanguage } from '../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
@@ -25,7 +26,7 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) 
     saveController.current = controller;
     setSaveState({ planId: plan.planId, busy: true, message: '', error: '' });
     try {
-      const response = await fetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/rescue/plans`, {
+      const response = await sessionFetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/rescue/plans`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ objective, actions: plan.actions }), signal: controller.signal,
       });

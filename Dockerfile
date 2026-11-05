@@ -10,6 +10,9 @@ WORKDIR /app/server
 COPY server/package*.json ./
 RUN npm ci --omit=dev
 COPY server/src ./src
+COPY server/scripts/assign-business-owner.mjs ./scripts/assign-business-owner.mjs
+COPY server/scripts/check-database.mjs ./scripts/check-database.mjs
+COPY fixtures /app/fixtures
 COPY --from=client /app/client/dist /app/client/dist
 ENV NODE_ENV=production PORT=5001
 EXPOSE 5001

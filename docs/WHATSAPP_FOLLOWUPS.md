@@ -20,9 +20,9 @@ Import [the workflow JSON](../client/public/workflows/cashflow-followups.n8n.jso
 Flow: Every minute → Claim due jobs → Split jobs → Recheck outstanding invoice and one-time dispatch permission → Send approved WhatsApp template → Record the API result.
 
 1. Configure a WhatsApp Business Cloud account and obtain a phone number ID, access token, and approved utility template. The template must accept exactly one body text parameter containing the generated reminder, and its name/language must match the Configuration node. Follow [n8n's WhatsApp Business documentation](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.whatsapp/).
-2. Create two **Header Auth** credentials in n8n. Both use header name `Authorization`, with a value starting `Bearer `. The CashFlow credential uses a new server-side automation secret; the WhatsApp credential uses the Meta access token. Select the appropriate credential on every HTTP Request node. No secrets are embedded in the export.
+2. Create two **Header Auth** credentials in n8n. Both use header name `Authorization`, with a value starting `Bearer `. The CashFlow credential uses a per-business automation credential created by the owner; the WhatsApp credential uses the Meta access token. Select the appropriate credential on every HTTP Request node. No secrets are embedded in the export.
 3. In the Configuration node set the backend base URL and Meta Messages URL, including the correct phone number ID and a supported Graph API version. Native local n8n can use `http://localhost:5000`. A Docker instance may need `http://host.docker.internal:5000` and a backend reachable from that container; the demo binds to localhost, so prefer native local n8n for this project. A hosted n8n instance cannot reach your localhost directly.
-4. Set `FOLLOWUP_AUTOMATION_TOKEN` in `server/.env` to match n8n's CashFlow credential. Set `FOLLOWUP_ALLOW_SEND=1` only when ready to enable external sends, and restart the backend. These variables are read on the server, never in the browser. Use the app only with synthetic data until proper tenant authentication is implemented.
+4. Create an automation credential under the selected business’s Setup & Import → Business access and use it as n8n’s CashFlow credential. Shared environment automation tokens are no longer accepted. Set `FOLLOWUP_ALLOW_SEND=1` only when ready to enable external sends, and restart the backend. These variables are read on the server, never in the browser. Login and business membership are required; use synthetic records while validating the full integration.
 5. In Operations explicitly schedule a rule in **Automatic WhatsApp via n8n** mode and confirm that this particular recipient opted in. Creating a demo-mode rule never makes it eligible for n8n sending. The first live cycle is eligible immediately; later cycles use the configured cadence.
 6. Review the imported nodes and credentials, then [publish the schedule-triggered workflow](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.scheduletrigger/). Start with a WhatsApp test recipient.
 
@@ -34,7 +34,7 @@ This is a rule-driven proactive assistant with a bounded follow-up state machine
 
 ## Server endpoints
 
-- `GET /api/workspaces/:workspaceId/followups`: current priorities, eligible invoices and schedules; owner/demo access required.
+- `GET /api/workspaces/:workspaceId/followups`: current priorities, eligible invoices and schedules; signed-in business owner required.
 - `POST /api/workspaces/:workspaceId/followups`: schedule or explicitly restart an eligible invoice's follow-ups.
 - `PATCH /api/workspaces/:workspaceId/followups/:ruleId`: pause using `{ "state": "paused" }`.
 - `POST /api/workspaces/:workspaceId/followups/:ruleId/demo-run`: advance one active demo schedule immediately; never sends externally.
@@ -42,4 +42,4 @@ This is a rule-driven proactive assistant with a bounded follow-up state machine
 - `POST /api/followup-automation/jobs/:claimId/validate`: rechecks invoice and consumes one-time dispatch permission.
 - `POST /api/followup-automation/jobs/:claimId/ack`: records `{ "outcome": "accepted", "providerMessageId": "..." }` or `{ "outcome": "failed" }`.
 
-All automation endpoints require `Authorization: Bearer <FOLLOWUP_AUTOMATION_TOKEN>` and the explicit live-send switch. Default configuration disables the entire external automation API.
+All automation endpoints require a revocable per-business automation credential in the `Authorization: Bearer` header and the explicit live-send switch. Default configuration disables the entire external automation API.

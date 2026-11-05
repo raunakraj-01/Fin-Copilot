@@ -8,6 +8,7 @@ import PaymentObservation from '../models/PaymentObservation.js';
 import SyncBatch from '../models/SyncBatch.js';
 import SyncDevice from '../models/SyncDevice.js';
 import { calendarDays, pseudonym } from '../services/finance/reliability.js';
+import { requireOwner } from '../middleware/auth.js';
 
 const router = Router({ mergeParams: true });
 const gstin = z.string().trim().toUpperCase().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/);
@@ -22,19 +23,8 @@ const row = z.object({ sourceId: z.string().min(1).max(150), version: z.string()
 const batch = z.object({ companyId: z.string().min(1).max(150), batchId: z.string().uuid(), rows: z.array(row).min(1).max(500) }).strict();
 const tokenHash = token => createHash('sha256').update(token).digest('hex');
 
-function requireOwner(req) {
-  if (req.app.locals.demoMode === true || req.app.locals.localSyntheticDev === true) return;
-  if (!process.env.FEATURE_ADMIN_TOKEN || req.get('Authorization') !== `Bearer ${process.env.FEATURE_ADMIN_TOKEN}`)
-    fail(401, 'UNAUTHORIZED', 'Owner authorization required');
-}
-
 async function authenticateDevice(req) {
-  const token = req.get('Authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) fail(401, 'UNAUTHORIZED', 'Sync device authentication required');
-  const legacy = process.env.TALLY_SYNC_TOKEN && process.env.TALLY_SYNC_WORKSPACE_ID === req.params.workspaceId
-    && token === process.env.TALLY_SYNC_TOKEN;
-  if (legacy) return null;
-  const device = await SyncDevice.findOne({ workspaceId: req.params.workspaceId, tokenHash: tokenHash(token), revokedAt: null });
+  const device = req.service && await SyncDevice.findOne({ _id: req.service._id, workspaceId: req.params.workspaceId, revokedAt: null, kind: 'sync' });
   if (!device) fail(401, 'UNAUTHORIZED', 'Sync device authentication required');
   return device;
 }
@@ -42,10 +32,10 @@ async function authenticateDevice(req) {
 router.post('/devices', asyncRoute(async (req, res) => {
   requireOwner(req);
   await workspaceOr404(req.params.workspaceId);
-  const { name } = validate(z.object({ name: z.string().trim().min(1).max(100) }).strict(), req.body);
-  const token = `hsb_sync_${randomBytes(24).toString('base64url')}`;
+  const { name, kind } = validate(z.object({ name: z.string().trim().min(1).max(100), kind: z.enum(['sync', 'automation']).default('sync') }).strict(), req.body);
+  const token = `hsb_${kind}_${randomBytes(32).toString('base64url')}`;
   const device = await SyncDevice.create({ workspaceId: req.params.workspaceId, name,
-    tokenHash: tokenHash(token), tokenPrefix: token.slice(0, 17) });
+    kind, tokenHash: tokenHash(token), tokenPrefix: token.slice(0, 17) });
   res.status(201).json({ device: { id: String(device._id), name: device.name, tokenPrefix: device.tokenPrefix,
     createdAt: device.createdAt }, token });
 }));
@@ -54,7 +44,7 @@ router.get('/devices', asyncRoute(async (req, res) => {
   requireOwner(req);
   await workspaceOr404(req.params.workspaceId);
   const devices = await SyncDevice.find({ workspaceId: req.params.workspaceId }).sort({ createdAt: -1 }).lean();
-  res.json({ devices: devices.map(device => ({ id: String(device._id), name: device.name,
+  res.json({ devices: devices.map(device => ({ id: String(device._id), name: device.name, kind: device.kind,
     tokenPrefix: device.tokenPrefix, revokedAt: device.revokedAt, lastSeenAt: device.lastSeenAt, createdAt: device.createdAt })) });
 }));
 
@@ -96,7 +86,11 @@ router.post('/batches', asyncRoute(async (req, res) => {
     if (existing?.tallyVersion !== row.version) {
       if (row.item.sourceSystem !== 'tally_export') fail(400, 'VALIDATION_ERROR', 'Tally source required');
       const item = { ...row.item, ...source, tallyVersion: row.version, externalId: `${input.companyId}:${row.sourceId}` };
-      if (existing) { Object.assign(existing, item); await existing.save(); }
+      if (existing) {
+        if (existing.gatewayReceipts?.length && (item.settledPaise < existing.settledPaise || item.category !== existing.category))
+          fail(409, 'CONFLICT', 'Sync would undo confirmed receipts. Review the source settlement before retrying.');
+        Object.assign(existing, item); await existing.save();
+      }
       else await CashItem.create(item);
     }
     if (row.observation) {

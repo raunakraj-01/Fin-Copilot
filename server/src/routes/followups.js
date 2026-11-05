@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
 import { requireOwner } from './offers.js';
 import CollectionFollowUp from '../models/CollectionFollowUp.js';
 import { loadDecisionContext } from '../services/rescue/decisionContext.js';
 import { eligible, recommendCollections, liveFollowupsEnabled, runFollowups, validateDispatch, finishFollowup } from '../services/finance/followups.js';
+import { requireAutomation } from '../middleware/auth.js';
 
 const id = z.string().regex(/^[a-f\d]{24}$/i);
 const router = Router({ mergeParams: true });
@@ -50,23 +50,21 @@ router.post('/:ruleId/demo-run', asyncRoute(async (req, res) => {
 export default router;
 
 export const automationRouter = Router();
+automationRouter.use(requireAutomation);
 automationRouter.use((req, _res, next) => {
-  const token = process.env.FOLLOWUP_AUTOMATION_TOKEN;
-  const hash = value => createHash('sha256').update(value).digest();
-  if (!token || !timingSafeEqual(hash(req.get('Authorization') || ''), hash(`Bearer ${token}`))) return next(Object.assign(new Error('Automation authorization required'), { status: 401, code: 'UNAUTHORIZED' }));
   if (!liveFollowupsEnabled()) return next(Object.assign(new Error('Live follow-ups are disabled'), { status: 503, code: 'LIVE_DISABLED' }));
   next();
 });
-automationRouter.post('/claim', asyncRoute(async (_req, res) => { res.json({ jobs: await runFollowups({ mode: 'n8n' }) }); }));
+automationRouter.post('/claim', asyncRoute(async (req, res) => { res.json({ jobs: await runFollowups({ mode: 'n8n', workspaceId: req.service.workspaceId }) }); }));
 automationRouter.post('/jobs/:claimId/validate', asyncRoute(async (req, res) => {
   const claimId = validate(z.string().uuid(), req.params.claimId);
-  const job = await validateDispatch(claimId);
+  const job = await validateDispatch(claimId, req.service.workspaceId);
   res.json({ send: Boolean(job), ...job });
 }));
 automationRouter.post('/jobs/:claimId/ack', asyncRoute(async (req, res) => {
   const claimId = validate(z.string().uuid(), req.params.claimId);
   const data = validate(z.object({ outcome: z.enum(['accepted', 'failed']), providerMessageId: z.string().max(300).optional() }).strict(), req.body);
   if (data.outcome === 'accepted' && !data.providerMessageId) fail(400, 'INVALID_ACK', 'Accepted sends need the provider message ID');
-  const rule = await finishFollowup(claimId, data.outcome, data.providerMessageId);
+  const rule = await finishFollowup(claimId, data.outcome, data.providerMessageId, req.service.workspaceId);
   res.json({ recorded: Boolean(rule) });
 }));

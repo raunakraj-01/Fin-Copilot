@@ -1,3 +1,4 @@
+import { currentPromises, promiseExposure } from './promises.js';
 const DAY_MS = 86_400_000;
 
 function dayNumber(date) {
@@ -15,7 +16,7 @@ function dateFromDay(day) {
 
 export function buildForecast({
   asOfDate, horizonDays = 90, openingCashPaise, minimumReservePaise = 0,
-  cashItems = [], recurringRules = [], additionalEvents = [],
+  cashItems = [], recurringRules = [], additionalEvents = [], bankReviewIssues = [],
 }) {
   const start = dayNumber(asOfDate);
   if (!Number.isInteger(horizonDays) || horizonDays < 1 || horizonDays > 366) throw new Error('Invalid horizonDays');
@@ -24,7 +25,7 @@ export function buildForecast({
   }
 
   const events = [];
-  const warnings = [];
+  const warnings = bankReviewIssues.map(issue => issue.message);
   const addEvent = (event) => {
     const day = dayNumber(event.date);
     if (!Number.isSafeInteger(event.amountPaise) || event.amountPaise < 0) throw new Error('Invalid event amount');
@@ -42,9 +43,22 @@ export function buildForecast({
       warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs verification`);
       continue;
     }
-    const amount = item.amountPaise - (item.settledPaise || 0);
+    let amount = item.amountPaise - (item.settledPaise || 0);
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error('Invalid cash item settlement');
     if (!amount) continue;
+    if (item.category === 'receivable') {
+      for (const promise of currentPromises(item, asOfDate)) {
+        amount -= promise.forecastPaise;
+        if (!promise.forecastPaise) continue;
+        if (promise.promisedDate <= asOfDate) {
+          warnings.push(`Promise for ${item.externalId || item.counterparty}: ${promise.forecastPaise / 100} INR unpaid on ${promise.promisedDate}; excluded until a future date is agreed`);
+        } else addEvent({ id: `promise:${promise.id}`, cashItemId: String(item.id || item._id),
+          promiseId: promise.id, externalId: item.externalId, counterparty: item.counterparty,
+          date: promise.promisedDate, direction: 'in', amountPaise: promise.forecastPaise,
+          reason: 'payment_promise', confidenceState: 'owner_assumption' });
+      }
+      if (!amount) continue;
+    }
     if (!item.expectedDate) {
       warnings.push(`Cash item ${item.externalId || item.id || item._id || 'unknown'} needs an expected date`);
       continue;
@@ -103,6 +117,7 @@ export function buildForecast({
     warnings, assumptions: ['Expected dates are user inputs, not guaranteed collection dates'],
   };
   Object.assign(forecast.risk, explainRisk(forecast, cashItems));
+  forecast.promiseRisks = promiseExposure(forecast, cashItems);
   return forecast;
 }
 

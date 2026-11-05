@@ -40,7 +40,7 @@ router.post('/', asyncRoute(async (req, res) => {
   const result = await CashItem.updateOne({ _id: offer.cashItemId, workspaceId: offer.workspaceId,
     category: 'receivable', status: { $in: ['open', 'partial'] }, 'gatewayReceipts.paymentOfferId': { $ne: receipt.paymentOfferId },
     $expr: { $gte: [{ $subtract: ['$amountPaise', '$settledPaise'] }, offer.grossPaise] } },
-  { $inc: { settledPaise: offer.grossPaise }, $push: { gatewayReceipts: receipt } });
+  { $inc: { settledPaise: offer.grossPaise, __v: 1, promiseVersion: 1 }, $push: { gatewayReceipts: receipt } });
   const item = await CashItem.findById(offer.cashItemId);
   if (!result.modifiedCount && !item?.gatewayReceipts.some(row => row.paymentOfferId === receipt.paymentOfferId)) fail(409, 'SETTLEMENT_CONFLICT', 'Invoice cannot accept this settlement');
   if (result.modifiedCount) { item.status = item.settledPaise === item.amountPaise ? 'paid' : 'partial'; await item.save(); }

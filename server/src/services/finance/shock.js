@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { currentPromises } from './promises.js';
 import { analyzeRescue, applyActions, actionFeeEvents, makeCandidates, costAssumption } from '../rescue/analyze.js';
 import { addDays, horizonEnd } from '../rescue/dates.js';
 import { normalizeContext, parseRequest, runForecast, summarize, fail } from '../rescue/validation.js';
@@ -18,14 +19,30 @@ function metrics(forecast, reserve) {
 }
 
 export function delayReceipts(items, counterparty, days, asOfDate) {
-  return items.map(item => pending(item) && item.counterparty === counterparty && item.expectedDate > asOfDate
-    ? { ...item, expectedDate: addDays(item.expectedDate, days) } : { ...item });
+  return items.map(item => pending(item) && item.counterparty === counterparty && scheduledDate(item, asOfDate)
+    ? { ...item, expectedDate: item.expectedDate > asOfDate ? addDays(item.expectedDate, days) : item.expectedDate,
+      paymentPromises: (item.paymentPromises || []).map(p => !p.closedAs && p.promisedDate > asOfDate
+        ? { ...p, promisedDate: addDays(p.promisedDate, days) } : { ...p }) } : { ...item });
+}
+
+function scheduledDate(item, asOfDate) {
+  const promises = currentPromises(item, asOfDate);
+  const dates = promises.filter(p => p.forecastPaise > 0 && p.promisedDate > asOfDate).map(p => p.promisedDate);
+  const remaining = item.amountPaise - item.settledPaise - promises.reduce((sum, p) => sum + p.forecastPaise, 0);
+  if (remaining > 0 && item.expectedDate > asOfDate) dates.push(item.expectedDate);
+  return dates.sort()[0];
+}
+function scheduledAmount(item, asOfDate) {
+  const promises = currentPromises(item, asOfDate);
+  const remaining = item.amountPaise - item.settledPaise - promises.reduce((sum, p) => sum + p.forecastPaise, 0);
+  return promises.filter(p => p.promisedDate > asOfDate).reduce((sum, p) => sum + p.forecastPaise, 0)
+    + (item.expectedDate > asOfDate ? remaining : 0);
 }
 
 export function analyzeShock(rawContext, rawOptions = {}, buildForecast) {
   const context = normalizeContext(rawContext);
   const options = validateShock(rawOptions);
-  const customers = [...new Set(context.cashItems.filter(item => pending(item) && item.expectedDate > context.asOfDate).map(item => item.counterparty).filter(Boolean))].sort();
+  const customers = [...new Set(context.cashItems.filter(item => pending(item) && scheduledDate(item, context.asOfDate)).map(item => item.counterparty).filter(Boolean))].sort();
   const counterparty = options.counterparty ?? customers[0] ?? null;
   if (options.counterparty && !customers.includes(options.counterparty)) fail('Select a customer with a dated open receivable in this workspace', 'counterparty');
   const reserve = context.minimumReservePaise;
@@ -34,9 +51,11 @@ export function analyzeShock(rawContext, rawOptions = {}, buildForecast) {
   const baseline = metrics(baselineForecast, reserve);
   const shifted = delayReceipts(context.cashItems, counterparty, options.delayDays, context.asOfDate);
   const stressed = metrics(runForecast(buildForecast, context, { cashItems: shifted }), reserve);
-  const movedReceipts = shifted.filter((item, index) => item.expectedDate !== context.cashItems[index].expectedDate)
-    .map(item => ({ cashItemId: item.id, externalId: item.externalId, fromDate: context.cashItems.find(source => source.id === item.id).expectedDate,
-      toDate: item.expectedDate, amountPaise: item.amountPaise - item.settledPaise, outsideHorizon: item.expectedDate > end }));
+  const movedReceipts = shifted.filter((item, index) => scheduledDate(item, context.asOfDate) !== scheduledDate(context.cashItems[index], context.asOfDate))
+    .map(item => ({ cashItemId: item.id, externalId: item.externalId,
+      fromDate: scheduledDate(context.cashItems.find(source => source.id === item.id), context.asOfDate),
+      toDate: scheduledDate(item, context.asOfDate), amountPaise: scheduledAmount(item, context.asOfDate),
+      outsideHorizon: item.expectedDate > end || currentPromises(item, context.asOfDate).some(p => p.forecastPaise > 0 && p.promisedDate > end) }));
   const rescue = analyzeRescue(context, { objective: 'minimum_reserve', maxCandidates: 12, maxPlans: 3 }, buildForecast);
   const plans = (rescue.plans.length ? rescue.plans : rescue.partialMitigations).map((plan, index) => {
     const items = applyActions(context, plan.actions);

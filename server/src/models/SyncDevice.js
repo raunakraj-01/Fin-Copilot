@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const schema = new mongoose.Schema({
   workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true, index: true },
   name: { type: String, required: true, trim: true, maxlength: 100 },
+  kind: { type: String, enum: ['sync', 'automation'], default: 'sync' },
   tokenHash: { type: String, required: true, unique: true },
   tokenPrefix: { type: String, required: true },
   revokedAt: { type: Date, default: null },

@@ -1,15 +1,18 @@
 import { analyzeNewOrder, validateOrder } from './analyze.js';
+import { analysisContext } from './freshness.js';
 
 export function prepareSavedScenario(context, request, buildForecast) {
   const order = validateOrder(request);
   const result = analyzeNewOrder(context, order, buildForecast);
-  return {
+  const saved = {
     label: order.label?.trim() || 'Prospective order',
     orderValuePaise: order.orderValuePaise,
     advancePaise: order.advancePaise,
     advanceDate: order.advanceDate,
     finalCollectionDate: order.finalCollectionDate,
     costLines: order.costLines.map(line => ({ ...line, description: line.description?.trim() || 'Order cost' })),
+    delayedCollectionDays: order.delayedCollectionDays ?? 0,
+    analyzedAt: new Date(),
     simulatedMinimumAdvancePaise: result.minimumAdvance.possible ? result.minimumAdvance.amountPaise : null,
     scenarioWarnings: [...result.warnings,
       'Hypothetical scenario only; no sales, receipts or payments have been posted',
@@ -18,4 +21,5 @@ export function prepareSavedScenario(context, request, buildForecast) {
       ...(order.delayedCollectionDays ? [`A ${order.delayedCollectionDays}-day delay was tested during analysis; the saved dates and minimum advance describe the original payment terms.`] : []),
     ],
   };
+  return { ...saved, analysisContext: analysisContext(context, saved) };
 }

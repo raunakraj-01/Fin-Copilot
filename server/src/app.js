@@ -1,9 +1,15 @@
 import cors from 'cors';
+import auth from './routes/auth.js';
+import { requireBusiness } from './middleware/auth.js';
+import { clientOrigin } from './services/auth.js';
 import express from 'express';
 import multer from 'multer';
 import workspaces from './routes/workspaces.js';
 import imports from './routes/imports.js';
+import bank from './routes/bank.js';
 import items from './routes/items.js';
+import promises from './routes/promises.js';
+import spending from './routes/spending.js';
 import forecast from './routes/forecast.js';
 import rescue from './routes/rescue.js';
 import orders from './routes/orders.js';
@@ -19,16 +25,24 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const app = express();
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
+app.disable('x-powered-by');
+app.use((_req, res, next) => { res.set('X-Frame-Options', 'DENY'); res.set('Referrer-Policy', 'no-referrer'); next(); });
+app.use(cors({ origin: (origin, callback) => callback(null, !origin || origin === clientOrigin()), credentials: true }));
+app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('X-Content-Type-Options', 'nosniff'); res.set('Referrer-Policy', 'no-referrer'); next(); });
 app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (_req, res) => res.json(app.locals.demoMode === true ? { ok: true, demoMode: true }
   : app.locals.localSyntheticDev === true ? { ok: true, localSyntheticDev: true } : { ok: true }));
+app.use('/api/auth', auth);
+app.use('/api/workspaces/:workspaceId', requireBusiness);
 app.use('/api/workspaces', workspaces);
 app.use('/api/workspaces/:workspaceId/imports', imports);
+app.use('/api/workspaces/:workspaceId/bank', bank);
 app.use('/api/workspaces/:workspaceId', items);
+app.use('/api/workspaces/:workspaceId', promises);
 app.use('/api/workspaces/:workspaceId/forecast', forecast);
+app.use('/api/workspaces/:workspaceId/spending-check', spending);
 
 app.use('/api/workspaces/:workspaceId/rescue', rescue);
 app.use('/api/workspaces/:workspaceId/orders', orders);
