@@ -9,6 +9,7 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
+import CapstoneDefenseModal from '../components/CapstoneDefenseModal.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport, '/setup-import'],
@@ -37,6 +38,7 @@ function BusinessApp({ user, onLogout }) {
   const [operationsItemId, setOperationsItemId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowSidebarCollapsed') === '1' : false));
   const [theme, setTheme] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowTheme') || 'light' : 'light'));
+  const [showDefenseModal, setShowDefenseModal] = useState(false);
   const [workspaceId, setWorkspaceId] = useState('');
   const [profiles, setProfiles] = useState([]);
   const [accessError, setAccessError] = useState('');
@@ -122,6 +124,9 @@ function BusinessApp({ user, onLogout }) {
           </button>
         </div>
         <div className="topbar-actions">
+          <button type="button" className="defense-mode-btn" onClick={() => setShowDefenseModal(true)} title="8th Semester Capstone Project Defense Dossier">
+            🎓 Capstone Defense
+          </button>
           <label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
           <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label>
           <button type="button" className="secondary theme-toggle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
@@ -141,6 +146,7 @@ function BusinessApp({ user, onLogout }) {
           </a>
         ))}
       </nav>
+      {showDefenseModal && <CapstoneDefenseModal onClose={() => setShowDefenseModal(false)} />}
     </div>
   </div></>;
 }

@@ -46,6 +46,25 @@ export default function Copilot({ workspaceId }) {
       {entry.modelWarning && <p role="status">{entry.modelWarning}</p>}
       {entry.facts?.length > 0 && <div className="copilot-facts">{entry.facts.map(fact => <span key={fact.label}>{fact.label}: <b>{fact.value}</b></span>)}</div>}
     </article>) : <p>Try “When will I run out of cash?” or “Which customers are overdue?”</p>}</div>
+    <div className="copilot-prompt-chips" aria-label="Suggested questions">
+      <span>Suggested questions:</span>
+      {[
+        'When will I run out of cash?',
+        'Which customers are overdue?',
+        'What are my Section 43B(h) deadlines?',
+        'Draft a reminder for overdue customer',
+      ].map((q, idx) => (
+        <button
+          key={idx}
+          type="button"
+          className="copilot-chip-btn"
+          disabled={!workspaceId || busy}
+          onClick={() => setMessage(q)}
+        >
+          {q}
+        </button>
+      ))}
+    </div>
     <form onSubmit={send} className="copilot-form"><label htmlFor="copilot-message">Your question</label><input id="copilot-message" value={message} onChange={event => setMessage(event.target.value)} maxLength={2000} disabled={!workspaceId || busy} /><AsyncActionButton type="submit" disabled={!workspaceId || busy || !message.trim()} busy={busy} idleLabel="Ask" doneLabel="Answer ready" steps={["Checking records…", "Reading cash forecast…", "Grounding the answer…"]} /></form>
   </section>;
 }

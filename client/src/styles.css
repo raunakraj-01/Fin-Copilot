@@ -1038,6 +1038,293 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
   line-height: 1.5;
 }
 
+/* Section 43B(h) MSME Auditor */
+.section-43b-card {
+  border: 1.5px solid #0284c7;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 24px;
+  margin: 20px 0;
+  box-shadow: 0 4px 24px rgba(2, 132, 199, 0.08);
+  animation: fadeIn 0.25s ease-out;
+}
+.section-43b-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.section-43b-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #0284c7;
+  text-transform: uppercase;
+}
+.section-43b-header h2 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.section-43b-caption {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 720px;
+}
+.section-43b-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-kpi {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-kpi small {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.stat-kpi strong {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 19px;
+  font-weight: 600;
+}
+.stat-kpi span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Status Pill Helpers */
+.status-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-pill.text-success {
+  background: #ecfdf5;
+  color: #059669;
+}
+.status-pill.text-warning {
+  background: #fffbeb;
+  color: #d97706;
+}
+.status-pill.text-danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Capstone Defense Modal */
+.defense-mode-btn {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  font-weight: 600 !important;
+  padding: 6px 14px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+.defense-mode-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+}
+.defense-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.defense-modal-container {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  width: min(100%, 960px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.defense-modal-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.defense-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #4f46e5;
+  text-transform: uppercase;
+}
+.defense-title-block h2 {
+  margin: 4px 0 2px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.defense-title-block p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.defense-tab-nav {
+  display: flex;
+  gap: 4px;
+  padding: 10px 28px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.defense-tab-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.defense-tab-btn:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+.defense-tab-btn.active {
+  background: var(--surface);
+  color: #4f46e5;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.defense-tab-body {
+  padding: 24px 28px 32px;
+  overflow-y: auto;
+  flex: 1;
+}
+.defense-article h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.defense-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+.defense-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.defense-info-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+}
+.defense-info-card h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #4f46e5;
+  font-weight: 600;
+}
+.defense-info-card p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.defense-info-card ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.code-architecture-box {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  overflow-x: auto;
+  line-height: 1.4;
+}
+.test-stat-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.test-stat {
+  display: flex;
+  flex-direction: column;
+}
+.test-stat strong {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 20px;
+  color: #059669;
+}
+.test-stat span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.test-suite-list {
+  padding-left: 20px;
+  font-size: 12px;
+}
+.test-suite-list code {
+  color: #4f46e5;
+}
+
+/* Copilot Prompt Chips */
+.copilot-prompt-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.copilot-chip-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  min-height: auto;
+  transition: all 0.15s ease;
+}
+.copilot-chip-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* Print Rules */
 @media print {
   body {

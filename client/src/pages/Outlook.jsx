@@ -9,6 +9,7 @@ import CapitalHealthGauge from '../components/CapitalHealthGauge.jsx';
 import WhatIfSimulator from '../components/WhatIfSimulator.jsx';
 import EngineeringInspector from '../components/EngineeringInspector.jsx';
 import MonteCarloEngine from '../components/MonteCarloEngine.jsx';
+import Section43bAuditor from '../components/Section43bAuditor.jsx';
 import { exportForecastToCsv } from '../services/exportAudit.js';
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
@@ -22,6 +23,7 @@ export default function Outlook({ workspaceId, onNavigate }) {
   const [showSimulator, setShowSimulator] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
   const [showMonteCarlo, setShowMonteCarlo] = useState(false);
+  const [showSection43b, setShowSection43b] = useState(false);
   const [horizonDays, setHorizonDays] = useState(90);
 
   useEffect(() => {
@@ -87,6 +89,9 @@ export default function Outlook({ workspaceId, onNavigate }) {
         <button type="button" className="secondary no-print" onClick={() => setShowMonteCarlo(v => !v)}>
           🎲 {showMonteCarlo ? t("Hide Monte Carlo") : t("Monte Carlo Risk (1k)")}
         </button>
+        <button type="button" className="secondary no-print" onClick={() => setShowSection43b(v => !v)}>
+          ⚖️ {showSection43b ? t("Hide 43B(h)") : t("Section 43B(h) Auditor")}
+        </button>
         <button type="button" className="secondary no-print" onClick={() => setShowSimulator(v => !v)}>
           🔬 {showSimulator ? t("Hide Simulator") : t("What-If Simulator")}
         </button>
@@ -106,6 +111,9 @@ export default function Outlook({ workspaceId, onNavigate }) {
 
     {/* Stochastic Monte Carlo Simulation Engine */}
     {showMonteCarlo && <MonteCarloEngine forecast={forecast} onClose={() => setShowMonteCarlo(false)} />}
+
+    {/* Section 43B(h) Statutory Compliance Auditor */}
+    {showSection43b && <Section43bAuditor forecast={forecast} onClose={() => setShowSection43b(false)} />}
 
     {/* Interactive What-If Scenario Sandbox */}
     {showSimulator && <WhatIfSimulator forecast={forecast} onClose={() => setShowSimulator(false)} />}
