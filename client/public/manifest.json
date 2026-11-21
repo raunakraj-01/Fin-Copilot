@@ -1,0 +1,17 @@
+{
+  "name": "Fin-Copilot · MSME Cash Planning & Statutory Decision Engine",
+  "short_name": "Fin-Copilot",
+  "description": "Institutional-grade cash-planning, Section 43B(h) compliance, and stochastic liquidity engine for Indian MSMEs.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#11171c",
+  "theme_color": "#1e272d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/brand/cashflow-mark.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ]
+}

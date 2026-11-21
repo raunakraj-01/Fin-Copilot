@@ -26,7 +26,15 @@ import { fileURLToPath } from 'node:url';
 
 const app = express();
 app.disable('x-powered-by');
-app.use((_req, res, next) => { res.set('X-Frame-Options', 'DENY'); res.set('Referrer-Policy', 'no-referrer'); next(); });
+app.use((_req, res, next) => {
+  res.set('X-Frame-Options', 'DENY');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('X-DNS-Prefetch-Control', 'off');
+  res.set('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), usb=()');
+  res.set('Cross-Origin-Opener-Policy', 'same-origin');
+  next();
+});
 app.use((req, res, next) => cors({
   origin: (origin, callback) => callback(null, !origin || isAllowedOrigin(origin, req.get('Host'))),
   credentials: true,

@@ -10,7 +10,7 @@ import WhatIfSimulator from '../components/WhatIfSimulator.jsx';
 import EngineeringInspector from '../components/EngineeringInspector.jsx';
 import MonteCarloEngine from '../components/MonteCarloEngine.jsx';
 import Section43bAuditor from '../components/Section43bAuditor.jsx';
-import { exportForecastToCsv } from '../services/exportAudit.js';
+import { exportForecastToCsv, exportToTallyXml } from '../services/exportAudit.js';
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
@@ -100,6 +100,9 @@ export default function Outlook({ workspaceId, onNavigate }) {
         </button>
         <button type="button" className="secondary no-print" onClick={() => exportForecastToCsv(forecast)}>
           📥 {t("Export Audit CSV")}
+        </button>
+        <button type="button" className="secondary no-print" onClick={() => exportToTallyXml(forecast)}>
+          📦 {t("Tally Prime XML")}
         </button>
       </div>
     </div>
