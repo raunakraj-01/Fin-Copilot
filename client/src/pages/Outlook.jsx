@@ -8,6 +8,8 @@ import ExecutiveDossier from '../components/ExecutiveDossier.jsx';
 import CapitalHealthGauge from '../components/CapitalHealthGauge.jsx';
 import WhatIfSimulator from '../components/WhatIfSimulator.jsx';
 import EngineeringInspector from '../components/EngineeringInspector.jsx';
+import MonteCarloEngine from '../components/MonteCarloEngine.jsx';
+import { exportForecastToCsv } from '../services/exportAudit.js';
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
@@ -19,6 +21,7 @@ export default function Outlook({ workspaceId, onNavigate }) {
   const [showDossier, setShowDossier] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
+  const [showMonteCarlo, setShowMonteCarlo] = useState(false);
   const [horizonDays, setHorizonDays] = useState(90);
 
   useEffect(() => {
@@ -81,11 +84,17 @@ export default function Outlook({ workspaceId, onNavigate }) {
         <button type="button" className="secondary no-print" onClick={() => setShowInspector(true)}>
           ⚡ {t("CS Architecture & Benchmarks")}
         </button>
+        <button type="button" className="secondary no-print" onClick={() => setShowMonteCarlo(v => !v)}>
+          🎲 {showMonteCarlo ? t("Hide Monte Carlo") : t("Monte Carlo Risk (1k)")}
+        </button>
         <button type="button" className="secondary no-print" onClick={() => setShowSimulator(v => !v)}>
           🔬 {showSimulator ? t("Hide Simulator") : t("What-If Simulator")}
         </button>
         <button type="button" className="secondary no-print" onClick={() => setShowDossier(true)}>
-          📑 {t("Executive Health Dossier (A4 Export)")}
+          📑 {t("Executive Dossier (A4)")}
+        </button>
+        <button type="button" className="secondary no-print" onClick={() => exportForecastToCsv(forecast)}>
+          📥 {t("Export Audit CSV")}
         </button>
       </div>
     </div>
@@ -94,6 +103,9 @@ export default function Outlook({ workspaceId, onNavigate }) {
 
     {/* Capital Health Scorecard Gauge */}
     <CapitalHealthGauge forecast={forecast} />
+
+    {/* Stochastic Monte Carlo Simulation Engine */}
+    {showMonteCarlo && <MonteCarloEngine forecast={forecast} onClose={() => setShowMonteCarlo(false)} />}
 
     {/* Interactive What-If Scenario Sandbox */}
     {showSimulator && <WhatIfSimulator forecast={forecast} onClose={() => setShowSimulator(false)} />}

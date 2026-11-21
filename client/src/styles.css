@@ -938,6 +938,106 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
   color: var(--muted);
 }
 
+/* Monte Carlo Stochastic Engine */
+.monte-carlo-card {
+  border: 1.5px solid #6366f1;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 24px;
+  margin: 20px 0;
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.1);
+  animation: fadeIn 0.25s ease-out;
+}
+.monte-carlo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.monte-carlo-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #6366f1;
+  text-transform: uppercase;
+}
+.monte-carlo-header h2 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.monte-carlo-caption {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.monte-carlo-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) auto;
+  gap: 16px;
+  align-items: end;
+  background: var(--surface-2);
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+.monte-carlo-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.monte-kpi {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.monte-kpi small {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.monte-kpi strong {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 20px;
+  font-weight: 600;
+}
+.monte-kpi span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.monte-chart-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+/* Pareto Frontier */
+.pareto-frontier-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+}
+.pareto-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.custom-chart-tooltip {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Print Rules */
 @media print {
   body {
