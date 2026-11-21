@@ -29,7 +29,6 @@ export default function AuthGate({ children }) {
   }
   if (loading) return <main className="decision-card"><p role="status">Checking your session…</p></main>;
   if (!user) return <main className="decision-page"><section className="decision-card"><h1>{register ? 'Create your account' : 'Sign in to CashFlow Copilot'}</h1>
-    <p>Owners and accountants sign in here. Business access is assigned by the owner.</p>
     <form onSubmit={authenticate} className="form-grid"><fieldset disabled={busy}>
       {register && <label>Your name<input required maxLength={100} autoComplete="name" value={name} onChange={e => setName(e.target.value)} /></label>}
       <label>Email<input required type="email" autoComplete="username" maxLength={254} value={email} onChange={e => setEmail(e.target.value)} /></label>

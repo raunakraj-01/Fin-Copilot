@@ -1,14 +1,18 @@
 import { z } from 'zod';
-import { isDateOnly } from '../utils/dates.js';
+import { isDateOnly, todayIndia } from '../utils/dates.js';
 
 export const dateOnly = z.string().refine(isDateOnly, 'Must be a valid YYYY-MM-DD date');
 export const paise = z.number().int().safe().nonnegative();
-export const workspaceCreate = z.object({
+const workspaceFields = {
   name: z.string().trim().min(1).max(100), asOfDate: dateOnly,
-  openingCashPaise: z.number().int().safe(), minimumReservePaise: paise.default(0),
-  businessGstin: z.string().trim().toUpperCase().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/).optional(),
+  openingCashPaise: z.number().int().safe(), minimumReservePaise: paise,
+  businessGstin: z.string().trim().toUpperCase().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z\d]Z[A-Z\d]$/).optional(),
+};
+export const workspaceCreate = z.object({ ...workspaceFields,
+  asOfDate: dateOnly.default(todayIndia), minimumReservePaise: paise.default(0),
 }).strict();
-export const workspacePatch = workspaceCreate.partial().refine(value => Object.keys(value).length > 0, 'No fields supplied');
+export const workspacePatch = z.object(workspaceFields).partial()
+  .refine(value => Object.keys(value).length > 0, 'No fields supplied');
 
 export const itemInput = z.object({
   category: z.enum(['receivable', 'payable', 'expense']),

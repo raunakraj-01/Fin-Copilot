@@ -9,7 +9,6 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
-import LandingPage from '../components/LandingPage.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport, '/setup-import'],
@@ -34,8 +33,7 @@ const icons = {
 
 function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
-  const [showLanding, setShowLanding] = useState(() => window.location.pathname === '/');
-  const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'setup');
+  const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'outlook');
   const [operationsItemId, setOperationsItemId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowSidebarCollapsed') === '1' : false));
   const [theme, setTheme] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowTheme') || 'light' : 'light'));
@@ -62,27 +60,33 @@ function BusinessApp({ user, onLogout }) {
   useEffect(() => {
     let active = true;
     const refresh = () => api('/workspaces').then(data => { if (!active) return; setProfiles(data.workspaces);
-      setWorkspaceId(current => { const desired = current || localStorage.getItem(`cashflowWorkspace:${user.id}`); return data.workspaces.some(w => w.id === desired) ? desired : ''; });
+      setWorkspaceId(current => {
+        const desired = current || localStorage.getItem(`cashflowWorkspace:${user.id}`);
+        const selected = data.workspaces.some(w => w.id === desired) ? desired : data.workspaces[0]?.id || '';
+        if (selected) localStorage.setItem(`cashflowWorkspace:${user.id}`, selected);
+        else localStorage.removeItem(`cashflowWorkspace:${user.id}`);
+        return selected;
+      });
     }).catch(e => { if (active) setAccessError(e.message); });
     refresh(); window.addEventListener('focus', refresh);
     return () => { active = false; window.removeEventListener('focus', refresh); };
   }, [user.id]);
   useEffect(() => {
-    if (window.location.pathname !== '/' && !pageFromPath(window.location.pathname))
-      window.history.replaceState(null, '', pages.setup[3]);
+    if (window.location.pathname === '/' || !pageFromPath(window.location.pathname))
+      window.history.replaceState(null, '', pages.outlook[3]);
     const followBrowserHistory = () => {
       const next = pageFromPath(window.location.pathname);
-      setShowLanding(window.location.pathname === '/');
-      setPage(next || 'setup');
+      setPage(next || 'outlook');
     };
+    followBrowserHistory();
     window.addEventListener('popstate', followBrowserHistory);
     return () => window.removeEventListener('popstate', followBrowserHistory);
   }, []);
-  useEffect(() => { document.title = showLanding ? 'CashFlow Copilot' : `${pages[page][0]} · CashFlow Copilot`; }, [page, showLanding]);
+  useEffect(() => { document.title = `${pages[page][0]} - CashFlow Copilot`; }, [page]);
   const navigate = (nextPage, replace = false) => {
     const path = pages[nextPage][3];
     window.history[replace ? 'replaceState' : 'pushState'](null, '', path);
-    setShowLanding(false); setPage(nextPage);
+    setPage(nextPage);
   };
   const followLink = (event, nextPage) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -106,10 +110,9 @@ function BusinessApp({ user, onLogout }) {
     <aside className="sidebar">
       <div className="sidebar-head"><div className="brand"><span className="brand-mark" aria-hidden="true">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div></div>
       <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label, , , path]]) =>
-        <a key={key} href={path} aria-label={t(label)} title={t(label)} aria-current={!showLanding && page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
+        <a key={key} href={path} aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">{t(icons[key])}</svg><span>{t(label)}</span>
         </a>)}</nav>
-      <div className="sidebar-note"><strong>{t("Synthetic workspace")}</strong><span>{t("Use demo financial records only.")}</span></div>
     </aside>
     <div className="app-area">
       <header className="topbar">
@@ -117,31 +120,28 @@ function BusinessApp({ user, onLogout }) {
           <button className="sidebar-toggle" type="button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path d={sidebarCollapsed ? 'm13 9 3 3-3 3' : 'm16 9-3 3 3 3'} /></svg>
           </button>
-          <div className="topbar-wordmark" aria-label={`${t('CashFlow')} ${t('Copilot')}`}>
-            <span className="topbar-brand-shine">{t("CashFlow")} {t("Copilot")}</span>
-          </div>
         </div>
         <div className="topbar-actions">
-          <span>{user.name}</span>
+          <label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
+          <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label>
           <button type="button" className="secondary theme-toggle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
+          <span>{user.name}</span>
           <button type="button" className="secondary" onClick={onLogout}>Sign out</button>
-          <label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
-          <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label>
         </div>
       </header>
-      <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace}
+      <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace} onNavigate={navigate}
         operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }} /></main>
       <nav className="mobile-bottom-nav no-print" aria-label="Mobile Navigation">
         {['setup', 'outlook', 'shock', 'rescue', 'orders'].map(key => (
-          <a key={key} href={pages[key][3]} aria-label={`Mobile ${pages[key][0]}`} aria-current={!showLanding && page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
+          <a key={key} href={pages[key][3]} aria-label={`Mobile ${pages[key][0]}`} aria-current={page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{icons[key]}</svg>
             <span>{t(pages[key][0].replace('Cash ', '').replace('New ', '').replace(' & Import', ''))}</span>
           </a>
         ))}
       </nav>
     </div>
-  </div>{showLanding && <LandingPage onStart={() => navigate('setup', true)} />}</>;
+  </div></>;
 }
 export default function App() { return <AuthGate>{(user, logout) => <BusinessApp key={user.id} user={user} onLogout={logout} />}</AuthGate>; }

@@ -1,5 +1,5 @@
 .landing-page { position: fixed; inset: 0; z-index: 1000; min-width: 320px; min-height: 100dvh; overflow-y: auto; color: #eaf0f3; background: #172229; }
-.landing-page__header { width: min(100%, 1480px); margin: 0 auto; padding: 28px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #39474e; font-size: 13px; color: #aebec6; }
+.landing-page__header { width: min(100%, 1480px); margin: 0 auto; padding: 28px 40px; display: flex; align-items: center; border-bottom: 1px solid #39474e; }
 .landing-page__wordmark { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 500; color: #eef2f4; }
 .landing-page__wordmark span { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid #648397; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; color: #b4d1e1; }
 .landing-page__body { width: min(100%, 1480px); min-height: calc(100dvh - 85px); margin: 0 auto; padding: 64px 40px 80px; display: grid; grid-template-columns: minmax(320px, .8fr) minmax(520px, 1.2fr); align-items: center; gap: clamp(48px, 6vw, 96px); }
@@ -31,4 +31,4 @@
 .landing-preview__foot span:first-child { display: inline-flex; align-items: center; gap: 8px; }
 .landing-preview__foot i { width: 6px; height: 6px; border-radius: 50%; background: #cfaa72; }
 @media (max-width: 1050px) { .landing-page__body { grid-template-columns: 1fr; gap: 48px; padding-top: 56px; } .landing-page__content { max-width: 700px; } .landing-preview { max-width: 760px; } }
-@media (max-width: 600px) { .landing-page__header { padding: 16px 20px; } .landing-page__header > span { display: none; } .landing-page__body { padding: 48px 20px 64px; gap: 40px; } .landing-page h1 { font-size: clamp(40px, 11vw, 56px); } .landing-page__subtitle { font-size: 16px; } .landing-preview { padding: 16px; } .landing-preview__summary { gap: 12px; } .landing-preview__summary strong { font-size: 20px; } .landing-preview__chart { height: 180px; } .landing-preview__foot span:last-child { display: none; } }
+@media (max-width: 600px) { .landing-page__header { padding: 16px 20px; } .landing-page__body { padding: 48px 20px 64px; gap: 40px; } .landing-page h1 { font-size: clamp(40px, 11vw, 56px); } .landing-page__subtitle { font-size: 16px; } .landing-preview { padding: 16px; } .landing-preview__summary { gap: 12px; } .landing-preview__summary strong { font-size: 20px; } .landing-preview__chart { height: 180px; } .landing-preview__foot span:last-child { display: none; } }

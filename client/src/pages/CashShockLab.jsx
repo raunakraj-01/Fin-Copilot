@@ -56,8 +56,8 @@ export default function CashShockLab({ workspaceId, apiBaseUrl }) {
   const series = result ? [{ label: 'Original forecast', daily: result.baseline.daily, color: '#275e80' },
     { label: `${result.delayDays}-day customer delay`, daily: result.stressed.daily, color: '#a45143' }] : [];
   return <main className="decision-page">
-    <header><span className="decision-kicker">{t("CashFlow Copilot · Stress testing")}</span><h1>{t("Cash Shock Lab")}</h1>
-      <p className="decision-intro">{t("Can your cash plan withstand a late customer payment? Test the delay, inspect your rescue plans, and decide which collection to pursue first.")}</p></header>
+    <header><h1>{t("Cash Shock Lab")}</h1>
+      <p className="decision-intro">{t("Test how late customer payments change your cash position and rescue options.")}</p></header>
     {!workspaceId ? <p className="decision-empty">{t("Create or select a workspace in Setup & Import to test its cash plan.")}</p> : <section className="decision-card">
       <div className="decision-controls"><label>{t("Customer")}<select disabled={loading || !customers.length} value={counterparty} onChange={event => { setCounterparty(event.target.value); clear(); }}>
         {!customers.length && <option value="">{t("No dated customer receipts")}</option>}{customers.map(customer => <option key={customer}>{customer}</option>)}

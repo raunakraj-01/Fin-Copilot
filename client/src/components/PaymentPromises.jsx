@@ -66,8 +66,7 @@ export default function PaymentPromises({ workspaceId, refreshKey, onChanged }) 
   function change(values) { setForm(current => ({ ...current, ...values })); setRetryId(null); }
   return <div className="card">
     <h2>{t('Payment promises')}</h2>
-    <p>Track installments, revisions and actual receipts. Broken means unpaid after the promised date, using the workspace as-of date: <strong>{data?.asOfDate || '…'}</strong>.</p>
-    <p>Promises replace the same portion of the invoice forecast; they are not extra income. Missed amounts are excluded until revised. Payments on or before the cash snapshot must already be included in opening cash.</p>
+    <p>Track installments and receipts as of <strong>{data?.asOfDate || '…'}</strong>. Promises replace the invoice receipt in the forecast; payments already received belong in opening cash.</p>
     <form onSubmit={submit} className="form-grid">
       <fieldset disabled={busy} className="form-grid">
         <legend>{form.mode === 'receipt' ? 'Confirm actual payment' : form.promiseId ? 'Revise remaining promise' : 'Add payment promise'}</legend>

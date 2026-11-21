@@ -10,10 +10,17 @@ const fields = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDat
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
   'maxEarlyCollectionInr', 'estimatedActionCostInr', 'actionCostDate'];
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
+const indiaToday = () => {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
 
 export default function SetupImport({ workspaceId, onWorkspaceCreated, businessRole = 'owner' }) {
   useLanguage();
-  const [form, setForm] = useState({ name: 'Demo Packaging Supplier', businessGstin: '', asOfDate: '2026-11-01', openingCashInr: '200000', minimumReserveInr: '0' });
+  const [form, setForm] = useState({ name: 'My business', businessGstin: '', asOfDate: indiaToday(), openingCashInr: '', minimumReserveInr: '0' });
+  const [openingBalanceConfirmed, setOpeningBalanceConfirmed] = useState('');
+  const openingBalanceKey = `${form.asOfDate}:${form.openingCashInr}`;
   const [kind, setKind] = useState('receivables');
   const [file, setFile] = useState(null);
   const [batchId, setBatchId] = useState('');
@@ -31,6 +38,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
     if (!workspaceId) return;
     let active = true;
     setBatchId(''); setRows([]); setCorrections({}); setExcluded([]);
+    setOpeningBalanceConfirmed(false);
     api(`/workspaces/${workspaceId}`).then(({ workspace }) => {
       if (active) setForm({ name: workspace.name, businessGstin: workspace.businessGstin || '', asOfDate: workspace.asOfDate,
         openingCashInr: String(workspace.openingCashPaise / 100),
@@ -57,6 +65,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
   }
 
   function updateWorkspace() {
+    if (openingBalanceConfirmed !== openingBalanceKey) { setMessage('Confirm the opening balance before saving the cash snapshot.'); return; }
     run('workspace', async () => {
       const { workspace } = await json(`/workspaces/${workspaceId}`, 'PATCH', { name: form.name, ...(form.businessGstin ? { businessGstin: form.businessGstin.toUpperCase() } : {}), asOfDate: form.asOfDate,
         openingCashPaise: Math.round(Number(form.openingCashInr) * 100),
@@ -68,7 +77,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
 
   function useSeed() {
     run('seed', async () => {
-      const { workspace } = await json('/workspaces', 'POST', { name: 'Demo Packaging Supplier', asOfDate: '2026-11-01', openingCashPaise: 20000000, minimumReservePaise: 0 });
+      const { workspace } = await json('/workspaces', 'POST', { name: 'Demo Packaging Supplier', asOfDate: indiaToday(), openingCashPaise: 20000000, minimumReservePaise: 0 });
       await json(`/workspaces/${workspace.id}/demo-data`, 'POST', {});
       onWorkspaceCreated(workspace);
       setMessage(`Using seeded workspace: ${workspace.name}`);
@@ -109,21 +118,22 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
 
   return <section>
     <h1>{t("Setup & Import")}</h1>
-    <p>{t("Use synthetic records for this demo. Enter opening cash and reserve in Indian rupees.")}</p>
+    <p>{t("Set opening cash and reserve, then add or import records.")}</p>
     <form onSubmit={createWorkspace} className="card form-grid">
       <label>{t("Business name")}<input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} required /></label>
       <label>Business GSTIN (optional)<input value={form.businessGstin} onChange={event => setForm({ ...form, businessGstin: event.target.value.toUpperCase() })} pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]" maxLength="15" /></label>
-      <label>{t("As-of date")}<input type="date" value={form.asOfDate} onChange={event => setForm({ ...form, asOfDate: event.target.value })} required /></label>
+      <label>{t("As-of date")}<input type="date" value={form.asOfDate} onChange={event => { setForm({ ...form, asOfDate: event.target.value }); setOpeningBalanceConfirmed(false); }} required /></label>
+      <label className="opening-balance-confirmation"><input type="checkbox" checked={openingBalanceConfirmed === openingBalanceKey} onChange={event => setOpeningBalanceConfirmed(event.target.checked ? openingBalanceKey : '')} required />
+        {t('I confirm this opening balance matches the bank balance on the selected as-of date.')}</label>
       <label>{t("Opening cash (₹)")}<input type="number" step="0.01" value={form.openingCashInr} onChange={event => setForm({ ...form, openingCashInr: event.target.value })} required /></label>
       <label>{t("Minimum reserve (₹)")}<input type="number" step="0.01" min="0" value={form.minimumReserveInr} onChange={event => setForm({ ...form, minimumReserveInr: event.target.value })} required /></label>
       <div className="form-actions">
-        <button disabled={busy}>{t("Create new workspace")}</button>
-        {workspaceId && <button type="button" className="secondary" disabled={busy || businessRole !== 'owner'} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
+        <button disabled={busy || openingBalanceConfirmed !== openingBalanceKey}>{t("Create new workspace")}</button>
+        {workspaceId && <button type="button" className="secondary" disabled={busy || businessRole !== 'owner' || openingBalanceConfirmed !== openingBalanceKey} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
       </div>
     </form>
     <div className="page-actions"><button type="button" className="secondary" disabled={busy} onClick={useSeed}>{t("Use seeded demo workspace")}</button></div>
     {workspaceId && <>
-      <p>{t("Active workspace: ")}<code>{workspaceId}</code></p>
       <p>{t("CSV templates: ")}<a href="/templates/receivables.csv" download>{t("Receivables")}</a> · <a href="/templates/payables.csv" download>{t("Payables")}</a></p>
       <form onSubmit={inspect} className="card form-grid">
         <label>{t("Import type")}<select value={kind} onChange={event => setKind(event.target.value)}><option value="receivables">{t("Receivables")}</option><option value="payables">{t("Payables")}</option></select></label>

@@ -33,15 +33,14 @@ export default function SpendingCheck({ workspaceId, refreshKey }) {
     setRequestAmount(Math.round(Number(amount) * 100)); setVersion(v => v + 1);
   }
   const purchaseCurrent = amount !== '' && Math.round(Number(amount) * 100) === requestAmount;
-  return <div className="card" aria-label="Reserve-aware spending check">
+  return <div className="card spending-check" aria-label="Reserve-aware spending check">
     <h2>How much can I spend?</h2>
-    <p>Compare an additional payment today against your minimum reserve throughout the selected period.</p>
     <div className="form-grid">
       <label>Planning period<select value={horizon} onChange={e => setHorizon(e.target.value)}>{['7', '30', '60', '90'].map(d => <option key={d} value={d}>{d} days</option>)}</select></label>
       <label>Customer payment delay<select value={delay} onChange={e => setDelay(e.target.value)}>{['7', '15', '30'].map(d => <option key={d} value={d}>{d} days late</option>)}</select></label>
     </div>
     <label><input type="checkbox" checked={confirmed} onChange={e => setConfirmedFor(e.target.checked ? confirmationKey : '')} /> I included all wages, tax payments, supplier bills, loan payments and other commitments for this period.</label>
-    <p>Add missing commitments in Setup & Import. Confirm the cash snapshot includes all payments already received.</p>
+    <p>Confirm the cash snapshot includes all payments already received.</p>
     {error && <div><p role="alert">{error}</p><button type="button" className="secondary" onClick={() => setVersion(v => v + 1)}>Retry spending check</button></div>}
     {!result && !error && <p role="status">Calculating spending limits…</p>}
     {result && <>

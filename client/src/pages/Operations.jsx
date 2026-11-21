@@ -87,9 +87,8 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
   const canPreview = businessRole === 'owner';
   if (!canPreview) return <section><h1>Operations</h1><p>Only the business owner can configure integrations, messaging and payment links.</p></section>;
   return <section className="operations">
-    <h1>Operations</h1><p>Review Tally sync, payment reliability, and a proposed early-payment message. Real financial data requires an authorized deployment.</p>
+    <h1>Operations</h1><p>Manage Tally sync, buyer reliability, and collection messages.</p>
     {!workspaceId ? <p>Select a workspace first.</p> : <>
-      <p className="decision-notice">Owner access is verified from your signed-in business membership. Integration credentials are managed in Setup & Import.</p>
       <ProactiveCollections workspaceId={workspaceId} token={token} enabled={canPreview} />
       <div className="card"><h2>Tally connection</h2><p>Enroll a sync device for this business. Payment observations stay isolated within this business; cross-business pooling is disabled.</p>
         <p>Payment telemetry: <strong>{consent ? 'enabled' : 'disabled'}</strong> <button type="button" className="secondary" onClick={async () => { try { const data = await ownerRequest('reliability/consent', 'PATCH', { share: !consent }); setConsent(data.share); } catch (cause) { setError(cause.message); } }}>{consent ? 'Withdraw consent' : 'Enable consent'}</button></p>

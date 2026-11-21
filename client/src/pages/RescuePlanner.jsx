@@ -41,7 +41,7 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) 
     }
   }
   return <main className="decision-page">
-    <header><span className="decision-kicker">{t("CashFlow Copilot · Decision support")}</span><h1>{t("Build a cash rescue plan")}</h1><p className="decision-intro">{t("Explore earlier customer collections and flexible payment dates. Every option is checked across the entire cash forecast and remains conditional on agreement.")}</p></header>
+    <header><h1>{t("Build a cash rescue plan")}</h1><p className="decision-intro">{t("Compare earlier collections and flexible payment dates against your reserve.")}</p></header>
     {!workspaceId ? <div className="decision-empty">{t("Create or select a workspace, verify its records, then return to find rescue options.")}</div> : <section className="decision-card"><div className="decision-controls">
       <label>{t("Cash objective")}<select value={objective} disabled={loading} onChange={event => { saveController.current?.abort(); setObjective(event.target.value); clear(); setSaveState({ planId: null, busy: false, message: '', error: '' }); }}><option value="nonnegative">{t("Keep cash at or above zero")}</option><option value="minimum_reserve">{t("Preserve the minimum reserve")}</option></select></label>
       <AsyncActionButton onClick={() => { saveController.current?.abort(); setSaveState({ planId: null, busy: false, message: '', error: '' }); run({ objective, maxCandidates: 12, maxPlans: 3 }); }} disabled={loading} busy={loading} idleLabel={t("Find rescue options")} doneLabel={t("Options ready")} steps={[t("Finding risky options…"), t("Testing collection timing…"), t("Comparing payment deferrals…"), t("Ranking practical plans…")]} />

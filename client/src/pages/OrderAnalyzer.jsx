@@ -47,7 +47,7 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
     { label: 'Minimum advance terms', daily: result.minimumAdvance.scenario?.daily, color: '#4b7768' },
   ] : [];
   return <main className="decision-page">
-    <header><span className="decision-kicker">{t("CashFlow Copilot · Decision support")}</span><h1>{t("Can this order fit your cash plan?")}</h1><p className="decision-intro">{t("Enter payment dates and production costs to compare daily cash, test a delayed customer payment, and find the minimum advance needed to preserve your reserve.")}</p></header>
+    <header><h1>{t("Can this order fit your cash plan?")}</h1><p className="decision-intro">{t("Compare production costs, payment timing, and the required advance against your reserve.")}</p></header>
     {!workspaceId ? <div className="decision-empty">{t("Create or select a workspace first. Your opening cash, reserve, and existing obligations are needed for this analysis.")}</div> : <form ref={formRef} onSubmit={analyze} className="decision-card">
       <fieldset disabled={loading}><div className="decision-form-grid">
         {[
