@@ -7,7 +7,7 @@ import SpendingCheck from '../components/SpendingCheck.jsx';
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
-export default function Outlook({ workspaceId }) {
+export default function Outlook({ workspaceId, onNavigate }) {
   useLanguage();
   const [forecast, setForecast] = useState(null);
   const [error, setError] = useState('');
@@ -20,20 +20,72 @@ export default function Outlook({ workspaceId }) {
     return () => { active = false; };
   }, [workspaceId, refreshKey]);
 
-  if (!workspaceId) return <section><h1>{t("Cash Outlook")}</h1><p>{t("Create a workspace and import records first.")}</p></section>;
+  if (!workspaceId) return <section><h1>{t("Cash Outlook")}</h1><p>{t("Create a workspace and import records first.")}</p>
+    <button type="button" onClick={() => onNavigate?.('setup')}>{t('Open Setup & Import')}</button></section>;
   if (error) return <section><h1>{t("Cash Outlook")}</h1><p role="alert">{t(error)}</p></section>;
   if (!forecast) return <section><h1>{t("Cash Outlook")}</h1><p>{t("Loading forecast…")}</p></section>;
   const { risk } = forecast;
   const events = forecast.daily.flatMap(day => day.events);
+  const desk = forecast.cashDesk || {};
+  const freshness = desk.dataFreshness || {};
+  const issues = desk.unresolvedIssues || { bankRows: [], cashItems: [], totalCount: 0 };
+  const bankRows = issues.bankRows || [];
+  const cashItems = issues.cashItems || [];
+  const reserveDay = forecast.daily.find(day => day.date === risk.firstReserveBreachDate);
+  const next30Days = forecast.daily.slice(0, 30);
+  const safeToSpendPaise = desk.safeToSpendPaise ?? Math.max(0,
+    (next30Days.length ? Math.min(...next30Days.map(day => day.closingCashPaise)) : forecast.openingCashPaise) - forecast.minimumReservePaise);
+  const actions = [];
+  if (reserveDay) {
+    const shortfallPaise = Math.max(0, forecast.minimumReservePaise - reserveDay.closingCashPaise);
+    actions.push({ title: `Protect the reserve before ${reserveDay.date}`,
+      detail: `Projected cash is ${money(reserveDay.closingCashPaise)} against a ${money(forecast.minimumReservePaise)} reserve.`,
+      impact: `Projected reserve gap: ${money(shortfallPaise)}`, page: 'rescue' });
+  }
+  if (bankRows.length) {
+    const amountPaise = bankRows.reduce((sum, row) => sum + (row.amountPaise || 0), 0);
+    actions.push({ title: `Review ${bankRows.length} unresolved bank row${bankRows.length === 1 ? '' : 's'}`,
+      detail: 'Match the statement to ledger records or record why the remainder is excluded.',
+      impact: `Amount awaiting review: ${money(amountPaise)}`, page: 'setup' });
+  }
+  if (cashItems.length) {
+    const amountPaise = cashItems.reduce((sum, item) => sum + (item.amountPaise || 0), 0);
+    actions.push({ title: `Resolve ${cashItems.length} cash record issue${cashItems.length === 1 ? '' : 's'}`,
+      detail: cashItems.slice(0, 2).map(item => item.externalId || item.counterparty || 'Cash record').join(', '),
+      impact: `Cash records involved: ${money(amountPaise)}`, page: 'setup' });
+  }
+  if (freshness.stale && actions.length < 3) {
+    actions.push({ title: 'Refresh cash inputs', detail: `The latest update was ${freshness.staleDays} days ago.`,
+      impact: 'Forecast impact is not quantified until the records are refreshed.', page: 'setup' });
+  }
+  const today = new Intl.DateTimeFormat(locale(), { dateStyle: 'long', timeZone: 'Asia/Kolkata' }).format(new Date());
   return <section className="cash-outlook">
     <h1>{t("Cash Outlook")}</h1>
-    <p>{t("This forecast assumes the entered expected payment dates. It is a scenario, not a guaranteed prediction.")}</p>
+    <p>{t('Today')}: {today} | {t('Cash snapshot')}: {t(desk.snapshotDate || forecast.asOfDate)}</p>
+    <p className="cash-desk-caption">{t('Spend headroom uses entered expected dates and current records; receipts are not guaranteed.')}</p>
     <p className="notice">{t(risk.explanation)}</p>
+    <div className="metrics cash-desk-metrics">
+      <div className="card"><small>{t('Safe to spend (next 30 days)')}</small><strong>{t(money(safeToSpendPaise))}</strong><span>{t('Projected low point less the reserve')}</span></div>
+      <div className="card"><small>{t('Opening cash at snapshot')}</small><strong>{t(money(forecast.openingCashPaise))}</strong></div>
+      <div className="card"><small>{t('Next reserve breach')}</small><strong>{t(risk.firstReserveBreachDate || 'None')}</strong></div>
+      <div className={`card cash-freshness${freshness.stale ? ' cash-freshness-stale' : ''}`}>
+        <small>{t('Data freshness')}</small>
+        <strong>{freshness.stale ? t(`Stale - ${freshness.staleDays} days`) : t('Current')}</strong>
+        <span>{freshness.lastUpdatedAt ? `${t('Last updated')} ${new Date(freshness.lastUpdatedAt).toLocaleDateString(locale())}` : t('No source update recorded')}</span>
+        <span>{freshness.lastSuccessfulSyncAt ? `${t('Last successful Tally sync')}: ${new Date(freshness.lastSuccessfulSyncAt).toLocaleDateString(locale())}` : t('No successful Tally sync recorded')}</span>
+      </div>
+    </div>
+    <div className="card cash-desk-actions" aria-labelledby="cash-actions-heading">
+      <h2 id="cash-actions-heading">{t('Prioritized actions')}</h2>
+      {actions.length ? <ol>{actions.slice(0, 3).map((action, index) => <li key={`${action.title}-${index}`}>
+        <div><strong>{t(action.title)}</strong><p>{t(action.detail)}</p><small>{t(action.impact)}</small></div>
+        <button type="button" className="secondary" onClick={() => onNavigate?.(action.page)}>{t('Review')}</button>
+      </li>)}</ol> : <p>{t('No urgent actions from the current cash inputs.')}</p>}
+      {!!issues.totalCount && <p className="cash-issue-count" role="status">{t(`${issues.totalCount} unresolved data issue${issues.totalCount === 1 ? '' : 's'}`)}</p>}
+    </div>
     <SpendingCheck key={`spending-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} />
-    <div className="metrics">
-      <div className="card"><small>{t("Opening cash")}</small><strong>{t(money(forecast.openingCashPaise))}</strong></div>
+    <div className="metrics cash-risk-metrics">
       <div className="card"><small>{t("First negative day")}</small><strong>{t(risk.firstNegativeDate || 'None')}</strong></div>
-      <div className="card"><small>{t("First reserve breach")}</small><strong>{t(risk.firstReserveBreachDate || 'None')}</strong></div>
       <div className={`card outlook-risk${risk.worstCashPaise < 0 ? ' outlook-risk-negative' : ''}`}><small>{t("Worst balance")}</small><strong>{t(money(risk.worstCashPaise))}</strong><span>{t(risk.worstDate)}</span></div>
     </div>
     <PaymentPromises key={workspaceId} workspaceId={workspaceId} onChanged={() => setRefreshKey(value => value + 1)} />

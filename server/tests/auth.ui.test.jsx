@@ -90,12 +90,18 @@ test('owner access controls create an invitation and revoke an accountant throug
 test('business selector uses server memberships and ignores forged cached business IDs and owner roles', async () => {
   localStorage.setItem('cashflowProfiles', JSON.stringify([{ id: 'foreign', name: 'Other private business', role: 'owner' }]));
   localStorage.setItem('cashflowWorkspace:owner', 'foreign');
-  vi.stubGlobal('fetch', vi.fn(async url => response(url.endsWith('/auth/me') ? { user, csrfToken: 'csrf' } : {
-    workspaces: [{ id: 'authorized', name: 'Authorized business', role: 'accountant' }],
-  })));
+  vi.stubGlobal('fetch', vi.fn(async url => {
+    if (url.endsWith('/auth/me')) return response({ user, csrfToken: 'csrf' });
+    if (url.endsWith('/forecast')) return response({ asOfDate: '2026-11-21', openingCashPaise: 0, minimumReservePaise: 0,
+      daily: [], warnings: [], promiseRisks: [], risk: { contributingItems: [], explanation: 'Cash stays above reserve.' } });
+    if (url.endsWith('/promises')) return response({ asOfDate: '2026-11-21', items: [] });
+    if (url.includes('/spending-check')) return response({ error: { message: 'No spending check' } }, 503);
+    return response({ workspaces: [{ id: 'authorized', name: 'Authorized business', role: 'accountant' }] });
+  }));
   render(<App />);
   await screen.findByRole('option', { name: 'Authorized business · accountant' });
-  expect(screen.getByLabelText('Supplier profile').value).toBe('');
+  expect(screen.getByLabelText('Supplier profile').value).toBe('authorized');
+  await screen.findByRole('heading', { name: 'Cash Outlook' });
   expect(screen.queryByRole('option', { name: /Other private business/ })).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Business access' })).toBeNull();
 });
@@ -116,10 +122,12 @@ test('gives every dashboard page a bookmarkable URL and follows browser navigati
   expect(screen.getByRole('link', { name: 'Rescue Planner' }).getAttribute('aria-current')).toBe('page');
 });
 
-test('moves from the root landing page to the setup endpoint', async () => {
+test('opens the signed-in owner in Cash Outlook by default', async () => {
   vi.stubGlobal('fetch', vi.fn(async url => response(url.endsWith('/auth/me') ? { user, csrfToken: 'csrf' } : { workspaces: [] })));
   render(<App />);
-  fireEvent.click(await screen.findByRole('button', { name: /Open workspace/ }));
+  await screen.findByRole('heading', { name: 'Cash Outlook' });
+  expect(window.location.pathname).toBe('/cash-outlook');
+  fireEvent.click(screen.getByRole('button', { name: 'Open Setup & Import' }));
   expect(window.location.pathname).toBe('/setup-import');
   await screen.findByRole('heading', { name: 'Setup & Import' });
 });

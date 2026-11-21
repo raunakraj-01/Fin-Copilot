@@ -39,10 +39,10 @@ Dashboard pages have bookmarkable browser routes: `/setup-import`, `/cash-outloo
 Use Node.js LTS. Start MongoDB Server locally or use a MongoDB Atlas URI. MongoDB Compass only inspects the database; it does not run the server.
 
 1. Copy `server/.env.example` to `server/.env`; set `MONGODB_URI` and optionally `CLIENT_ORIGIN`.
-2. Run `cd server && npm install && npm run seed` to create the repeatable synthetic demo workspace (`650000000000000000000001`).
-3. Run `cd server && npm run dev` for the API at `http://localhost:5000/api`.
-4. Run `cd client && npm install && npm run dev` for the app at `http://localhost:5173`.
-5. Run `cd server && npm test` and `cd client && npm run build` to check the project. Tests use an isolated in-memory MongoDB, so they do not require your local database.
+2. Install server and client dependencies with `npm --prefix server install` and `npm --prefix client install`.
+3. Run `npm run dev` for the API at `http://localhost:5000/api`.
+4. In a second terminal, run `npm --prefix client run dev` for the app at `http://localhost:5173`.
+5. Run `npm test` and `npm run build` to check the project. Tests use an isolated in-memory MongoDB, so they do not require your local database.
 
 Open the UI, create an account and select **Use seeded demo workspace** to create an owned sample business. The CLI seed is separate and remains locked until assigned with the ownership migration script. To exercise the import flow, create a new workspace dated `2026-11-01` with ₹2,00,000 opening cash and ₹0 reserve, then import and approve `fixtures/receivables.csv` and `fixtures/payables.csv`. The Setup screen also provides blank CSV templates, row corrections (including a missing expected-date column), manual records, monthly expenses, and an editor for the active workspace's cash snapshot and reserve.
 

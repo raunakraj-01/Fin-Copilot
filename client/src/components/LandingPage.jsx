@@ -11,7 +11,6 @@ export default function LandingPage({ onStart }) {
   return <main className="landing-page" aria-label="CashFlow Copilot welcome">
     <header className="landing-page__header">
       <div className="landing-page__wordmark"><span aria-hidden="true">₹</span> CashFlow Copilot</div>
-      <span>Cash decisions, in view</span>
     </header>
     <div className="landing-page__body">
       <section className="landing-page__content">

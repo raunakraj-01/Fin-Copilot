@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { asyncRoute, fail, workspaceOr404 } from '../utils/http.js';
 import { loadDecisionContext } from '../services/rescue/decisionContext.js';
 import { buildForecast } from '../services/finance/forecast.js';
+import { cashDeskSummary } from '../services/finance/cashDesk.js';
 
 const router = Router({ mergeParams: true });
 router.get('/', asyncRoute(async (req, res) => {
@@ -10,6 +11,8 @@ router.get('/', asyncRoute(async (req, res) => {
   if (!Number.isInteger(horizonDays) || horizonDays < 1 || horizonDays > 366) fail(400, 'VALIDATION_ERROR', 'horizonDays must be 1–366');
   const context = await loadDecisionContext(req.params.workspaceId);
   if (!context) fail(404, 'NOT_FOUND', 'Workspace not found');
-  res.json(buildForecast({ ...context, horizonDays }));
+  const result = buildForecast({ ...context, horizonDays });
+  Object.assign(result, cashDeskSummary(context, result));
+  res.json(result);
 }));
 export default router;
