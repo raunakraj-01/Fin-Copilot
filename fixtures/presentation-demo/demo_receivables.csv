@@ -1,0 +1,13 @@
+Invoice ID,Customer,Amount INR,Settled INR,Due Date,Expected Date,Status,Earliest Collection Date,Max Early Collection INR,Estimated Action Cost INR,Fee Payment Date
+DEMO-R001,Acme Retail Pvt Ltd,400000,0,2026-11-15,2026-11-26,open,2026-11-04,200000,3000,2026-11-04
+DEMO-R002,Orbit Industries,240000,60000,2026-11-18,2026-11-20,partial,2026-11-07,80000,1500,2026-11-07
+DEMO-R003,Namma Stores,50000,0,2026-11-04,2026-11-04,open,,0,0,
+DEMO-R004,Metro Distributors,30000,0,2026-10-25,2026-11-08,open,2026-11-03,20000,0,
+DEMO-R005,Acme Retail Pvt Ltd,125000,0,2026-12-05,2026-12-12,open,2026-11-28,50000,1000,2026-11-28
+DEMO-R006,Sahyadri Engineering,175000,0,2026-12-15,2026-12-15,open,2026-12-01,75000,0,
+DEMO-R007,Coastal Exports,90000,30000,2026-12-20,2026-12-28,partial,2026-12-10,25000,,
+DEMO-R008,Greenfield Foods,85000.5,0,2027-01-08,2027-01-08,open,,0,0,
+DEMO-R009,Vidya Wholesale,65000,0,2027-01-20,2027-01-25,open,2027-01-10,30000,600,2027-01-10
+DEMO-R010,City Mart,45000,45000,2026-10-20,2026-10-20,paid,,0,0,
+DEMO-R011,Cancelled Trial Customer,70000,0,2026-11-10,2026-11-10,cancelled,,0,0,
+DEMO-R012,Long Cycle Projects,200000,0,2027-01-28,2027-02-15,open,,0,,

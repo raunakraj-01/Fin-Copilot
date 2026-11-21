@@ -73,6 +73,7 @@ export function analyzeNewOrder(rawContext, rawOrder, buildForecast) {
     }
     minimumAdvance = { possible: true, amountPaise: low, conditionalOnAssumptions: true, scenario: describe(run(low)) };
   }
+  const negotiationEnvelope = buildNegotiationEnvelope(order, run, reserve, minimumAdvance);
   const delayedDate = order.delayedCollectionDays ? addDays(order.finalCollectionDate, order.delayedCollectionDays) : null;
   const delayedForecast = delayedDate ? run(order.advancePaise, delayedDate) : null;
   const warnings = [...new Set([...(baselineForecast.warnings ?? []), ...(current.warnings ?? []), ...(delayedForecast?.warnings ?? [])])];
@@ -84,8 +85,49 @@ export function analyzeNewOrder(rawContext, rawOrder, buildForecast) {
   return {
     baseline, withOrder: describe(current), minimumAdvance,
     delayedCustomerScenario: delayedForecast ? { ...describe(delayedForecast), finalCollectionDate: delayedDate } : null,
+    negotiationEnvelope,
     warnings,
     assumptions: [...(baselineForecast.assumptions ?? []), 'Order receipts and costs are hypothetical and depend on the entered dates', 'Minimum advance assumes the customer pays the agreed amount on time', 'Cash feasibility is evaluated only within the forecast horizon, using end-of-day balances; it is not a profit or order-acceptance recommendation'],
     asOfDate: context.asOfDate, forecastEndDate: end, minimumReservePaise: reserve,
   };
+}
+
+export function buildNegotiationEnvelope(order, run, reserve, minimumAdvance) {
+  const options = [];
+  const minPct = minimumAdvance.possible
+    ? Math.min(100, Math.max(0, Math.ceil((minimumAdvance.amountPaise / order.orderValuePaise) * 100)))
+    : null;
+
+  const targetPcts = [20, 30, 40, 50];
+  if (minPct != null && !targetPcts.includes(minPct)) {
+    targetPcts.push(minPct);
+  }
+  targetPcts.sort((a, b) => a - b);
+
+  const delayOptions = [0, 15, 30];
+
+  for (const pct of targetPcts) {
+    const advancePaise = Math.round((order.orderValuePaise * pct) / 100);
+    for (const delayDays of delayOptions) {
+      const finalDate = delayDays === 0
+        ? order.finalCollectionDate
+        : addDays(order.finalCollectionDate, delayDays);
+      const forecast = run(advancePaise, finalDate);
+      const worstCashPaise = Math.min(...forecast.daily.map(d => d.closingCashPaise));
+      const preservesReserve = worstCashPaise >= reserve;
+      const headroomPaise = worstCashPaise - reserve;
+
+      options.push({
+        advancePct: pct,
+        advancePaise,
+        delayDays,
+        finalCollectionDate: finalDate,
+        preservesReserve,
+        worstCashPaise,
+        headroomPaise,
+        isMinimumAdvance: minPct === pct,
+      });
+    }
+  }
+  return options;
 }

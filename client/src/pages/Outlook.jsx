@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { api } from '../services/api.js';
 import PaymentPromises from '../components/PaymentPromises.jsx';
 import SpendingCheck from '../components/SpendingCheck.jsx';
+import ExecutiveDossier from '../components/ExecutiveDossier.jsx';
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
@@ -12,6 +13,7 @@ export default function Outlook({ workspaceId }) {
   const [forecast, setForecast] = useState(null);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showDossier, setShowDossier] = useState(false);
   useEffect(() => {
     if (!workspaceId) return;
     let active = true;
@@ -26,8 +28,15 @@ export default function Outlook({ workspaceId }) {
   const { risk } = forecast;
   const events = forecast.daily.flatMap(day => day.events);
   return <section>
-    <h1>{t("Cash Outlook")}</h1>
-    <p>{t("This forecast assumes the entered expected payment dates. It is a scenario, not a guaranteed prediction.")}</p>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+      <div>
+        <h1>{t("Cash Outlook")}</h1>
+        <p>{t("This forecast assumes the entered expected payment dates. It is a scenario, not a guaranteed prediction.")}</p>
+      </div>
+      <button type="button" className="secondary no-print" onClick={() => setShowDossier(true)} style={{ marginTop: '8px' }}>
+        📑 {t("Executive Health Dossier (A4 Export)")}
+      </button>
+    </div>
     <p className="notice">{t(risk.explanation)}</p>
     <SpendingCheck key={`spending-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} />
     <div className="metrics">
@@ -56,5 +65,6 @@ export default function Outlook({ workspaceId }) {
     {risk.contributingItems.length > 0 && <div className="card"><h2>{t("Largest outgoing drivers")}</h2><ul>{risk.contributingItems.slice(0, 5).map((item, index) =>
       <li key={`${item.cashItemId}-${index}`}>{t(item.date)} · {item.externalId || item.cashItemId} · {t(money(item.amountPaise))}</li>)}</ul></div>}
     {forecast.warnings.length > 0 && <div className="card"><h2>{t("Data warnings")}</h2><ul>{forecast.warnings.map((warning, index) => <li key={index}>{t(warning)}</li>)}</ul></div>}
+    {showDossier && <ExecutiveDossier forecast={forecast} asOfDate={forecast.asOfDate} onClose={() => setShowDossier(false)} />}
   </section>;
 }

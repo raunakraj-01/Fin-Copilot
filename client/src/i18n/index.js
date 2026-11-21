@@ -16,7 +16,7 @@ const dictionaries = {
     'Calculated explanation · AI is not configured.':'ಲೆಕ್ಕಾಚಾರ ಆಧಾರಿತ ವಿವರಣೆ · AI ಹೊಂದಿಸಲಾಗಿಲ್ಲ.','Calculated explanation · AI was unavailable or returned unsupported evidence.':'ಲೆಕ್ಕಾಚಾರ ಆಧಾರಿತ ವಿವರಣೆ · AI ಲಭ್ಯವಿರಲಿಲ್ಲ ಅಥವಾ ಆಧಾರ ಸರಿಯಿರಲಿಲ್ಲ.','AI-selected evidence · amounts and sentences verified by the cash engine.':'AI ಆಯ್ದ ಆಧಾರ · ಮೊತ್ತಗಳು ಮತ್ತು ವಾಕ್ಯಗಳನ್ನು ನಗದು ಎಂಜಿನ್ ಪರಿಶೀಲಿಸಿದೆ.','Preparing a source-backed explanation…':'ಮೂಲ ಆಧಾರಿತ ವಿವರಣೆ ಸಿದ್ಧವಾಗುತ್ತಿದೆ…','No dated customer receipts':'ದಿನಾಂಕವಿರುವ ಗ್ರಾಹಕ ಸ್ವೀಕೃತಿಗಳಿಲ್ಲ','None within forecast':'ಮುನ್ನೋಟದಲ್ಲಿ ಯಾವುದೂ ಇಲ್ಲ','Closing cash':'ಅಂತಿಮ ನಗದು','Receipt':'ಸ್ವೀಕೃತಿ','Payment':'ಪಾವತಿ','Verified':'ಪರಿಶೀಲಿಸಲಾಗಿದೆ','Scenario':'ಸ್ಥಿತಿ','Owner assumption':'ಮಾಲೀಕರ ಊಹೆ','days':'ದಿನಗಳು','on':'ರಂದು','from':'ಇಂದ','to':'ಗೆ','by':'ಒಳಗೆ','for':'ಗಾಗಿ','through':'ವರೆಗೆ','Priority ':'ಆದ್ಯತೆ ','Row ':'ಸಾಲು ','Plan ':'ಯೋಜನೆ ','Fee':'ಶುಲ್ಕ','Estimated fee: ':'ಅಂದಾಜು ಶುಲ್ಕ: ','unknown (excluded)':'ಅಜ್ಞಾತ (ಸೇರಿಸಿಲ್ಲ)','unknown; excluded from this estimate':'ಅಜ್ಞಾತ; ಈ ಅಂದಾಜಿನಲ್ಲಿ ಸೇರಿಸಿಲ್ಲ',
   },
 };
-let language = localStorage.getItem('cashflowLanguage') || 'en';
+let language = (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowLanguage') : null) || 'en';
 if (!['en', 'hi', 'kn'].includes(language)) language = 'en';
 const listeners = new Set();
 export const getLanguage = () => language;
@@ -24,8 +24,8 @@ export const locale = () => ({ en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN' })[language
 export function setLanguage(value) {
   if (!['en', 'hi', 'kn'].includes(value)) return;
   language = value;
-  localStorage.setItem('cashflowLanguage', value);
-  document.documentElement.lang = value;
+  if (typeof localStorage !== 'undefined') localStorage.setItem('cashflowLanguage', value);
+  if (typeof document !== 'undefined') document.documentElement.lang = value;
   listeners.forEach(listener => listener());
 }
 export function useLanguage() {
@@ -35,4 +35,4 @@ export function t(value) {
   if (language === 'en' || typeof value !== 'string') return value;
   return dictionaries[language][value] ?? value;
 }
-document.documentElement.lang = language;
+if (typeof document !== 'undefined') document.documentElement.lang = language;

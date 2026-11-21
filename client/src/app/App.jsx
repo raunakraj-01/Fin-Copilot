@@ -37,10 +37,28 @@ function BusinessApp({ user, onLogout }) {
   const [showLanding, setShowLanding] = useState(() => window.location.pathname === '/');
   const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'setup');
   const [operationsItemId, setOperationsItemId] = useState(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('cashflowSidebarCollapsed') === '1');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowSidebarCollapsed') === '1' : false));
+  const [theme, setTheme] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowTheme') || 'light' : 'light'));
   const [workspaceId, setWorkspaceId] = useState('');
   const [profiles, setProfiles] = useState([]);
   const [accessError, setAccessError] = useState('');
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (theme === 'dark') document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(current => {
+      const next = current === 'dark' ? 'light' : 'dark';
+      if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
+        localStorage.setItem('cashflowTheme', next);
+      }
+      return next;
+    });
+  };
   useEffect(() => {
     let active = true;
     const refresh = () => api('/workspaces').then(data => { if (!active) return; setProfiles(data.workspaces);
@@ -103,11 +121,26 @@ function BusinessApp({ user, onLogout }) {
             <span className="topbar-brand-shine">{t("CashFlow")} {t("Copilot")}</span>
           </div>
         </div>
-        <div className="topbar-actions"><span>{user.name}</span><button type="button" className="secondary" onClick={onLogout}>Sign out</button><label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
-          <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label></div>
+        <div className="topbar-actions">
+          <span>{user.name}</span>
+          <button type="button" className="secondary theme-toggle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+          <button type="button" className="secondary" onClick={onLogout}>Sign out</button>
+          <label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
+          <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label>
+        </div>
       </header>
       <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace}
         operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }} /></main>
+      <nav className="mobile-bottom-nav no-print" aria-label="Mobile Navigation">
+        {['setup', 'outlook', 'shock', 'rescue', 'orders'].map(key => (
+          <a key={key} href={pages[key][3]} aria-label={`Mobile ${pages[key][0]}`} aria-current={!showLanding && page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">{icons[key]}</svg>
+            <span>{t(pages[key][0].replace('Cash ', '').replace('New ', '').replace(' & Import', ''))}</span>
+          </a>
+        ))}
+      </nav>
     </div>
   </div>{showLanding && <LandingPage onStart={() => navigate('setup', true)} />}</>;
 }

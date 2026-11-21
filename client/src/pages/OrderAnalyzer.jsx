@@ -75,6 +75,23 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
         {result.minimumAdvance.possible && <button type="button" className="secondary" onClick={() => { setForm(current => ({ ...current, advance: inputRupees(result.minimumAdvance.amountPaise) })); changed(); }}>{t("Use this advance in the form")}</button>}
       </article>
       <section className="decision-card"><h2>{t("Daily cash comparison")}</h2><CashChart series={series} reserve={result.minimumReservePaise} /><DailyTable series={series} />{result.delayedCustomerScenario && <p>{t("With final payment delayed to ")}{displayDate(result.delayedCustomerScenario.finalCollectionDate)}{t(", lowest cash is ")}{t(rupees(result.delayedCustomerScenario.worstCashPaise))}.</p>}</section>
+      {result.negotiationEnvelope?.length > 0 && <section className="decision-card" aria-label={t("Negotiation terms envelope")}>
+        <span className="decision-kicker">{t("Contract strategy")}</span>
+        <h2>{t("Negotiation Envelope (What terms should I offer?)")}</h2>
+        <p className="decision-muted">{t("Explore combinations of customer advance and payment timing. Highlighted rows preserve your minimum reserve.")}</p>
+        <div className="table-scroll"><table className="decision-table">
+          <thead><tr><th>{t("Advance %")}</th><th>{t("Advance Amount")}</th><th>{t("Payment Delay")}</th><th>{t("Final Date")}</th><th>{t("Reserve Status")}</th><th>{t("Worst Cash")}</th><th>{t("Action")}</th></tr></thead>
+          <tbody>{result.negotiationEnvelope.map((opt, idx) => <tr key={idx}>
+            <td><strong>{opt.advancePct}%</strong>{opt.isMinimumAdvance ? ` (${t("Min")})` : ''}</td>
+            <td>{t(rupees(opt.advancePaise))}</td>
+            <td>{opt.delayDays === 0 ? t("On time") : `+${opt.delayDays} ${t("days")}`}</td>
+            <td>{displayDate(opt.finalCollectionDate)}</td>
+            <td><span className={`decision-badge${opt.preservesReserve ? '' : ' partial'}`}>{t(opt.preservesReserve ? 'Preserves reserve' : 'Reserve breached')}</span></td>
+            <td>{t(rupees(opt.worstCashPaise))}</td>
+            <td><button type="button" className="secondary" onClick={() => { setForm(current => ({ ...current, advance: inputRupees(opt.advancePaise), delayedCollectionDays: String(opt.delayDays) })); changed(); }}>{t("Apply")}</button></td>
+          </tr>)}</tbody>
+        </table></div>
+      </section>}
       <Notices warnings={result.warnings} assumptions={result.assumptions} />
       <SaveScenario key={`${workspaceId}:${apiBaseUrl}`} order={analyzedOrder} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} onSaved={() => setSavedVersion(value => value + 1)} />
     </section>}

@@ -97,6 +97,23 @@ export default function CashShockLab({ workspaceId, apiBaseUrl }) {
           <details className="decision-details"><summary>{t("Draft collection request")}</summary><p>{t("Hello ")}{action.counterparty}{t(", could you arrange ")}{t(rupees(action.amountPaise))}{t(" against ")}{action.externalId || 'this invoice'}{t(" by ")}{displayDate(action.toDate)}{t("? Please confirm the amount and payment date so we can plan our upcoming commitments. Thank you.")}</p><small>{t("Draft only. Review and send it yourself after confirming the terms.")}</small></details>
         </article>)}
       </section>
+      {result.uncertainties?.length > 0 && <section className="decision-card" aria-label={t("Uncertainty sensitivity analysis")}>
+        <span className="decision-kicker">{t("Sensitivity analysis")}</span>
+        <h2>{t("Which uncertainty should I resolve first?")}</h2>
+        <p className="decision-muted">{t("Customer receipts ranked by how much an unexpected 7-day payment slip harms your daily cash reserve. Prioritize confirming these promises first.")}</p>
+        <div className="decision-table-wrap"><table>
+          <caption>{t("Uncertainty impact on reserve breach")}</caption>
+          <thead><tr><th>{t("Priority")}</th><th>{t("Customer / Invoice")}</th><th>{t("Amount")}</th><th>{t("Expected date")}</th><th>{t("Deficit impact")}</th><th>{t("Recommendation")}</th></tr></thead>
+          <tbody>{result.uncertainties.map((u, i) => <tr key={u.cashItemId}>
+            <td><strong>#{i + 1}</strong></td>
+            <td><a href={sourceLink(u.cashItemId)}>{u.counterparty} ({u.externalId})</a></td>
+            <td>{t(rupees(u.amountPaise))}</td>
+            <td>{displayDate(u.expectedDate)}</td>
+            <td>{u.additionalDeficitPaise > 0 ? <span className="decision-badge partial">+{t(rupees(u.additionalDeficitPaise))}</span> : <span className="decision-badge">{t("Low impact")}</span>}</td>
+            <td>{t(u.actionRecommendation)}</td>
+          </tr>)}</tbody>
+        </table></div>
+      </section>}
       <Explanations workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} report={result} />
       <section className="decision-card"><h2>{t("Source records")}</h2><div className="decision-table-wrap"><table><caption>{t("Records used in this analysis")}</caption><thead><tr><th>{t("Record")}</th><th>{t("Counterparty")}</th><th>{t("Outstanding")}</th><th>{t("Expected date")}</th><th>{t("Evidence")}</th></tr></thead><tbody>{result.sources.map(source => <tr key={source.id} id={`cash-source-${encodeURIComponent(source.id)}`} tabIndex={-1}><th>{source.label}</th><td>{source.counterparty}</td><td>{t(rupees(source.outstandingPaise))}</td><td>{displayDate(source.expectedDate)}</td><td>{t(source.confidenceState.replaceAll('_', ' '))}</td></tr>)}</tbody></table></div></section>
       <Notices warnings={result.warnings} assumptions={result.assumptions} />

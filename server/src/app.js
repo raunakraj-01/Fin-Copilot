@@ -1,7 +1,7 @@
 import cors from 'cors';
 import auth from './routes/auth.js';
 import { requireBusiness } from './middleware/auth.js';
-import { clientOrigin } from './services/auth.js';
+import { clientOrigin, isAllowedOrigin } from './services/auth.js';
 import express from 'express';
 import multer from 'multer';
 import workspaces from './routes/workspaces.js';
@@ -27,7 +27,10 @@ import { fileURLToPath } from 'node:url';
 const app = express();
 app.disable('x-powered-by');
 app.use((_req, res, next) => { res.set('X-Frame-Options', 'DENY'); res.set('Referrer-Policy', 'no-referrer'); next(); });
-app.use(cors({ origin: (origin, callback) => callback(null, !origin || origin === clientOrigin()), credentials: true }));
+app.use((req, res, next) => cors({
+  origin: (origin, callback) => callback(null, !origin || isAllowedOrigin(origin, req.get('Host'))),
+  credentials: true,
+})(req, res, next));
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('X-Content-Type-Options', 'nosniff'); res.set('Referrer-Policy', 'no-referrer'); next(); });
 app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
 app.use(express.json({ limit: '1mb' }));

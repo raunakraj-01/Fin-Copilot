@@ -1,0 +1,15 @@
+Bill ID,Supplier,Amount INR,Settled INR,Due Date,Expected Date,Status,Negotiable,Max Extension Days,Mandatory,Discretionary,Estimated Action Cost INR,Fee Payment Date
+DEMO-P001,Factory Rent November,60000,0,2026-11-03,2026-11-03,open,no,0,yes,no,0,
+DEMO-P002,Raw Materials Co,300000,0,2026-11-06,2026-11-06,open,yes,20,no,no,2000,2026-11-26
+DEMO-P003,Staff Payroll November,100000,0,2026-11-11,2026-11-11,open,no,0,yes,no,0,
+DEMO-P004,Packaging Partners,50000,25000,2026-11-12,2026-11-12,partial,yes,14,no,no,500,2026-11-26
+DEMO-P005,Social Media Campaign,35000,0,2026-11-15,2026-11-15,open,yes,30,no,yes,0,
+DEMO-P006,Electricity November,18000.5,0,2026-11-22,2026-11-22,open,no,0,yes,no,0,
+DEMO-P007,Logistics Partner,40000,0,2026-11-28,2026-11-28,open,yes,10,no,no,,
+DEMO-P008,Factory Rent December,60000,0,2026-12-03,2026-12-03,open,no,0,yes,no,0,
+DEMO-P009,Staff Payroll December,100000,0,2026-12-11,2026-12-11,open,no,0,yes,no,0,
+DEMO-P010,Machine Maintenance,45000,0,2026-12-18,2026-12-18,open,yes,15,no,no,1000,2027-01-02
+DEMO-P011,Trade Fair Booth,30000,0,2027-01-06,2027-01-06,open,yes,21,no,yes,500,2027-01-27
+DEMO-P012,Staff Payroll January,100000,0,2027-01-11,2027-01-11,open,no,0,yes,no,0,
+DEMO-P013,Settled Office Supplies,12000,12000,2026-10-24,2026-10-24,paid,no,0,no,no,0,
+DEMO-P014,Cancelled Equipment Upgrade,150000,0,2026-11-05,2026-11-05,cancelled,no,0,no,yes,0,
