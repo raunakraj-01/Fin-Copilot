@@ -20,7 +20,7 @@ beforeAll(async () => {
 }, 600000);
 afterAll(async () => { vi.unstubAllEnvs(); await mongoose.disconnect(); await mongo?.stop(); });
 
-it('applies a Tally batch once and updates a changed source without duplicates', async () => {
+it('applies a Tally batch once and queues changed source data for owner review', async () => {
   const base = `/api/workspaces/${id}/sync/batches`;
   const batch = { companyId: 'company-a', batchId: crypto.randomUUID(), rows: [{ sourceId: 'voucher-1', version: '1', item: {
     category: 'receivable', counterparty: 'Buyer', sourceSystem: 'tally_export', amountPaise: 10000,
@@ -32,7 +32,13 @@ it('applies a Tally batch once and updates a changed source without duplicates',
   await request(app).post(base).set('Authorization', 'Bearer secret').send({ ...batch, batchId: crypto.randomUUID(), rows: [{ ...batch.rows[0], version: '2', item: { ...batch.rows[0].item, amountPaise: 12000 } }] }).expect(200);
   const rows = await CashItem.find({ workspaceId: id });
   expect(rows).toHaveLength(1);
-  expect(rows[0].amountPaise).toBe(12000);
+  expect(rows[0].amountPaise).toBe(10000);
+  const changes = await request(app).get(`/api/workspaces/${id}/sync/changes`).expect(200);
+  expect(changes.body.changes[0]).toMatchObject({ kind: 'changed', proposedItem: { amountPaise: 12000 } });
+  await request(app).post(`/api/workspaces/${id}/sync/changes/${changes.body.changes[0].id}/resolve`).send({ decision: 'accept' }).expect(200);
+  const accepted = await CashItem.find({ workspaceId: id });
+  expect(accepted).toHaveLength(1);
+  expect(accepted[0].amountPaise).toBe(12000);
 });
 
 it('connects five supplier sync devices to an eligible pooled buyer score', async () => {

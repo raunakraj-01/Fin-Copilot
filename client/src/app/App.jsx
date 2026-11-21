@@ -9,6 +9,7 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
+import TrustCenter from '../components/TrustCenter.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport, '/setup-import'],
@@ -106,7 +107,8 @@ function BusinessApp({ user, onLogout }) {
         <div className="topbar-actions">
           <label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
           <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label>
-          <span>{user.name}</span><button type="button" className="secondary" onClick={onLogout}>Sign out</button>
+          <span>{user.name}</span><TrustCenter workspaceId={workspaceId} businessRole={profiles.find(profile => profile.id === workspaceId)?.role} />
+          <button type="button" className="secondary" onClick={onLogout}>Sign out</button>
         </div>
       </header>
       <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace} onNavigate={navigate}

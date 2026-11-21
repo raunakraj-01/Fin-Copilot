@@ -20,6 +20,8 @@ import reliabilityRoutes from './routes/reliability.js';
 import offers from './routes/offers.js';
 import followups, { automationRouter } from './routes/followups.js';
 import razorpayWebhook from './routes/razorpayWebhook.js';
+import trust from './routes/trust.js';
+import { auditBusinessRequest } from './services/audit.js';
 import { errorResponse } from './utils/http.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,7 +37,7 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', (_req, res) => res.json(app.locals.demoMode === true ? { ok: true, demoMode: true }
   : app.locals.localSyntheticDev === true ? { ok: true, localSyntheticDev: true } : { ok: true }));
 app.use('/api/auth', auth);
-app.use('/api/workspaces/:workspaceId', requireBusiness);
+app.use('/api/workspaces/:workspaceId', requireBusiness, auditBusinessRequest);
 app.use('/api/workspaces', workspaces);
 app.use('/api/workspaces/:workspaceId/imports', imports);
 app.use('/api/workspaces/:workspaceId/bank', bank);
@@ -52,6 +54,7 @@ app.use('/api/workspaces/:workspaceId/sync', sync);
 app.use('/api/workspaces/:workspaceId/reliability', reliabilityRoutes);
 app.use('/api/workspaces/:workspaceId/offers', offers);
 app.use('/api/workspaces/:workspaceId/followups', followups);
+app.use('/api/workspaces/:workspaceId/trust', trust);
 app.use('/api/followup-automation', automationRouter);
 
 if (process.env.NODE_ENV === 'production') {

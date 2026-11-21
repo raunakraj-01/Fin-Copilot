@@ -3,6 +3,8 @@ import { Router } from 'express';
 import PaymentOffer from '../models/PaymentOffer.js';
 import CashItem from '../models/CashItem.js';
 import { asyncRoute, fail } from '../utils/http.js';
+import CollectionAction from '../models/CollectionAction.js';
+import { appendAudit } from '../services/audit.js';
 
 const router = Router();
 router.post('/', asyncRoute(async (req, res) => {
@@ -37,14 +39,29 @@ router.post('/', asyncRoute(async (req, res) => {
   const date = new Date(event.created_at * 1000);
   if (!Number.isFinite(date.getTime())) fail(400, 'VALIDATION_ERROR', 'Invalid payment timestamp');
   const receipt = { paymentOfferId: String(offer._id), amountPaise: offer.buyerPaysPaise, date: date.toISOString().slice(0, 10) };
-  const result = await CashItem.updateOne({ _id: offer.cashItemId, workspaceId: offer.workspaceId,
-    category: 'receivable', status: { $in: ['open', 'partial'] }, 'gatewayReceipts.paymentOfferId': { $ne: receipt.paymentOfferId },
-    $expr: { $gte: [{ $subtract: ['$amountPaise', '$settledPaise'] }, offer.grossPaise] } },
-  { $inc: { settledPaise: offer.grossPaise, __v: 1, promiseVersion: 1 }, $push: { gatewayReceipts: receipt } });
+  const currentItem = await CashItem.findOne({ _id: offer.cashItemId, workspaceId: offer.workspaceId, category: 'receivable' }).lean();
+  if (!currentItem) fail(409, 'SETTLEMENT_CONFLICT', 'Invoice cannot accept this settlement');
+  let result = { modifiedCount: 0 };
+  if (!currentItem.gatewayReceipts.some(row => row.paymentOfferId === receipt.paymentOfferId)) {
+    if (!['open', 'partial'].includes(currentItem.status)) fail(409, 'SETTLEMENT_CONFLICT', 'Invoice cannot accept this settlement');
+    result = await CashItem.updateOne({ _id: offer.cashItemId, workspaceId: offer.workspaceId,
+      category: 'receivable', status: { $in: ['open', 'partial'] }, 'gatewayReceipts.paymentOfferId': { $ne: receipt.paymentOfferId },
+      $expr: { $gte: [{ $subtract: ['$amountPaise', '$settledPaise'] }, offer.grossPaise] } },
+    { $inc: { settledPaise: offer.grossPaise, __v: 1, promiseVersion: 1 }, $push: { gatewayReceipts: receipt, settlementEvents: {
+      source: 'gateway', sourceId: receipt.paymentOfferId, direction: 'receipt', amountPaise: offer.grossPaise, date: receipt.date,
+      dueDate: currentItem.dueDate, completedInvoice: currentItem.settledPaise + offer.grossPaise === currentItem.amountPaise, verified: true, reference: offer.gatewayLinkId } } });
+  }
   const item = await CashItem.findById(offer.cashItemId);
   if (!result.modifiedCount && !item?.gatewayReceipts.some(row => row.paymentOfferId === receipt.paymentOfferId)) fail(409, 'SETTLEMENT_CONFLICT', 'Invoice cannot accept this settlement');
   if (result.modifiedCount) { item.status = item.settledPaise === item.amountPaise ? 'paid' : 'partial'; await item.save(); }
   if (offer.status !== 'paid') { offer.status = 'paid'; offer.paidAt = receipt.date; await offer.save(); }
+  if (result.modifiedCount || offer.status !== 'paid') {
+    await CollectionAction.updateOne({ workspaceId: offer.workspaceId, requestId: `gateway:${offer._id}` }, { $setOnInsert: {
+      workspaceId: offer.workspaceId, cashItemId: offer.cashItemId, requestId: `gateway:${offer._id}`, type: 'receipt_confirmed',
+      status: 'recorded', note: `Razorpay payment confirmed for ${offer.gatewayLinkId}`, amountPaise: offer.grossPaise, receivedDate: receipt.date,
+    } }, { upsert: true });
+    await appendAudit({ workspaceId: offer.workspaceId, action: 'payment.confirmed', entityType: 'cash_item', entityId: String(offer.cashItemId) });
+  }
   res.json({ received: true });
 }));
 export default router;

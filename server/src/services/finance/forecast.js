@@ -35,7 +35,13 @@ export function buildForecast({
   };
 
   for (const item of cashItems) {
-    for (const receipt of item.gatewayReceipts || []) addEvent({ id: receipt.paymentOfferId,
+    const settlementEvents = item.settlementEvents || [];
+    const settlementIds = new Set(settlementEvents.map(event => event.sourceId));
+    for (const event of settlementEvents) addEvent({ id: event.sourceId, cashItemId: String(item.id || item._id), date: event.date,
+      direction: event.direction === 'receipt' ? 'in' : 'out', amountPaise: event.amountPaise,
+      reason: event.direction === 'receipt' ? `${event.source}_receipt` : `${event.source}_payment`,
+      counterparty: item.counterparty, externalId: item.externalId, confidenceState: 'verified' });
+    for (const receipt of item.gatewayReceipts || []) if (!settlementIds.has(receipt.paymentOfferId)) addEvent({ id: receipt.paymentOfferId,
       cashItemId: String(item.id || item._id), date: receipt.date, direction: 'in', amountPaise: receipt.amountPaise,
       reason: 'gateway_receipt', counterparty: item.counterparty });
     if (['paid', 'cancelled'].includes(item.status)) continue;

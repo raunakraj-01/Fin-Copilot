@@ -5,6 +5,8 @@ import CashItem from '../models/CashItem.js';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
 import { dateOnly, paise } from '../validators/finance.js';
 import { currentPromises, promiseState, itemPromiseStates } from '../services/finance/promises.js';
+import CollectionAction from '../models/CollectionAction.js';
+import { randomUUID } from 'node:crypto';
 
 const router = Router({ mergeParams: true });
 const note = z.string().trim().max(1000).default('');
@@ -42,6 +44,8 @@ async function change(req, res, action) {
   if (promise?.closedAs) fail(409, 'CONFLICT', 'Promise is already closed');
   const history = { action, at: new Date(), asOfDate: workspace.asOfDate, note: data.note,
     ...(promise ? { statusBefore: promiseState(promise.toObject(), workspace.asOfDate).status } : {}) };
+  const actionRequestId = data.requestId || randomUUID();
+  history.requestId = actionRequestId;
   const remaining = promise ? promise.amountPaise - promise.receivedPaise : 0;
   if (promise && remaining <= 0) fail(409, 'CONFLICT', 'Promise is already fulfilled');
   let newReceipt;
@@ -68,7 +72,9 @@ async function change(req, res, action) {
   const update = { $set: { paymentPromises: item.paymentPromises.toObject() }, $inc: { promiseVersion: 1, __v: 1 } };
   if (newReceipt) {
     update.$inc.settledPaise = data.amountPaise;
-    update.$push = { gatewayReceipts: newReceipt };
+    update.$push = { gatewayReceipts: newReceipt, settlementEvents: { source: 'promise', sourceId: `promise:${data.requestId}`,
+      direction: 'receipt', amountPaise: data.amountPaise, date: data.receivedDate, dueDate: item.dueDate,
+      completedInvoice: originalSettled + data.amountPaise === item.amountPaise, verified: true, reference: item.externalId || String(item._id) } };
     update.$set.status = originalSettled + data.amountPaise === item.amountPaise ? 'paid' : 'partial';
     if (item.constraints?.maxEarlyCollectionPaise != null)
       update.$set['constraints.maxEarlyCollectionPaise'] = Math.min(item.constraints.maxEarlyCollectionPaise, item.amountPaise - originalSettled - data.amountPaise);
@@ -77,6 +83,13 @@ async function change(req, res, action) {
     settledPaise: originalSettled, status: item.status, amountPaise: item.amountPaise, category: 'receivable',
     ...(version ? { promiseVersion: version } : { $or: [{ promiseVersion: 0 }, { promiseVersion: { $exists: false } }] }) }, update, { new: true, runValidators: true });
   if (!updated) fail(409, 'CONFLICT', 'Invoice changed. Refresh before trying again.');
+  await CollectionAction.updateOne({ workspaceId: workspace._id, requestId: `promise-action:${actionRequestId}` }, { $setOnInsert: {
+    workspaceId: workspace._id, cashItemId: item._id, requestId: `promise-action:${actionRequestId}`,
+    type: action === 'created' ? 'promise_created' : action === 'revised' ? 'promise_revised' : action === 'cancelled' ? 'promise_cancelled' : 'receipt_confirmed',
+    status: 'recorded', note: data.note, ...(data.amountPaise ? { amountPaise: data.amountPaise } : {}),
+    ...(data.promisedDate ? { promisedDate: data.promisedDate } : {}), ...(data.receivedDate ? { receivedDate: data.receivedDate } : {}),
+    actorUserId: req.user._id,
+  } }, { upsert: true });
   res.status(action === 'created' ? 201 : 200).json({ itemId: String(updated._id),
     promises: itemPromiseStates(updated.toObject(), workspace.asOfDate) });
 }

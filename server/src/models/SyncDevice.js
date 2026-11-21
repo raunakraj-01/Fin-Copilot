@@ -8,6 +8,7 @@ const schema = new mongoose.Schema({
   tokenPrefix: { type: String, required: true },
   revokedAt: { type: Date, default: null },
   lastSeenAt: { type: Date, default: null },
+  lastSuccessfulAt: { type: Date, default: null },
 }, { timestamps: true });
 
 export default mongoose.model('SyncDevice', schema);

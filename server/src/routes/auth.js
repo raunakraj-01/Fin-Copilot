@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import User from '../models/User.js';
 import AuthSession from '../models/AuthSession.js';
@@ -47,6 +48,28 @@ router.post('/password', requireSession, asyncRoute(async (req, res) => {
   if (!updated) fail(409, 'CONFLICT', 'Account changed. Sign in again.');
   await AuthSession.deleteMany({ userId: user._id });
   res.json({ user: userShape(updated), csrfToken: await createSession(updated, res) });
+}));
+router.post('/recovery-codes', requireSession, asyncRoute(async (req, res) => {
+  const { currentPassword } = validate(z.object({ currentPassword: z.string().min(1).max(128) }).strict(), req.body);
+  await throttle(req, 'recovery-codes', req.user.email);
+  const user = await User.findById(req.user._id).select('+passwordHash');
+  if (!await verifyPassword(currentPassword, user.passwordHash)) fail(401, 'UNAUTHORIZED', 'Current password is incorrect');
+  const codes = Array.from({ length: 10 }, () => randomBytes(8).toString('hex').toUpperCase());
+  user.recoveryCodeHashes = codes.map(code => ({ hash: tokenHash(code), createdAt: new Date() }));
+  await user.save();
+  res.json({ codes, createdAt: user.recoveryCodeHashes[0].createdAt });
+}));
+router.post('/recover', asyncRoute(async (req, res) => {
+  const data = validate(z.object({ email: emailInput, recoveryCode: z.string().trim().min(8).max(40), newPassword: password }).strict(), req.body);
+  await throttle(req, 'recover', data.email);
+  const normalizedCode = data.recoveryCode.replace(/[^a-f\d]/gi, '').toUpperCase();
+  const hash = tokenHash(normalizedCode);
+  const user = await User.findOneAndUpdate({ email: data.email, disabled: false,
+    recoveryCodeHashes: { $elemMatch: { hash, usedAt: null } } },
+  { $set: { 'recoveryCodeHashes.$.usedAt': new Date(), passwordHash: await hashPassword(data.newPassword) }, $inc: { authVersion: 1 } }, { new: true });
+  if (!user) fail(400, 'RECOVERY_FAILED', 'Email or recovery code is invalid, expired, or already used');
+  await AuthSession.deleteMany({ userId: user._id });
+  res.json({ recovered: true, message: 'Password changed. Sign in with your new password.' });
 }));
 router.post('/invitations/accept', requireSession, asyncRoute(async (req, res) => {
   const { token } = validate(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/) }).strict(), req.body);

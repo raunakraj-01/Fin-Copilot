@@ -8,8 +8,8 @@ import CashItem from '../models/CashItem.js';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
 import { parseUpload } from '../services/imports/parse.js';
 import { canonicalId, digest } from '../services/imports/identity.js';
-import { bankFields, bankMapping, normalizeBankRows, availablePaise, matchingSuggestions } from '../services/imports/bank.js';
-import { matchBankCredit } from '../services/finance/bankMatching.js';
+import { bankFields, bankMapping, normalizeBankRows, availablePaise, availableDebitPaise, matchingSuggestions } from '../services/imports/bank.js';
+import { matchBankCredit, matchBankDebit } from '../services/finance/bankMatching.js';
 import { itemPromiseStates } from '../services/finance/promises.js';
 
 const router = Router({ mergeParams: true });
@@ -79,19 +79,30 @@ router.post('/imports/:batchId/commit', asyncRoute(async (req, res) => {
 router.get('/', asyncRoute(async (req, res) => {
   const workspace = await workspaceOr404(req.params.workspaceId);
   const offset = validate(z.coerce.number().int().min(0).max(1000000), req.query.offset ?? 0);
-  const [transactions, invoices, total] = await Promise.all([
+  const [transactions, invoices, ledgerRecords, total] = await Promise.all([
     BankTransaction.find({ workspaceId: workspace._id }).sort({ date: -1, _id: -1 }).skip(offset).limit(500).lean(),
     CashItem.find({ workspaceId: workspace._id, category: 'receivable', status: { $in: ['open', 'partial'] } }).lean(),
+    CashItem.find({ workspaceId: workspace._id, category: { $in: ['payable', 'expense'] }, status: { $in: ['open', 'partial'] } }).lean(),
     BankTransaction.countDocuments({ workspaceId: workspace._id }),
   ]);
   res.json({ asOfDate: workspace.asOfDate, limit: 500, offset, total, transactions: transactions.map(t => ({ ...t, id: String(t._id), availablePaise: availablePaise(t),
-    suggestions: t.reviewState === 'open' && availablePaise(t) > 0 ? matchingSuggestions(t, invoices.filter(i => i.confidenceState !== 'needs_review')) : [] })),
+    availableDebitPaise: availableDebitPaise(t),
+    suggestions: t.reviewState === 'open' && availablePaise(t) > 0 ? matchingSuggestions(t, invoices.filter(i => i.confidenceState !== 'needs_review')) : [],
+    debitSuggestions: t.reviewState === 'open' && availableDebitPaise(t) > 0 ? matchingSuggestions({ ...t, creditPaise: t.debitPaise,
+      allocations: t.allocations.filter(a => a.direction === 'debit').map(a => ({ ...a, direction: 'credit' })) }, ledgerRecords.filter(i => i.confidenceState !== 'needs_review')) : [] })),
     invoices: invoices.map(i => ({ id: String(i._id), externalId: i.externalId, counterparty: i.counterparty,
-      outstandingPaise: i.amountPaise - i.settledPaise, confidenceState: i.confidenceState, promises: itemPromiseStates(i, workspace.asOfDate) })) });
+      outstandingPaise: i.amountPaise - i.settledPaise, confidenceState: i.confidenceState, promises: itemPromiseStates(i, workspace.asOfDate) })),
+    ledgerRecords: ledgerRecords.map(i => ({ id: String(i._id), externalId: i.externalId, category: i.category, counterparty: i.counterparty,
+      outstandingPaise: i.amountPaise - i.settledPaise, confidenceState: i.confidenceState })) });
 }));
 router.post('/:transactionId/match', asyncRoute(async (req, res) => {
   const workspace = await workspaceOr404(req.params.workspaceId); validId(req.params.transactionId);
   res.json(await matchBankCredit(workspace, req.params.transactionId, validate(matchInput, req.body)));
+}));
+router.post('/:transactionId/match-debit', asyncRoute(async (req, res) => {
+  const workspace = await workspaceOr404(req.params.workspaceId); validId(req.params.transactionId);
+  const input = validate(matchInput.omit({ promiseId: true }), req.body);
+  res.json(await matchBankDebit(workspace, req.params.transactionId, input));
 }));
 router.patch('/:transactionId/review', asyncRoute(async (req, res) => {
   await workspaceOr404(req.params.workspaceId); validId(req.params.transactionId);
