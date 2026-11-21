@@ -1,10 +1,13 @@
 import { t, useLanguage, locale } from '../i18n/index.js';
 import React, { useEffect, useState } from 'react';
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CartesianGrid, Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../services/api.js';
 import PaymentPromises from '../components/PaymentPromises.jsx';
 import SpendingCheck from '../components/SpendingCheck.jsx';
 import ExecutiveDossier from '../components/ExecutiveDossier.jsx';
+import CapitalHealthGauge from '../components/CapitalHealthGauge.jsx';
+import WhatIfSimulator from '../components/WhatIfSimulator.jsx';
+import EngineeringInspector from '../components/EngineeringInspector.jsx';
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
@@ -14,6 +17,10 @@ export default function Outlook({ workspaceId, onNavigate }) {
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const [showDossier, setShowDossier] = useState(false);
+  const [showSimulator, setShowSimulator] = useState(false);
+  const [showInspector, setShowInspector] = useState(false);
+  const [horizonDays, setHorizonDays] = useState(90);
+
   useEffect(() => {
     if (!workspaceId) return;
     let active = true;
@@ -61,6 +68,8 @@ export default function Outlook({ workspaceId, onNavigate }) {
       impact: 'Forecast impact is not quantified until the records are refreshed.', page: 'setup' });
   }
   const today = new Intl.DateTimeFormat(locale(), { dateStyle: 'long', timeZone: 'Asia/Kolkata' }).format(new Date());
+  const chartData = forecast.daily.slice(0, horizonDays);
+
   return <section className="cash-outlook">
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
       <div>
@@ -68,11 +77,27 @@ export default function Outlook({ workspaceId, onNavigate }) {
         <p>{t('Today')}: {today} | {t('Cash snapshot')}: {t(desk.snapshotDate || forecast.asOfDate)}</p>
         <p className="cash-desk-caption">{t('Spend headroom uses entered expected dates and current records; receipts are not guaranteed.')}</p>
       </div>
-      <button type="button" className="secondary no-print" onClick={() => setShowDossier(true)} style={{ marginTop: '8px' }}>
-        📑 {t("Executive Health Dossier (A4 Export)")}
-      </button>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+        <button type="button" className="secondary no-print" onClick={() => setShowInspector(true)}>
+          ⚡ {t("CS Architecture & Benchmarks")}
+        </button>
+        <button type="button" className="secondary no-print" onClick={() => setShowSimulator(v => !v)}>
+          🔬 {showSimulator ? t("Hide Simulator") : t("What-If Simulator")}
+        </button>
+        <button type="button" className="secondary no-print" onClick={() => setShowDossier(true)}>
+          📑 {t("Executive Health Dossier (A4 Export)")}
+        </button>
+      </div>
     </div>
+
     <p className="notice">{t(risk.explanation)}</p>
+
+    {/* Capital Health Scorecard Gauge */}
+    <CapitalHealthGauge forecast={forecast} />
+
+    {/* Interactive What-If Scenario Sandbox */}
+    {showSimulator && <WhatIfSimulator forecast={forecast} onClose={() => setShowSimulator(false)} />}
+
     <div className="metrics cash-desk-metrics">
       <div className="card"><small>{t('Safe to spend (next 30 days)')}</small><strong>{t(money(safeToSpendPaise))}</strong><span>{t('Projected low point less the reserve')}</span></div>
       <div className="card"><small>{t('Opening cash at snapshot')}</small><strong>{t(money(forecast.openingCashPaise))}</strong></div>
@@ -108,17 +133,49 @@ export default function Outlook({ workspaceId, onNavigate }) {
       </tr>)}</tbody>
     </table></div></div>}
     <section className="chart outlook-chart">
-      <div className="outlook-chart-heading"><h2>{t("Daily closing cash forecast")}</h2><span>{forecast.daily[0]?.date} – {forecast.daily.at(-1)?.date}</span></div>
-      <div className="outlook-chart-plot" role="img" aria-label={t("Daily closing cash forecast")}><ResponsiveContainer width="100%" height="100%"><LineChart data={forecast.daily} margin={{ top: 12, right: 20, left: 15, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" tickFormatter={value => value.slice(5)} minTickGap={20} />
-        <YAxis tickFormatter={value => `${Math.round(value / 100000)}k`} />
-        <ReferenceLine y={0} stroke="#a43d41" strokeDasharray="4 4" />
-        <Tooltip formatter={value => money(value)} /><Line type="stepAfter" dataKey="closingCashPaise" stroke="#275e80" strokeWidth={3} dot={false} activeDot={{ r: 4 }} name={t("Closing cash")} />
-      </LineChart></ResponsiveContainer></div>
+      <div className="outlook-chart-heading">
+        <h2>{t("Daily closing cash forecast")}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="horizon-picker no-print" role="group" aria-label="Forecast horizon">
+            {[30, 60, 90].map(d => (
+              <button
+                key={d}
+                type="button"
+                className={`horizon-btn ${horizonDays === d ? 'active' : ''}`}
+                onClick={() => setHorizonDays(d)}
+              >
+                {d}D
+              </button>
+            ))}
+          </div>
+          <span>{chartData[0]?.date} – {chartData.at(-1)?.date}</span>
+        </div>
+      </div>
+      <div className="outlook-chart-plot" role="img" aria-label={t("Daily closing cash forecast")}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 12, right: 20, left: 15, bottom: 8 }}>
+            <defs>
+              <linearGradient id="outlookCashGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#275e80" stopOpacity={0.28} />
+                <stop offset="95%" stopColor="#275e80" stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
+            <XAxis dataKey="date" tickFormatter={value => value.slice(5)} minTickGap={20} />
+            <YAxis tickFormatter={value => `${Math.round(value / 100000)}k`} />
+            <ReferenceLine y={0} stroke="#a43d41" strokeDasharray="4 4" />
+            <ReferenceLine y={forecast.minimumReservePaise || 0} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: 'Reserve', fill: '#f59e0b', fontSize: 11, position: 'right' }} />
+            <Tooltip formatter={value => money(value)} />
+            <Area type="monotone" dataKey="closingCashPaise" stroke="#275e80" strokeWidth={2.8} fillOpacity={1} fill="url(#outlookCashGrad)" name={t("Closing cash")} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </section>
     {risk.contributingItems.length > 0 && <div className="card"><h2>{t("Largest outgoing drivers")}</h2><ul>{risk.contributingItems.slice(0, 5).map((item, index) =>
       <li key={`${item.cashItemId}-${index}`}>{t(item.date)} · {item.externalId || item.cashItemId} · {t(money(item.amountPaise))}</li>)}</ul></div>}
     {forecast.warnings.length > 0 && <div className="card"><h2>{t("Data warnings")}</h2><ul>{forecast.warnings.map((warning, index) => <li key={index}>{t(warning)}</li>)}</ul></div>}
     {showDossier && <ExecutiveDossier forecast={forecast} asOfDate={forecast.asOfDate} onClose={() => setShowDossier(false)} />}
+    {showInspector && <EngineeringInspector onClose={() => setShowInspector(false)} />}
   </section>;
 }
+
