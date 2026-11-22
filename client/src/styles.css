@@ -451,33 +451,81 @@ html.dark .popover-item:hover {
   margin: 6px 0;
 }
 
-.menu-item-btn {
+html.dark .user-menu-divider {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .user-menu-profile strong {
+  color: #f0f6f3;
+}
+
+html.dark .user-menu-profile p {
+  color: #8fa79d;
+}
+
+.kavach-user-menu button.menu-item-btn,
+button.menu-item-btn {
   width: 100%;
   text-align: left;
-  background: transparent;
-  border: 0;
-  padding: 7px 10px;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--text);
+  color: var(--text) !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 30px;
+  min-height: 32px;
+  transition: all 0.12s ease;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
-.menu-item-btn:hover {
-  background: #f0f4ee;
+.kavach-user-menu button.menu-item-btn:hover,
+.kavach-user-menu button.menu-item-btn:focus,
+.kavach-user-menu button.menu-item-btn:focus-visible,
+button.menu-item-btn:hover,
+button.menu-item-btn:focus,
+button.menu-item-btn:focus-visible {
+  background: #f0f4ee !important;
+  border-color: transparent !important;
+  color: var(--brand-forest) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  outline: none !important;
 }
 
-.menu-item-btn.menu-signout {
-  color: #dc2626;
+html.dark .kavach-user-menu button.menu-item-btn,
+html.dark button.menu-item-btn {
+  color: #d1ded8 !important;
 }
 
-.menu-item-btn.menu-signout:hover {
-  background: rgba(239, 68, 68, 0.08);
+html.dark .kavach-user-menu button.menu-item-btn:hover,
+html.dark .kavach-user-menu button.menu-item-btn:focus,
+html.dark .kavach-user-menu button.menu-item-btn:focus-visible,
+html.dark button.menu-item-btn:hover,
+html.dark button.menu-item-btn:focus,
+html.dark button.menu-item-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.kavach-user-menu button.menu-item-btn.menu-signout,
+button.menu-item-btn.menu-signout {
+  color: #dc2626 !important;
+}
+
+.kavach-user-menu button.menu-item-btn.menu-signout:hover,
+.kavach-user-menu button.menu-item-btn.menu-signout:focus,
+.kavach-user-menu button.menu-item-btn.menu-signout:focus-visible,
+button.menu-item-btn.menu-signout:hover,
+button.menu-item-btn.menu-signout:focus,
+button.menu-item-btn.menu-signout:focus-visible {
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #b91c1c !important;
 }
 
 /* Luxury micro-pills */
