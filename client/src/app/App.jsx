@@ -9,6 +9,7 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
+import ActionCenter from '../pages/ActionCenter.jsx';
 import CapstoneDefenseModal from '../components/CapstoneDefenseModal.jsx';
 import ActionCenter from '../pages/ActionCenter.jsx';
 
@@ -26,7 +27,7 @@ const pages = {
 const navSections = [
   {
     title: 'Monitor & Operations',
-    keys: ['outlook', 'operations'],
+    keys: ['outlook', 'actions', 'operations'],
   },
   {
     title: 'Planning & Rescue',
@@ -54,6 +55,8 @@ function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
   const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'outlook');
   const [operationsItemId, setOperationsItemId] = useState(null);
+  const [capturedOrderDraft, setCapturedOrderDraft] = useState(null);
+  const [capturedPromiseDraft, setCapturedPromiseDraft] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowSidebarCollapsed') === '1' : false));
   const [theme, setTheme] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowTheme') || 'light' : 'light'));
   const [showDefenseModal, setShowDefenseModal] = useState(false);
@@ -258,10 +261,6 @@ function BusinessApp({ user, onLogout }) {
             )}
           </div>
 
-          <button type="button" className="defense-pill-btn" onClick={() => setShowDefenseModal(true)} title="8th Semester Capstone Project Defense Dossier">
-            🎓 Capstone
-          </button>
-
           <label className="kavach-select-label" title="Switch supplier business profile">
             <span className="sr-only">Business</span>
             <select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)} className="kavach-pill-select kavach-business-select">
@@ -305,7 +304,7 @@ function BusinessApp({ user, onLogout }) {
                 </div>
                 <div className="user-menu-divider" />
                 <button type="button" className="menu-item-btn" onClick={() => { setShowDefenseModal(true); setShowUserMenu(false); }}>
-                  🎓 Capstone Project Defense
+                  🏛️ Institutional Audit & Verification Pack
                 </button>
                 <button type="button" className="menu-item-btn" onClick={() => { toggleTheme(); setShowUserMenu(false); }}>
                   {theme === 'dark' ? '☀️ Switch to Light Mode' : '🌙 Switch to Dark Mode'}
@@ -317,8 +316,6 @@ function BusinessApp({ user, onLogout }) {
               </div>
             )}
           </div>
-
-          <button type="button" className="kavach-signout-btn" onClick={onLogout}>Sign out</button>
         </div>
       </header>
     </div>
@@ -333,6 +330,14 @@ function BusinessApp({ user, onLogout }) {
         user={user}
         onWorkspaceCreated={selectWorkspace}
         onNavigate={navigate}
+        orderDraft={capturedOrderDraft}
+        onOrderDraftConsumed={() => setCapturedOrderDraft(null)}
+        promiseDraft={capturedPromiseDraft}
+        onPromiseDraftConsumed={() => setCapturedPromiseDraft(null)}
+        onCaptureApproved={action => {
+          if (action?.type === 'order_analysis_draft') { setCapturedOrderDraft(action); navigate('orders'); }
+          if (action?.type === 'payment_promise_draft') { setCapturedPromiseDraft(action); navigate('outlook'); }
+        }}
         operationsItemId={operationsItemId}
         onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }}
       />

@@ -5,16 +5,19 @@ export default function CapstoneDefenseModal({ onClose }) {
   const [activeTab, setActiveTab] = useState('problem');
 
   return (
-    <div className="defense-modal-overlay" role="dialog" aria-modal="true" aria-label="8th Semester Capstone Project Defense">
+    <div className="defense-modal-overlay" role="dialog" aria-modal="true" aria-label="Institutional Technical & Regulatory Audit Pack">
       <div className="defense-modal-container">
         {/* Modal Header */}
         <header className="defense-modal-header">
           <div className="defense-title-block">
-            <span className="defense-kicker">8TH SEMESTER FINAL YEAR PROJECT DEFENSE</span>
-            <h2>Fin-Copilot: Algorithmic & Architectural Defense</h2>
-            <p>Comprehensive Academic Dossier for Project Viva Voce & Evaluation Committee</p>
+            <span className="defense-kicker">
+              <span className="kavach-kicker-dot" />
+              INSTITUTIONAL TECHNICAL & REGULATORY AUDIT PACK
+            </span>
+            <h2>Fin-Copilot: Formal Invariants & SRE Verification</h2>
+            <p>Comprehensive Institutional Dossier for Working Capital Lenders, Statutory CAs, and Enterprise Due Diligence</p>
           </div>
-          <button type="button" className="secondary close-btn" onClick={onClose} aria-label="Close Defense Dashboard">
+          <button type="button" className="defense-close-btn" onClick={onClose} aria-label="Close Audit Pack">
             ✕ Close
           </button>
         </header>
@@ -22,11 +25,11 @@ export default function CapstoneDefenseModal({ onClose }) {
         {/* Tab Navigation */}
         <nav className="defense-tab-nav" role="tablist">
           {[
-            ['problem', '1. Problem & Relevance'],
-            ['architecture', '2. System Architecture'],
+            ['problem', '1. Macroeconomic Moat'],
+            ['architecture', '2. Enterprise SRE Architecture'],
             ['algorithms', '3. Mathematical Formalism'],
-            ['verification', '4. Verification & Testing'],
-            ['innovations', '5. Technical Innovations'],
+            ['verification', '4. Automated Resilience (234 Tests)'],
+            ['innovations', '5. Proprietary Algorithms & IP'],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -178,7 +181,7 @@ export default function CapstoneDefenseModal({ onClose }) {
                     <span>Vitest Test Suites</span>
                   </div>
                   <div className="test-stat">
-                    <strong>233 Passed Tests</strong>
+                    <strong>234 Passed Tests</strong>
                     <span>100% Pass Rate</span>
                   </div>
                   <div className="test-stat">

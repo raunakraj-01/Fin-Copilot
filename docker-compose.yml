@@ -1,23 +1,65 @@
+version: '3.8'
+
+# ==============================================================================
+# Fin-Copilot (Kavach MSME Risk Radar) - Production Orchestration
+# Usage:
+#   docker compose up -d --build
+#   docker compose logs -f app
+# ==============================================================================
+
 services:
-  mongodb:
-    image: mongo:7-jammy
-    volumes:
-      - mongo-data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-  hisaab-app:
-    build: .
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fin-copilot-app
+    restart: unless-stopped
     ports:
-      - "5001:5001"
+      - "5000:5000"
     environment:
-      MONGODB_URI: mongodb://mongodb:27017/hisaab
-      CLIENT_ORIGIN: http://localhost:5001
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/fin_copilot
+      - SESSION_SECRET=${SESSION_SECRET:-enterprise_fincopilot_secret_key_production_2026}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5000,http://127.0.0.1:5000}
     depends_on:
-      mongodb:
+      mongo:
         condition: service_healthy
+    networks:
+      - fin_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5000/api/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  mongo:
+    image: mongo:7.0
+    container_name: fin-copilot-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - fin_network
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+networks:
+  fin_network:
+    driver: bridge
+
 volumes:
-  mongo-data:
+  mongo_data:
+    driver: local
