@@ -15,6 +15,7 @@ import { ensureLocalOllama } from '../src/services/ai/startOllama.js';
 import { startFollowupWorker } from '../src/services/finance/followups.js';
 
 const clientDist = fileURLToPath(new URL('../../client/dist/', import.meta.url));
+const port = Number(process.env.PORT || 5000);
 let database;
 let server;
 let stopFollowups;
@@ -50,14 +51,19 @@ try {
   const demo = express();
   demo.use((_req, res, next) => { res.set('Referrer-Policy', 'no-referrer'); res.set('X-Frame-Options', 'DENY'); next(); });
   demo.use(express.static(clientDist));
+  demo.use((req, res, next) => {
+    if (req.path.startsWith('/api')) return app(req, res, next);
+    next();
+  });
+  demo.get('*', (_req, res) => res.sendFile(`${clientDist}/index.html`));
   demo.use(app);
-  server = demo.listen(5000, 'localhost');
+  server = demo.listen(port, 'localhost');
   await new Promise((resolve, reject) => { server.once('listening', resolve); server.once('error', reject); });
-  console.log('Synthetic demo ready: http://localhost:5000 — create an account, then choose Use seeded demo workspace to create your own sample business.');
+  console.log(`Synthetic demo ready: http://localhost:${port} — create an account, then choose Use seeded demo workspace to create your own sample business.`);
   console.log('Uses an isolated temporary database. Demo edits disappear when this process stops.');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { stop().then(() => process.exit(0)); });
 } catch {
-  console.error('Demo could not start. Build the client first, free port 5000, and check that the MongoDB test runtime can start.');
+  console.error(`Demo could not start. Build the client first, free port ${port}, and check that the MongoDB test runtime can start.`);
   await stop();
   process.exitCode = 1;
 }

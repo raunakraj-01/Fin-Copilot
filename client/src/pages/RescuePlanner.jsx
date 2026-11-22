@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
 import SavedPlans from './RescuePlanner/SavedPlans.jsx';
 import AsyncActionButton from '../components/AsyncActionButton.jsx';
+import ParetoFrontier from '../components/ParetoFrontier.jsx';
 
 const actionLabels = { accelerate_collection: 'Request early collection', defer_payable: 'Request supplier extension', delay_expense: 'Postpone discretionary expense' };
 
@@ -52,6 +53,7 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) 
       <div className="decision-metrics"><Metric label={t("Current lowest cash")} value={rupees(result.baseline.worstCashPaise)} note={displayDate(result.baseline.worstDate)} /><Metric label={t("First negative day")} value={displayDate(result.baseline.firstNegativeDate)} /><Metric label={t("Actions considered")} value={result.candidateCount} note={`${result.evaluatedCombinationCount ?? '—'} combinations evaluated`} /></div>
       {result.message && <p className="decision-notice" role="status">{t(result.message)}</p>}
       {result.rankingRationale && <p className="decision-muted">{t(result.rankingRationale)}</p>}
+      {shownPlans.length > 1 && <ParetoFrontier plans={shownPlans} baselineWorstCashPaise={result.baseline.worstCashPaise} reservePaise={result.minimumReservePaise || 0} />}
       {shownPlans.map((plan, index) => {
         const series = [{ label: 'Current forecast', daily: result.baseline.daily, color: '#68747c' }, { label: 'Conditional plan', daily: plan.daily, color: '#275e80' }];
         return <article className="decision-card" key={plan.planId}>

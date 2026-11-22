@@ -78,8 +78,9 @@ export function analyzeShock(rawContext, rawOptions = {}, buildForecast) {
       firstBreachAfter: after.firstReserveBreachDate };
   }).sort((a, b) => b.breachDaysReduced - a.breachDaysReduced || b.peakGapReductionPaise - a.peakGapReductionPaise || a.cashItemId.localeCompare(b.cashItemId))
     .filter(action => action.breachDaysReduced > 0 || action.peakGapReductionPaise > 0).slice(0, 3);
+  const uncertainties = rankUncertainties(context, buildForecast, baseline, reserve);
   return { asOfDate: context.asOfDate, forecastEndDate: end, minimumReservePaise: reserve,
-    customers, counterparty, delayDays: options.delayDays, baseline, stressed, movedReceipts, plans, priorities,
+    customers, counterparty, delayDays: options.delayDays, baseline, stressed, movedReceipts, plans, priorities, uncertainties,
     sources: context.cashItems.map(item => ({ id: item.id, label: item.externalId || item.counterparty || item.id,
       counterparty: item.counterparty, expectedDate: item.expectedDate, outstandingPaise: item.amountPaise - item.settledPaise,
       confidenceState: item.confidenceState || 'owner_assumption' })),
@@ -88,6 +89,45 @@ export function analyzeShock(rawContext, rawOptions = {}, buildForecast) {
       ...(movedReceipts.some(item => item.outsideHorizon) ? ['Delayed receipts beyond the forecast horizon are excluded from displayed cash, not cancelled.'] : [])])],
     assumptions: [costAssumption, 'All dated open receipts from the selected customer, including negotiated early portions, receive the same delay. Mandatory payments and fee dates stay fixed.',
       'Pass counts describe three chosen scenarios, not probabilities. Only the top returned baseline rescue plans are stress-tested; other plans may exist.',
-      'Collection priorities use the original forecast, assume agreement, and are ranked by days below reserve removed, then peak gap reduction. Individual benefits cannot be added together.'],
+      'Collection priorities use the original forecast, assume agreement, and are ranked by days below reserve removed, then peak gap reduction. Individual benefits cannot be added together.',
+      'Uncertainty ranking tests a 7-day timing slip on unverified customer receipts to identify which assumption most impacts near-term cash.'],
   };
+}
+
+export function rankUncertainties(context, buildForecast, baseline, reserve) {
+  const unverified = context.cashItems.filter(item =>
+    item.category === 'receivable' &&
+    ['open', 'partial'].includes(item.status) &&
+    item.confidenceState !== 'verified' &&
+    item.expectedDate &&
+    item.expectedDate > context.asOfDate
+  );
+
+  return unverified.map(item => {
+    const amount = item.amountPaise - (item.settledPaise || 0);
+    const delayedItems = context.cashItems.map(i =>
+      i.id === item.id ? { ...i, expectedDate: addDays(i.expectedDate, 7) } : i
+    );
+    const stressedForecast = runForecast(buildForecast, context, { cashItems: delayedItems });
+    const stressedSummary = summarize(stressedForecast, reserve);
+    const additionalDeficitPaise = Math.max(0, baseline.worstCashPaise - stressedSummary.worstCashPaise);
+    const earlierBreach = baseline.firstReserveBreachDate && stressedSummary.firstReserveBreachDate
+      ? stressedSummary.firstReserveBreachDate < baseline.firstReserveBreachDate
+      : !baseline.firstReserveBreachDate && stressedSummary.firstReserveBreachDate;
+
+    return {
+      cashItemId: item.id,
+      externalId: item.externalId || item.id,
+      counterparty: item.counterparty,
+      amountPaise: amount,
+      expectedDate: item.expectedDate,
+      additionalDeficitPaise,
+      earlierBreachDate: stressedSummary.firstReserveBreachDate,
+      earlierNegativeDate: stressedSummary.firstNegativeDate,
+      urgencyScore: additionalDeficitPaise + (earlierBreach ? 10_000_000 : 0),
+      actionRecommendation: additionalDeficitPaise > 0
+        ? `Confirm payment promise immediately; a 7-day slip adds ₹${Math.round(additionalDeficitPaise / 100).toLocaleString('en-IN')} to cash deficit.`
+        : 'Timing uncertainty has low immediate impact on near-term obligations.',
+    };
+  }).sort((a, b) => b.urgencyScore - a.urgencyScore).slice(0, 5);
 }

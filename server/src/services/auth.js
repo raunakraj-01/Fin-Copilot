@@ -8,9 +8,32 @@ const options = { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 };
 export const tokenHash = value => createHash('sha256').update(value).digest('hex');
 export const csrfToken = token => createHmac('sha256', token).update('cashflow-csrf-v1').digest('hex');
 export const cookieName = () => process.env.NODE_ENV === 'production' ? '__Host-cashflow_session' : 'cashflow_session';
-export const clientOrigin = () => process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+export const clientOrigin = () => {
+  if (process.env.CLIENT_ORIGIN) return process.env.CLIENT_ORIGIN;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:5173';
+};
+
+export function isAllowedOrigin(origin, host) {
+  if (!origin) return true;
+  if (origin === clientOrigin()) return true;
+  if (process.env.VERCEL_URL && origin === `https://${process.env.VERCEL_URL}`) return true;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin === `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) return true;
+  try {
+    const parsed = new URL(origin);
+    if (host && parsed.host === host) return true;
+    if (parsed.hostname.endsWith('.vercel.app')) return true;
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return true;
+  } catch {}
+  return false;
+}
+
 export function assertOrigin(req) {
-  if (req.get('Origin') && req.get('Origin') !== clientOrigin()) fail(403, 'FORBIDDEN', 'Request origin is not allowed');
+  const origin = req.get('Origin');
+  if (origin && !isAllowedOrigin(origin, req.get('Host'))) {
+    fail(403, 'FORBIDDEN', 'Request origin is not allowed');
+  }
 }
 export async function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');

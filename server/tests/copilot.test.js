@@ -64,3 +64,13 @@ it('returns a labeled calculated fallback when local Ollama fails', async () => 
   expect(response.text).toContain('"mode":"offline"');
   expect(response.text).toContain('modelWarning');
 });
+
+it('retrieves relevant knowledge units and attaches sources in RAG response', async () => {
+  vi.stubEnv('OLLAMA_MODEL', '');
+  vi.stubEnv('GEMINI_API_KEY', '');
+  const response = await request(app).post(`/api/workspaces/${workspaceId}/copilot/chat`)
+    .send({ sessionId: crypto.randomUUID(), message: 'What is the payment status for Surya Plastics?' }).expect(200);
+  expect(response.text).toContain('"sources":');
+  expect(response.text).toContain('Surya Plastics');
+  expect(response.text).toContain('₹200.00');
+});

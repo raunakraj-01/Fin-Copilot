@@ -9,8 +9,7 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
-import ActionCenter from '../pages/ActionCenter.jsx';
-import TrustCenter from '../components/TrustCenter.jsx';
+import CapstoneDefenseModal from '../components/CapstoneDefenseModal.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport, '/setup-import'],
@@ -22,6 +21,21 @@ const pages = {
   actions: ['Action Center', 'See what needs attention next', ActionCenter, '/action-center'],
   operations: ['Operations', 'Review sync and collection drafts', Operations, '/operations'],
 };
+
+const navSections = [
+  {
+    title: 'Monitor & Operations',
+    keys: ['outlook', 'operations'],
+  },
+  {
+    title: 'Planning & Rescue',
+    keys: ['rescue', 'shock', 'orders'],
+  },
+  {
+    title: 'Intelligence & Setup',
+    keys: ['copilot', 'setup'],
+  },
+];
 const pageFromPath = pathname => Object.entries(pages).find(([, page]) => page[3] === pathname)?.[0];
 
 const icons = {
@@ -39,12 +53,31 @@ function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
   const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'outlook');
   const [operationsItemId, setOperationsItemId] = useState(null);
-  const [capturedOrderDraft, setCapturedOrderDraft] = useState(null);
-  const [capturedPromiseDraft, setCapturedPromiseDraft] = useState(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('cashflowSidebarCollapsed') === '1');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowSidebarCollapsed') === '1' : false));
+  const [theme, setTheme] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowTheme') || 'light' : 'light'));
+  const [showDefenseModal, setShowDefenseModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [workspaceId, setWorkspaceId] = useState('');
   const [profiles, setProfiles] = useState([]);
   const [accessError, setAccessError] = useState('');
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (theme === 'dark') document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(current => {
+      const next = current === 'dark' ? 'light' : 'dark';
+      if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
+        localStorage.setItem('cashflowTheme', next);
+      }
+      return next;
+    });
+  };
   useEffect(() => {
     let active = true;
     const refresh = () => api('/workspaces').then(data => { if (!active) return; setProfiles(data.workspaces);
@@ -94,37 +127,225 @@ function BusinessApp({ user, onLogout }) {
     return next;
   });
   const Page = pages[page][2];
-  return <><div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-    <aside className="sidebar">
-      <div className="sidebar-head"><div className="brand"><span className="brand-mark" aria-hidden="true">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div></div>
-      <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label, , , path]]) =>
-        <a key={key} href={path} aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">{t(icons[key])}</svg><span>{t(label)}</span>
-        </a>)}</nav>
-    </aside>
-    <div className="app-area">
-      <header className="topbar">
-        <div className="topbar-leading">
-          <button className="sidebar-toggle" type="button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path d={sidebarCollapsed ? 'm13 9 3 3-3 3' : 'm16 9-3 3 3 3'} /></svg>
-          </button>
+  return <><div className="kavach-app-wrapper" onClick={e => {
+    if (!e.target.closest('.kavach-user-menu-wrap') && showUserMenu) setShowUserMenu(false);
+    if (!e.target.closest('.kavach-bell-wrap') && showNotifications) setShowNotifications(false);
+  }}>
+    <div className="kavach-header-container">
+      <header className="kavach-floating-nav" role="banner">
+        <div className="kavach-nav-brand">
+          <div className="kavach-shield-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+          <div className="kavach-brand-titles">
+            <span className="kavach-brand-name">Kavach</span>
+            <span className="kavach-brand-sub">Fin-Copilot</span>
+          </div>
         </div>
-        <div className="topbar-actions">
-          <label className="language-picker">Business<select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)}><option value="">Select business</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}</select></label>
-          <label className="language-picker">{t('Language')}<select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label>
-          <span>{user.name}</span><TrustCenter workspaceId={workspaceId} businessRole={profiles.find(profile => profile.id === workspaceId)?.role} />
-          <button type="button" className="secondary" onClick={onLogout}>Sign out</button>
+
+        <nav className="kavach-nav-tabs" aria-label={t("Main navigation")}>
+          <a
+            href={pages.outlook[3]}
+            aria-label={t("Cash Outlook")}
+            className={`kavach-nav-tab ${page === 'outlook' ? 'active' : ''}`}
+            aria-current={page === 'outlook' ? 'page' : undefined}
+            onClick={event => followLink(event, 'outlook')}
+          >
+            {t("Dashboard")}
+          </a>
+          <a
+            href={pages.orders[3]}
+            aria-label={t("New Order Analyzer")}
+            className={`kavach-nav-tab ${page === 'orders' ? 'active' : ''}`}
+            aria-current={page === 'orders' ? 'page' : undefined}
+            onClick={event => followLink(event, 'orders')}
+          >
+            {t("Buyer search")}
+          </a>
+          <a
+            href={pages.rescue[3]}
+            aria-label={t("Rescue Planner")}
+            className={`kavach-nav-tab ${page === 'rescue' ? 'active' : ''}`}
+            aria-current={page === 'rescue' ? 'page' : undefined}
+            onClick={event => followLink(event, 'rescue')}
+          >
+            {t("Rescue Planner")}
+          </a>
+          <a
+            href={pages.shock[3]}
+            aria-label={t("Cash Shock Lab")}
+            className={`kavach-nav-tab ${page === 'shock' ? 'active' : ''}`}
+            aria-current={page === 'shock' ? 'page' : undefined}
+            onClick={event => followLink(event, 'shock')}
+          >
+            {t("Shock Lab")}
+          </a>
+          <a
+            href={pages.copilot[3]}
+            aria-label={t("Cash Copilot")}
+            className={`kavach-nav-tab ${page === 'copilot' ? 'active' : ''}`}
+            aria-current={page === 'copilot' ? 'page' : undefined}
+            onClick={event => followLink(event, 'copilot')}
+          >
+            {t("RAG Assistant")}
+          </a>
+          <a
+            href={pages.operations[3]}
+            aria-label={t("Operations")}
+            className={`kavach-nav-tab ${page === 'operations' ? 'active' : ''}`}
+            aria-current={page === 'operations' ? 'page' : undefined}
+            onClick={event => followLink(event, 'operations')}
+          >
+            {t("Operations")}
+          </a>
+          <a
+            href={pages.setup[3]}
+            aria-label={t("Setup & Import")}
+            className={`kavach-nav-tab ${page === 'setup' ? 'active' : ''}`}
+            aria-current={page === 'setup' ? 'page' : undefined}
+            onClick={event => followLink(event, 'setup')}
+          >
+            {t("Setup")}
+          </a>
+        </nav>
+
+        <div className="kavach-nav-actions">
+          <div className="live-workspace-pill" title="Protected continuous bank & ledger sync active">
+            <span className="pulse-dot"></span>
+            <span>Live workspace</span>
+          </div>
+
+          {/* Interactive Notification Bell */}
+          <div className="kavach-bell-wrap">
+            <button
+              type="button"
+              className={`kavach-icon-btn ${showNotifications ? 'active' : ''}`}
+              onClick={() => setShowNotifications(v => !v)}
+              aria-label="Risk alerts"
+              title="2 Risk Alerts Active"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span className="bell-badge-dot"></span>
+            </button>
+            {showNotifications && (
+              <div className="kavach-popover-menu kavach-notifications-menu" role="dialog" aria-label="Risk notifications">
+                <div className="popover-header">
+                  <strong>Risk Alerts</strong>
+                  <span className="badge-count">2 Active</span>
+                </div>
+                <div className="popover-item" onClick={() => { navigate('rescue'); setShowNotifications(false); }}>
+                  <span className="alert-dot danger"></span>
+                  <div>
+                    <strong>Delayed Receivables</strong>
+                    <p>₹2,14,700 flagged past standard cycle</p>
+                  </div>
+                </div>
+                <div className="popover-item" onClick={() => { navigate('outlook'); setShowNotifications(false); }}>
+                  <span className="alert-dot warning"></span>
+                  <div>
+                    <strong>Section 43B(h) Payables</strong>
+                    <p>Statutory 45-day threshold monitored</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button type="button" className="defense-pill-btn" onClick={() => setShowDefenseModal(true)} title="8th Semester Capstone Project Defense Dossier">
+            🎓 Capstone
+          </button>
+
+          <label className="kavach-select-label" title="Switch supplier business profile">
+            <span className="sr-only">Business</span>
+            <select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)} className="kavach-pill-select kavach-business-select">
+              <option value="">Select business</option>
+              {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}
+            </select>
+          </label>
+
+          <label className="kavach-select-label" title="Switch language">
+            <span className="sr-only">{t('Language')}</span>
+            <select aria-label={t('Language')} value={language} onChange={event => setLanguage(event.target.value)} className="kavach-pill-select kavach-lang-select">
+              <option value="en">EN</option>
+              <option value="hi">HI</option>
+              <option value="kn">KN</option>
+            </select>
+          </label>
+
+          <button type="button" className="kavach-icon-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+
+          {/* Interactive User Avatar Menu */}
+          <div className="kavach-user-menu-wrap">
+            <div
+              className="kavach-avatar-badge"
+              title={`Account options for ${user.name}`}
+              onClick={() => setShowUserMenu(v => !v)}
+              role="button"
+              tabIndex={0}
+            >
+              {user.name ? user.name[0].toUpperCase() : 'K'}
+            </div>
+            {showUserMenu && (
+              <div className="kavach-popover-menu kavach-user-menu" role="dialog" aria-label="User account">
+                <div className="user-menu-profile">
+                  <div className="menu-avatar">{user.name ? user.name[0].toUpperCase() : 'K'}</div>
+                  <div>
+                    <strong>{user.name}</strong>
+                    <p>{profiles.find(p => p.id === workspaceId)?.name || 'Packaging Supplier'}</p>
+                  </div>
+                </div>
+                <div className="user-menu-divider" />
+                <button type="button" className="menu-item-btn" onClick={() => { setShowDefenseModal(true); setShowUserMenu(false); }}>
+                  🎓 Capstone Project Defense
+                </button>
+                <button type="button" className="menu-item-btn" onClick={() => { toggleTheme(); setShowUserMenu(false); }}>
+                  {theme === 'dark' ? '☀️ Switch to Light Mode' : '🌙 Switch to Dark Mode'}
+                </button>
+                <div className="user-menu-divider" />
+                <button type="button" className="menu-item-btn menu-signout" onClick={onLogout}>
+                  🚪 Sign out
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button type="button" className="kavach-signout-btn" onClick={onLogout}>Sign out</button>
         </div>
       </header>
-      <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace} onNavigate={navigate}
-        orderDraft={capturedOrderDraft} onOrderDraftConsumed={() => setCapturedOrderDraft(null)}
-        promiseDraft={capturedPromiseDraft} onPromiseDraftConsumed={() => setCapturedPromiseDraft(null)}
-        onCaptureApproved={action => {
-          if (action?.type === 'order_analysis_draft') { setCapturedOrderDraft(action); navigate('orders'); }
-          if (action?.type === 'payment_promise_draft') { setCapturedPromiseDraft(action); navigate('outlook'); }
-        }}
-        operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }} /></main>
     </div>
+
+    <main className="content">
+      {accessError && <p role="alert">{accessError}</p>}
+      <Page
+        key={`${page}:${workspaceId}`}
+        workspaceId={workspaceId}
+        workspaceName={profiles.find(p => p.id === workspaceId)?.name}
+        businessRole={profiles.find(p => p.id === workspaceId)?.role}
+        user={user}
+        onWorkspaceCreated={selectWorkspace}
+        onNavigate={navigate}
+        operationsItemId={operationsItemId}
+        onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }}
+      />
+    </main>
+
+    <nav className="mobile-bottom-nav no-print" aria-label="Mobile Navigation">
+      {['setup', 'outlook', 'shock', 'rescue', 'orders'].map(key => (
+        <a key={key} href={pages[key][3]} aria-label={`Mobile ${pages[key][0]}`} aria-current={page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">{icons[key]}</svg>
+          <span>{t(pages[key][0].replace('Cash ', '').replace('New ', '').replace(' & Import', ''))}</span>
+        </a>
+      ))}
+    </nav>
+    {showDefenseModal && <CapstoneDefenseModal onClose={() => setShowDefenseModal(false)} />}
   </div></>;
 }
 export default function App() { return <AuthGate>{(user, logout) => <BusinessApp key={user.id} user={user} onLogout={logout} />}</AuthGate>; }

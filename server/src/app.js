@@ -1,7 +1,7 @@
 import cors from 'cors';
 import auth from './routes/auth.js';
 import { requireBusiness } from './middleware/auth.js';
-import { clientOrigin } from './services/auth.js';
+import { clientOrigin, isAllowedOrigin } from './services/auth.js';
 import express from 'express';
 import multer from 'multer';
 import workspaces from './routes/workspaces.js';
@@ -29,11 +29,23 @@ import { auditBusinessRequest } from './services/audit.js';
 import { errorResponse } from './utils/http.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 
 const app = express();
 app.disable('x-powered-by');
-app.use((_req, res, next) => { res.set('X-Frame-Options', 'DENY'); res.set('Referrer-Policy', 'no-referrer'); next(); });
-app.use(cors({ origin: (origin, callback) => callback(null, !origin || origin === clientOrigin()), credentials: true }));
+app.use((_req, res, next) => {
+  res.set('X-Frame-Options', 'DENY');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('X-DNS-Prefetch-Control', 'off');
+  res.set('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), usb=()');
+  res.set('Cross-Origin-Opener-Policy', 'same-origin');
+  next();
+});
+app.use((req, res, next) => cors({
+  origin: (origin, callback) => callback(null, !origin || isAllowedOrigin(origin, req.get('Host'))),
+  credentials: true,
+})(req, res, next));
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('X-Content-Type-Options', 'nosniff'); res.set('Referrer-Policy', 'no-referrer'); next(); });
 app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
 app.use(express.json({ limit: '1mb' }));
@@ -66,8 +78,8 @@ app.use('/api/workspaces/:workspaceId/fulfillment', fulfillment);
 app.use('/api/followup-automation', automationRouter);
 app.use('/api/capture-automation', captureAutomation);
 
-if (process.env.NODE_ENV === 'production') {
-  const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
+const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
+if (process.env.NODE_ENV === 'production' || existsSync(path.join(dist, 'index.html'))) {
   app.use(express.static(dist));
   app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }

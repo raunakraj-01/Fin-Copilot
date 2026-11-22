@@ -1,5 +1,5 @@
+export const baseUrl = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api')).replace(/\/$/, '');
 import { sessionFetch } from './session.js';
-const baseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 export async function api(path, options) {
   const response = await sessionFetch(`${baseUrl}${path}`, options);

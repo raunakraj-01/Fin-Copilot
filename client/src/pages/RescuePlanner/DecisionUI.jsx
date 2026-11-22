@@ -1,12 +1,13 @@
 import { sessionFetch } from '../../services/session.js';
 import { t, useLanguage, locale } from '../../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
+import { baseUrl } from '../../services/api.js';
 import './decision.css';
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 export const rupees = paise => paise == null ? '—' : new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(paise / 100);
 export const displayDate = value => value ? new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)) : t('None within forecast');
-export const decisionApiBase = apiBaseUrl => (apiBaseUrl || import.meta.env?.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api')).replace(/\/$/, '');
+export const decisionApiBase = apiBaseUrl => (apiBaseUrl || baseUrl).replace(/\/$/, '');
 
 export function useAnalysis(workspaceId, feature, apiBaseUrl) {
   const [state, setState] = useState({ result: null, error: '', loading: false });

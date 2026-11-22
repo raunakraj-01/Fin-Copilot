@@ -23,7 +23,7 @@ async function setup(type = 'defer_payable') {
 }
 it('recalculates agreed and rejected extensions immediately and preserves original saved figures and cash records', async () => {
   const { base, plan, path } = await setup();
-  const before = await CashItem.find({ workspaceId: plan.workspaceId }).lean();
+  const before = await CashItem.find({ workspaceId: plan.workspaceId }).sort({ _id: 1 }).lean();
   let listed = (await request(app).get(`${base}/rescue/plans`).expect(200)).body.plans[0];
   expect(listed.live.current.minimumCashPaise).toBe(-40000);
   const agreed = (await request(app).patch(path).send({ status: 'agreed', ownerNotes: 'Supplier confirmed' }).expect(200)).body;
@@ -35,7 +35,7 @@ it('recalculates agreed and rejected extensions immediately and preserves origin
   listed = (await request(app).get(`${base}/rescue/plans`)).body.plans[0];
   expect(listed.simulatedWorstCashPaise).toBe(plan.simulatedWorstCashPaise);
   expect(listed.live.current.minimumCashPaise).toBe(-40000);
-  expect(await CashItem.find({ workspaceId: plan.workspaceId }).lean()).toEqual(before);
+  expect(await CashItem.find({ workspaceId: plan.workspaceId }).sort({ _id: 1 }).lean()).toEqual(before);
 });
 
 it('links promises and recalculates broken/partial-payment outcomes on each read without double settlement', async () => {
