@@ -9,6 +9,7 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
+import ActionCenter from '../pages/ActionCenter.jsx';
 import TrustCenter from '../components/TrustCenter.jsx';
 
 const pages = {
@@ -18,6 +19,7 @@ const pages = {
   rescue: ['Rescue Planner', 'Find practical ways through a shortfall', RescuePlanner, '/rescue-planner'],
   orders: ['New Order Analyzer', 'Test an opportunity before committing', OrderAnalyzer, '/new-order-analyzer'],
   copilot: ['Cash Copilot', 'Ask about your cash records', Copilot, '/cash-copilot'],
+  actions: ['Action Center', 'See what needs attention next', ActionCenter, '/action-center'],
   operations: ['Operations', 'Review sync and collection drafts', Operations, '/operations'],
 };
 const pageFromPath = pathname => Object.entries(pages).find(([, page]) => page[3] === pathname)?.[0];
@@ -30,12 +32,15 @@ const icons = {
   orders: <><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h3"/></>,
   copilot: <><path d="M4 5h16v12H8l-4 4z"/><path d="M8 10h8M8 13h5"/></>,
   operations: <><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="7" cy="7" r="1"/><circle cx="16" cy="12" r="1"/></>,
+  actions: <><path d="M5 12.5 9.2 17 19 7"/><path d="M4 4h16v16H4z"/></>,
 };
 
 function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
   const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'outlook');
   const [operationsItemId, setOperationsItemId] = useState(null);
+  const [capturedOrderDraft, setCapturedOrderDraft] = useState(null);
+  const [capturedPromiseDraft, setCapturedPromiseDraft] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('cashflowSidebarCollapsed') === '1');
   const [workspaceId, setWorkspaceId] = useState('');
   const [profiles, setProfiles] = useState([]);
@@ -112,6 +117,12 @@ function BusinessApp({ user, onLogout }) {
         </div>
       </header>
       <main className="content">{accessError && <p role="alert">{accessError}</p>}<Page key={`${page}:${workspaceId}`} workspaceId={workspaceId} businessRole={profiles.find(p => p.id === workspaceId)?.role} onWorkspaceCreated={selectWorkspace} onNavigate={navigate}
+        orderDraft={capturedOrderDraft} onOrderDraftConsumed={() => setCapturedOrderDraft(null)}
+        promiseDraft={capturedPromiseDraft} onPromiseDraftConsumed={() => setCapturedPromiseDraft(null)}
+        onCaptureApproved={action => {
+          if (action?.type === 'order_analysis_draft') { setCapturedOrderDraft(action); navigate('orders'); }
+          if (action?.type === 'payment_promise_draft') { setCapturedPromiseDraft(action); navigate('outlook'); }
+        }}
         operationsItemId={operationsItemId} onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }} /></main>
     </div>
   </div></>;

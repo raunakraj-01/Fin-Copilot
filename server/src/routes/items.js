@@ -5,9 +5,12 @@ import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
 import { dateOnly, itemInput, paise } from '../validators/finance.js';
 import CashItem from '../models/CashItem.js';
 import RecurringRule from '../models/RecurringRule.js';
+import { requireOwner } from './offers.js';
 
 const router = Router({ mergeParams: true });
-const shape = item => ({ ...item.toObject(), id: String(item._id), outstandingPaise: Math.max(0, item.amountPaise - item.settledPaise) });
+const shape = item => ({ ...item.toObject(), id: String(item._id), outstandingPaise: Math.max(0, item.amountPaise - item.settledPaise),
+  paymentReviewStale: Boolean(item.paymentReview?.status && (item.paymentReview.amountPaise !== item.amountPaise
+    || item.paymentReview.settledPaise !== item.settledPaise || item.paymentReview.dueDate !== item.dueDate)) });
 
 router.get('/items', asyncRoute(async (req, res) => {
   await workspaceOr404(req.params.workspaceId);
@@ -39,6 +42,24 @@ router.patch('/items/:itemId', asyncRoute(async (req, res) => {
   const merged = { ...Object.fromEntries(editable.filter(key => current[key] !== undefined).map(key => [key, current[key]])), ...patch,
     constraints: { ...(current.constraints || {}), ...(patch.constraints || {}) } };
   Object.assign(item, validate(itemInput, merged));
+  await item.save();
+  res.json({ item: shape(item) });
+}));
+router.patch('/items/:itemId/payment-review', asyncRoute(async (req, res) => {
+  requireOwner(req);
+  await workspaceOr404(req.params.workspaceId);
+  if (!mongoose.isValidObjectId(req.params.itemId)) fail(404, 'NOT_FOUND', 'Supplier payment not found');
+  const item = await CashItem.findOne({ _id: req.params.itemId, workspaceId: req.params.workspaceId,
+    category: { $in: ['payable', 'expense'] }, status: { $in: ['open', 'partial'] } });
+  if (!item) fail(404, 'NOT_FOUND', 'Open supplier payment not found');
+  const data = validate(z.object({ status: z.enum(['approved_to_schedule', 'deferred', 'needs_discussion']),
+    note: z.string().trim().max(500).default('') }).strict(), req.body);
+  if (item.paymentReviewHistory.length >= 500) fail(400, 'VALIDATION_ERROR', 'Payment decision history limit reached');
+  const at = new Date();
+  item.paymentReview = { ...data, amountPaise: item.amountPaise, settledPaise: item.settledPaise, dueDate: item.dueDate,
+    reviewedAt: at, reviewedBy: req.user._id };
+  item.paymentReviewHistory.push({ ...data, amountPaise: item.amountPaise, settledPaise: item.settledPaise,
+    dueDate: item.dueDate, at, actorUserId: req.user._id });
   await item.save();
   res.json({ item: shape(item) });
 }));

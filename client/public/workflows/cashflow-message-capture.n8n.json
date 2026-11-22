@@ -1,0 +1,116 @@
+{
+  "name": "CashFlow Copilot - inbound WhatsApp order and promise capture",
+  "active": false,
+  "nodes": [
+    {
+      "id": "verify-meta",
+      "name": "Meta webhook verification",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "cashflow-message-capture",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "verify-token",
+      "name": "Check verification token",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [240, 0],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [
+            {"id": "mode-subscribe", "leftValue": "={{ $json.query['hub.mode'] }}", "rightValue": "subscribe", "operator": {"type": "string", "operation": "equals"}},
+            {"id": "token-match", "leftValue": "={{ $json.query['hub.verify_token'] }}", "rightValue": "REPLACE_WITH_RANDOM_VERIFY_TOKEN", "operator": {"type": "string", "operation": "equals"}}
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "return-challenge",
+      "name": "Return Meta challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [500, -80],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {"responseCode": 200}
+      }
+    },
+    {
+      "id": "deny-verification",
+      "name": "Reject invalid verification",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [500, 80],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Forbidden",
+        "options": {"responseCode": 403}
+      }
+    },
+    {
+      "id": "receive-whatsapp",
+      "name": "Receive WhatsApp events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 280],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cashflow-message-capture",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "extract-text",
+      "name": "Extract inbound text messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 280],
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst body = root.body || root;\nconst output = [];\nfor (const entry of body.entry || []) {\n  for (const change of entry.changes || []) {\n    const value = change.value || {};\n    for (const message of value.messages || []) {\n      const text = message.text?.body;\n      if (!text || !message.id || !message.from) continue;\n      const contact = (value.contacts || []).find(item => item.wa_id === message.from);\n      output.push({ json: { messageId: message.id, from: message.from, profileName: contact?.profile?.name || '', text, sourceSystem: 'whatsapp_cloud', receivedAt: message.timestamp ? Number(message.timestamp) : Date.now() } });\n    }\n  }\n}\nreturn output;"
+      }
+    },
+    {
+      "id": "store-capture",
+      "name": "Store owner-review capture",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 280],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5000/api/capture-automation/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {"timeout": 15000}
+      },
+      "credentials": {
+        "httpHeaderAuth": {"id": "CONFIGURE_AUTOMATION_CREDENTIAL", "name": "CashFlow automation bearer"}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Meta webhook verification": {"main": [[{"node": "Check verification token", "type": "main", "index": 0}]]},
+    "Check verification token": {"main": [[{"node": "Return Meta challenge", "type": "main", "index": 0}], [{"node": "Reject invalid verification", "type": "main", "index": 0}]]},
+    "Receive WhatsApp events": {"main": [[{"node": "Extract inbound text messages", "type": "main", "index": 0}]]},
+    "Extract inbound text messages": {"main": [[{"node": "Store owner-review capture", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "staticData": null,
+  "meta": {"templateCredsSetupCompleted": false}
+}

@@ -16,7 +16,7 @@ export default function BusinessAccess({ workspaceId }) {
     <ul>{members.map(m => <li key={m.id}>{m.name} · {m.email} · {m.role}{m.role === 'accountant' && <button disabled={busy} onClick={() => run(() => json(`${base}/members/${m.id}`, 'DELETE'))}>Remove accountant</button>}</li>)}</ul>
     <ul>{invitations.map(i => <li key={i.id}>{i.email} · invitation expires {new Date(i.expiresAt).toLocaleString()} <button disabled={busy} onClick={() => run(() => json(`${base}/invitations/${i.id}`, 'DELETE'))}>Revoke invitation</button></li>)}</ul>
     <h3>Integration credentials</h3><p>Each credential works only for this business. Revoking it blocks subsequent requests.</p>
-    <button disabled={busy} onClick={() => run(async () => { const result = await json(`${base}/sync/devices`, 'POST', { name: 'n8n follow-ups', kind: 'automation' }); setSecret(result.token); })}>Create automation credential</button>
+    <button disabled={busy} onClick={() => run(async () => { const result = await json(`${base}/sync/devices`, 'POST', { name: 'CashFlow automation bridge', kind: 'automation' }); setSecret(result.token); })}>Create automation credential</button>
     {secret && <label>Automation credential · shown once<input readOnly type="text" value={secret} onFocus={e => e.target.select()} /></label>}
     <ul>{devices.map(d => <li key={d.id}>{d.name} · {d.kind} · {d.revokedAt ? 'revoked' : 'active'}{!d.revokedAt && <button disabled={busy} onClick={() => run(() => json(`${base}/sync/devices/${d.id}`, 'DELETE'))}>Revoke credential</button>}</li>)}</ul>
     {message && <p role="alert">{message}</p>}

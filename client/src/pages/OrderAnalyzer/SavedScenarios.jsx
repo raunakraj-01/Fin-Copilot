@@ -30,12 +30,15 @@ export function SaveScenario({ order, workspaceId, apiBaseUrl, onSaved }) {
   </div>;
 }
 
-function ScenarioRecord({ scenario, workspaceId, apiBaseUrl, onRecalculated, onEdit }) {
-  const [state, setState] = useState({ busy: false, error: '', message: '' });
+function ScenarioRecord({ scenario, workspaceId, apiBaseUrl, onRecalculated, onTracked, onEdit, businessRole }) {
+  const [state, setState] = useState({ busy: false, trackingBusy: false, error: '', message: '' });
+  const [trackingStatus, setTrackingStatus] = useState(scenario.trackingStatus || 'prospective');
+  const [trackingNote, setTrackingNote] = useState(scenario.trackingNote || '');
+  useEffect(() => { setTrackingStatus(scenario.trackingStatus || 'prospective'); setTrackingNote(scenario.trackingNote || ''); }, [scenario.trackingStatus, scenario.trackingNote]);
   const active = useRef(null);
   useEffect(() => () => active.current?.abort(), []);
   async function recalculate() {
-    if (state.busy) return;
+    if (state.busy || state.trackingBusy) return;
     const controller = new AbortController(); active.current = controller;
     setState({ busy: true, error: '', message: '' });
     try {
@@ -51,6 +54,22 @@ function ScenarioRecord({ scenario, workspaceId, apiBaseUrl, onRecalculated, onE
       }
     } catch (error) { if (!controller.signal.aborted) setState({ busy: false, error: error.message, message: '' }); }
   }
+  async function saveTracking(event) {
+    event.preventDefault();
+    if (state.trackingBusy || state.busy) return;
+    setState(current => ({ ...current, trackingBusy: true, error: '', message: '' }));
+    try {
+      const response = await sessionFetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/orders/scenarios/${encodeURIComponent(scenario._id)}/tracking`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: trackingStatus, note: trackingNote }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message || 'Could not update order tracking');
+      setTrackingNote(payload.scenario.trackingNote || '');
+      setState(current => ({ ...current, trackingBusy: false, message: 'Order progress saved. Cash records remain unchanged.' }));
+      onTracked({ ...scenario, ...payload.scenario });
+    } catch (error) { setState(current => ({ ...current, trackingBusy: false, error: error.message })); }
+  }
   const stale = scenario.freshness?.stale !== false;
   return <article className="decision-card"><h3>{scenario.label}{t(' · hypothetical')}</h3>
     <p className={stale ? 'issue' : 'decision-muted'}><strong>{stale ? 'Outdated analysis — review before use' : 'Analysis matches current recorded inputs'}</strong></p>
@@ -58,17 +77,28 @@ function ScenarioRecord({ scenario, workspaceId, apiBaseUrl, onRecalculated, onE
     <p>{t('Order value: ')}{t(rupees(scenario.orderValuePaise))}{t('. Proposed advance: ')}{t(rupees(scenario.advancePaise))}{t(' on ')}{scenario.advanceDate}{t('. Final collection: ')}{scenario.finalCollectionDate}.</p>
     <p>{t('Minimum advance when saved: ')}{t(scenario.simulatedMinimumAdvancePaise == null ? 'No feasible advance' : rupees(scenario.simulatedMinimumAdvancePaise))}{stale ? ' · historical result; recalculate before relying on it.' : ' · conditional on entered data.'}</p>
     {scenario.analyzedAt && <p>Last calculated: {new Date(scenario.analyzedAt).toLocaleString()} · Cash snapshot: {scenario.analysisContext?.asOfDate} · Delay stress test: {scenario.delayedCollectionDays ?? 0} days</p>}
+    {businessRole === 'owner' && <form className="order-tracking-form" onSubmit={saveTracking}>
+      <label>Order progress<select value={trackingStatus} onChange={event => setTrackingStatus(event.target.value)}>
+        <option value="prospective">Prospective</option><option value="terms_requested">Terms requested</option><option value="accepted">Accepted</option>
+        <option value="in_production">In production</option><option value="delivered">Delivered</option><option value="awaiting_collection">Awaiting final collection</option>
+        <option value="completed">Completed</option><option value="cancelled">Cancelled</option>
+      </select></label>
+      <label>Progress note<input maxLength="500" value={trackingNote} onChange={event => setTrackingNote(event.target.value)} placeholder="e.g. Customer confirmed advance terms" /></label>
+      <button type="submit" className="secondary" disabled={state.trackingBusy || state.busy}>{state.trackingBusy ? 'Saving progress…' : 'Save order progress'}</button>
+      <p className="decision-muted">Progress is an owner note for follow-through. It does not record a payment or change the cash forecast.</p>
+      {scenario.trackingUpdatedAt && <p className="decision-muted">Updated {new Date(scenario.trackingUpdatedAt).toLocaleString()}{scenario.trackingHistory?.length ? ` · ${scenario.trackingHistory.length} update(s) recorded` : ''}</p>}
+    </form>}
     <div className="decision-actions">
-      <button type="button" disabled={state.busy || scenario.freshness?.datesExpired} onClick={recalculate}>{state.busy ? 'Recalculating…' : 'Recalculate with current ledger'}</button>
-      {onEdit && <button type="button" className="secondary" disabled={state.busy} onClick={() => onEdit(scenario)}>Edit order inputs</button>}
+      <button type="button" disabled={state.busy || state.trackingBusy || scenario.freshness?.datesExpired} onClick={recalculate}>{state.busy ? 'Recalculating…' : 'Recalculate with current ledger'}</button>
+      {onEdit && <button type="button" className="secondary" disabled={state.busy || state.trackingBusy} onClick={() => onEdit(scenario)}>Edit order inputs</button>}
     </div>
-    {state.error && <p role="alert">{state.error}</p>}{state.message && (!stale || state.message.startsWith('Recalculated, but')) && <p role="status">{state.message}</p>}
+    {state.error && <p role="alert">{state.error}</p>}{state.message && <p role="status">{state.message}</p>}
     <Notices warnings={scenario.scenarioWarnings || []} />
     {scenario.analysisHistory?.length > 0 && <details><summary>Previous calculations</summary><ul>{scenario.analysisHistory.map((h, i) => <li key={i}>{h.analyzedAt ? new Date(h.analyzedAt).toLocaleString() : 'Legacy calculation'} · Minimum advance: {h.minimumAdvancePaise == null ? 'No feasible advance' : rupees(h.minimumAdvancePaise)} · Snapshot {h.analysisContext?.asOfDate || 'not recorded'}</li>)}</ul></details>}
   </article>;
 }
 
-export default function SavedScenarios({ workspaceId, apiBaseUrl, reloadKey, onEdit }) {
+export default function SavedScenarios({ workspaceId, apiBaseUrl, reloadKey, onEdit, businessRole = 'owner' }) {
   useLanguage();
   const { records, loading, error, load, replaceRecord } = useSavedRecords(workspaceId, apiBaseUrl, 'orders/scenarios', 'scenarios', reloadKey);
   const currentLoad = useRef(load); currentLoad.current = load;
@@ -86,6 +116,6 @@ export default function SavedScenarios({ workspaceId, apiBaseUrl, reloadKey, onE
     <p>Your latest 50 saved scenarios. Freshness checks refresh every 30 seconds while visible and when you return to this window. Recalculation preserves the order terms and records the previous result in history.</p>
     <button type="button" disabled={loading} onClick={load}>{t(loading ? 'Loading scenarios…' : 'Load saved scenarios')}</button>
     {error && <p role="alert">{t(error)}</p>}{records?.length === 0 && <p>{t("No saved scenarios for this workspace.")}</p>}
-    {records?.map(scenario => <ScenarioRecord key={`${workspaceId}:${scenario._id}`} scenario={scenario} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} onRecalculated={replaceRecord} onEdit={onEdit} />)}
+    {records?.map(scenario => <ScenarioRecord key={`${workspaceId}:${scenario._id}`} scenario={scenario} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} onRecalculated={replaceRecord} onTracked={replaceRecord} onEdit={onEdit} businessRole={businessRole} />)}
   </section>;
 }

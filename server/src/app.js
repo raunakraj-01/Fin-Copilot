@@ -21,6 +21,10 @@ import offers from './routes/offers.js';
 import followups, { automationRouter } from './routes/followups.js';
 import razorpayWebhook from './routes/razorpayWebhook.js';
 import trust from './routes/trust.js';
+import inventory from './routes/inventory.js';
+import captures, { automationRouter as captureAutomation } from './routes/captures.js';
+import procurement from './routes/procurement.js';
+import fulfillment from './routes/fulfillment.js';
 import { auditBusinessRequest } from './services/audit.js';
 import { errorResponse } from './utils/http.js';
 import path from 'node:path';
@@ -55,7 +59,12 @@ app.use('/api/workspaces/:workspaceId/reliability', reliabilityRoutes);
 app.use('/api/workspaces/:workspaceId/offers', offers);
 app.use('/api/workspaces/:workspaceId/followups', followups);
 app.use('/api/workspaces/:workspaceId/trust', trust);
+app.use('/api/workspaces/:workspaceId/inventory', inventory);
+app.use('/api/workspaces/:workspaceId/captures', captures);
+app.use('/api/workspaces/:workspaceId/procurement', procurement);
+app.use('/api/workspaces/:workspaceId/fulfillment', fulfillment);
 app.use('/api/followup-automation', automationRouter);
+app.use('/api/capture-automation', captureAutomation);
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');

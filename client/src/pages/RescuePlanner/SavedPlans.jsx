@@ -58,10 +58,11 @@ export default function SavedPlans({ workspaceId, apiBaseUrl, reloadKey }) {
   useEffect(() => { enabled.current = false; }, [workspaceId]);
   useEffect(() => { if (records) enabled.current = true; }, [records]);
   useEffect(() => {
-    const refresh = () => { if (enabled.current && !document.hidden) currentLoad.current(true); };
-    const timer = setInterval(refresh, 30000);
-    window.addEventListener('focus', refresh);
-    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
+    const refreshWhileVisible = () => { if (enabled.current && !document.hidden) currentLoad.current(true); };
+    const refreshOnFocus = () => { if (enabled.current) currentLoad.current(true); };
+    const timer = setInterval(refreshWhileVisible, 30000);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refreshOnFocus); };
   }, [workspaceId]);
   if (!workspaceId) return null;
   return <section className="decision-card" aria-label={t("Saved rescue plans")}><h2>{t("Saved rescue plans")}</h2>
