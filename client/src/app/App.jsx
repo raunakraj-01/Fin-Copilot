@@ -255,10 +255,6 @@ function BusinessApp({ user, onLogout }) {
             )}
           </div>
 
-          <button type="button" className="defense-pill-btn" onClick={() => setShowDefenseModal(true)} title="Institutional Diligence & Regulatory Audit Pack">
-            🏛️ Audit Pack
-          </button>
-
           <label className="kavach-select-label" title="Switch supplier business profile">
             <span className="sr-only">Business</span>
             <select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)} className="kavach-pill-select kavach-business-select">
@@ -314,8 +310,6 @@ function BusinessApp({ user, onLogout }) {
               </div>
             )}
           </div>
-
-          <button type="button" className="kavach-signout-btn" onClick={onLogout}>Sign out</button>
         </div>
       </header>
     </div>
