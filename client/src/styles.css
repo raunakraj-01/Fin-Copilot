@@ -1325,6 +1325,51 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
   color: var(--accent);
 }
 
+/* Fin-RAG Knowledge Sources */
+.rag-sources-wrap {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border-left: 3px solid #0284c7;
+  font-size: 12px;
+}
+.rag-sources-header {
+  font-weight: 600;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.rag-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+.rag-source-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.rag-source-card strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+.rag-mode-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+  margin-top: 4px;
+}
+
 /* Print Rules */
 @media print {
   body {

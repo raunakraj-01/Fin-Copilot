@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { buildForecast } from '../finance/forecast.js';
 import { loadDecisionContext } from '../rescue/decisionContext.js';
 import { answerWithOllama } from './ollama.js';
+import { buildKnowledgeIndex, retrieveKnowledgeUnits } from './knowledgeIndexer.js';
 
 export const chatInput = z.object({ message: z.string().trim().min(1).max(2000), sessionId: z.string().uuid() });
 const sessions = new Map();
@@ -49,6 +50,21 @@ export async function answerChat(workspaceId, { message, sessionId }) {
   const named = debtors.find(item => message.toLowerCase().includes(item.counterparty.toLowerCase()));
   const entity = named?.counterparty || (/\b(unse|unka|unko|them|their)\b/i.test(message) ? active?.entity : null);
   const relevant = entity ? debtors.filter(item => item.counterparty === entity) : debtors;
+
+  // Retrieve Knowledge Units via RAG Indexer
+  const allKUs = buildKnowledgeIndex(context);
+  const retrievedKUs = retrieveKnowledgeUnits(allKUs, message, { entity, limit: 5 });
+  const sources = retrievedKUs.map(ku => ({
+    kuId: ku.kuId,
+    category: ku.category,
+    title: ku.title,
+    counterparty: ku.counterparty,
+    amount: ku.formattedAmount,
+    date: ku.date,
+    risk: ku.risk,
+    summary: ku.text,
+  }));
+
   let reply, facts = [], tool = selected;
   if (selected === 'runway') {
     const forecast = buildForecast(context);
@@ -73,14 +89,60 @@ export async function answerChat(workspaceId, { message, sessionId }) {
     }
   } else if (selected === 'deadlines') {
     tool = 'get_43bh_deadlines';
-    reply = 'The ledger does not record supplier MSME registration, acceptance date, or written payment terms. I cannot calculate Section 43B(h) deadlines reliably from these records.';
+    const payablesKUs = retrievedKUs.filter(k => k.category === 'payable');
+    if (payablesKUs.length > 0) {
+      const totalTaxRiskPaise = payablesKUs.reduce((s, p) => s + (p.taxPenaltyPaise || 0), 0);
+      reply = `Section 43B(h) MSME Auditor: Found ${payablesKUs.length} vendor payable(s). ${payablesKUs.slice(0, 3).map(p => `${p.counterparty}: ${p.formattedAmount} (${p.sec43bStatus})`).join('; ')}. Payments delayed beyond 15/45 days trigger an immediate 30% tax penalty (${money(totalTaxRiskPaise)} at risk).`;
+      facts = [{ label: 'Section 43B(h) Risk', value: money(totalTaxRiskPaise) }, { label: 'Payables Tracked', value: `${payablesKUs.length}` }];
+    } else {
+      reply = 'The ledger does not record supplier MSME registration, acceptance date, or written payment terms. I cannot calculate Section 43B(h) deadlines reliably from these records.';
+    }
   } else {
     tool = 'simulate_order';
     reply = 'Use New Order Analyzer to enter the order value, advance and dates, and dated production costs. I can then rely on its deterministic simulation; this question alone lacks the required inputs.';
   }
-  let mode = process.env.GEMINI_API_KEY ? 'grounded' : 'offline';
+
+  let mode = process.env.GEMINI_API_KEY ? 'gemini-rag' : 'offline-rag';
   let model;
   let modelWarning;
+
+  // Gemini Generative RAG Generation if API key is provided and Ollama is not requested
+  if (process.env.GEMINI_API_KEY && !process.env.OLLAMA_MODEL) {
+    try {
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const prompt = `You are Fin-Copilot RAG, an institutional cash planning and statutory decision AI for Indian MSMEs.
+Answer the user's question concisely using ONLY the provided retrieved financial records.
+All currency is in Indian Rupees (INR).
+Never invent numbers, due dates, tax penalties, or customer names.
+If the retrieved records do not contain the answer, rely on the calculated workspace answer.
+Whenever referring to an invoice or payable, cite its reference.
+
+RETRIEVED WORKSPACE KNOWLEDGE UNITS:
+${retrievedKUs.map(k => `[${k.kuId}] ${k.text}`).join('\n')}
+
+CALCULATED VERIFIED ANSWER:
+${reply}
+
+USER QUESTION: ${maskPII(message)}`;
+
+      const response = await ai.models.generateContent({
+        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+        contents: prompt,
+        config: { temperature: 0.1, maxOutputTokens: 350 }
+      });
+      const generated = response.text?.trim();
+      if (generated) {
+        reply = generated;
+        model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        mode = 'gemini-rag';
+      }
+    } catch {
+      mode = 'offline-rag';
+    }
+  }
+
+  // Local Ollama execution if configured
   if (process.env.OLLAMA_MODEL) {
     try {
       const forecast = buildForecast(context);
@@ -98,7 +160,8 @@ export async function answerChat(workspaceId, { message, sessionId }) {
       modelWarning = 'Local Ollama is unavailable or timed out. Showing the calculated workspace answer.';
     }
   }
+
   sessions.set(key, { entity: named?.counterparty || entity || active?.entity, updatedAt: Date.now(),
     history: [...(active?.history || []), { role: 'user', content: message }, { role: 'assistant', content: reply }].slice(-4) });
-  return { reply, facts, tool, mode, ...(model ? { model } : {}), ...(modelWarning ? { modelWarning } : {}), assumptions: ['Based on workspace records and the workspace as-of date'] };
+  return { reply, facts, tool, mode, sources, ...(model ? { model } : {}), ...(modelWarning ? { modelWarning } : {}), assumptions: ['Based on workspace records and the workspace as-of date'] };
 }
