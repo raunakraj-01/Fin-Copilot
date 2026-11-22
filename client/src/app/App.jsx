@@ -20,6 +20,21 @@ const pages = {
   copilot: ['Cash Copilot', 'Ask about your cash records', Copilot, '/cash-copilot'],
   operations: ['Operations', 'Review sync and collection drafts', Operations, '/operations'],
 };
+
+const navSections = [
+  {
+    title: 'Monitor & Operations',
+    keys: ['outlook', 'operations'],
+  },
+  {
+    title: 'Planning & Rescue',
+    keys: ['rescue', 'shock', 'orders'],
+  },
+  {
+    title: 'Intelligence & Setup',
+    keys: ['copilot', 'setup'],
+  },
+];
 const pageFromPath = pathname => Object.entries(pages).find(([, page]) => page[3] === pathname)?.[0];
 
 const icons = {
@@ -111,10 +126,21 @@ function BusinessApp({ user, onLogout }) {
   return <><div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
       <div className="sidebar-head"><div className="brand"><span className="brand-mark" aria-hidden="true">₹</span><span>{t("CashFlow")}<br/><small>{t("Copilot")}</small></span></div></div>
-      <nav aria-label={t("Main navigation")}>{Object.entries(pages).map(([key, [label, , , path]]) =>
-        <a key={key} href={path} aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">{t(icons[key])}</svg><span>{t(label)}</span>
-        </a>)}</nav>
+      <nav aria-label={t("Main navigation")}>
+        {navSections.map(sec => (
+          <div key={sec.title} className="nav-section">
+            <div className="nav-group-label">{t(sec.title)}</div>
+            {sec.keys.map(key => {
+              const [label, , , path] = pages[key];
+              return (
+                <a key={key} href={path} aria-label={t(label)} title={t(label)} aria-current={page === key ? 'page' : undefined} onClick={event => followLink(event, key)}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">{icons[key]}</svg><span>{t(label)}</span>
+                </a>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
     </aside>
     <div className="app-area">
       <header className="topbar">

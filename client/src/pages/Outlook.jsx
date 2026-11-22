@@ -82,28 +82,85 @@ export default function Outlook({ workspaceId, onNavigate }) {
         <p>{t('Today')}: {today} | {t('Cash snapshot')}: {t(desk.snapshotDate || forecast.asOfDate)}</p>
         <p className="cash-desk-caption">{t('Spend headroom uses entered expected dates and current records; receipts are not guaranteed.')}</p>
       </div>
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-        <button type="button" className="secondary no-print" onClick={() => setShowInspector(true)}>
-          ⚡ {t("CS Architecture & Benchmarks")}
-        </button>
-        <button type="button" className="secondary no-print" onClick={() => setShowMonteCarlo(v => !v)}>
-          🎲 {showMonteCarlo ? t("Hide Monte Carlo") : t("Monte Carlo Risk (1k)")}
-        </button>
-        <button type="button" className="secondary no-print" onClick={() => setShowSection43b(v => !v)}>
-          ⚖️ {showSection43b ? t("Hide 43B(h)") : t("Section 43B(h) Auditor")}
-        </button>
-        <button type="button" className="secondary no-print" onClick={() => setShowSimulator(v => !v)}>
-          🔬 {showSimulator ? t("Hide Simulator") : t("What-If Simulator")}
-        </button>
-        <button type="button" className="secondary no-print" onClick={() => setShowDossier(true)}>
-          📑 {t("Executive Dossier (A4)")}
-        </button>
-        <button type="button" className="secondary no-print" onClick={() => exportForecastToCsv(forecast)}>
-          📥 {t("Export Audit CSV")}
-        </button>
-        <button type="button" className="secondary no-print" onClick={() => exportToTallyXml(forecast)}>
-          📦 {t("Tally Prime XML")}
-        </button>
+    </div>
+
+    {/* Structured Command Toolbar */}
+    <div className="outlook-command-bar no-print" role="toolbar" aria-label="Outlook analytics and export tools">
+      {/* Group 1: Risk & Simulation Sandbox */}
+      <div className="command-group">
+        <span className="command-group-title">{t("Simulations")}</span>
+        <div className="command-group-buttons">
+          <button
+            type="button"
+            className={`command-btn ${showSimulator ? 'active' : ''}`}
+            onClick={() => setShowSimulator(v => !v)}
+            title="Interactive Customer Delay & Emergency Outflow Sandbox"
+          >
+            <span className="btn-icon">🔬</span> {showSimulator ? t("Hide Simulator") : t("What-If Simulator")}
+          </button>
+          <button
+            type="button"
+            className={`command-btn ${showMonteCarlo ? 'active' : ''}`}
+            onClick={() => setShowMonteCarlo(v => !v)}
+            title="1,000-Path Gaussian Delay Stochastic Risk Simulation"
+          >
+            <span className="btn-icon">🎲</span> {showMonteCarlo ? t("Hide Monte Carlo") : t("Monte Carlo Risk (1k)")}
+          </button>
+        </div>
+      </div>
+
+      {/* Group 2: Compliance & Audit */}
+      <div className="command-group">
+        <span className="command-group-title">{t("Compliance & Audit")}</span>
+        <div className="command-group-buttons">
+          <button
+            type="button"
+            className={`command-btn ${showSection43b ? 'active' : ''}`}
+            onClick={() => setShowSection43b(v => !v)}
+            title="Section 43B(h) 30% Tax Penalty & MSMED Act Penal Interest Auditor"
+          >
+            <span className="btn-icon">⚖️</span> {showSection43b ? t("Hide 43B(h)") : t("Section 43B(h) Auditor")}
+          </button>
+          <button
+            type="button"
+            className="command-btn"
+            onClick={() => setShowInspector(true)}
+            title="Algorithmic Complexity, Safety Invariant Proofs & Live Benchmarks"
+          >
+            <span className="btn-icon">⚡</span> {t("CS Architecture")}
+          </button>
+        </div>
+      </div>
+
+      {/* Group 3: Institutional Exports & ERP Bridges */}
+      <div className="command-group">
+        <span className="command-group-title">{t("Export & ERP")}</span>
+        <div className="command-group-buttons">
+          <button
+            type="button"
+            className="command-btn"
+            onClick={() => exportToTallyXml(forecast)}
+            title="Generate Native Tally.ERP 9 / Tally Prime XML Import Vouchers"
+          >
+            <span className="btn-icon">📦</span> {t("Tally Prime XML")}
+          </button>
+          <button
+            type="button"
+            className="command-btn"
+            onClick={() => exportForecastToCsv(forecast)}
+            title="Export 90-Day Liquidity Schedule to CSV with CWE-1236 Sanitization"
+          >
+            <span className="btn-icon">📥</span> {t("Export Audit CSV")}
+          </button>
+          <button
+            type="button"
+            className="command-btn"
+            onClick={() => setShowDossier(true)}
+            title="Generate A4 Printable Working Capital Dossier for CAs and Bankers"
+          >
+            <span className="btn-icon">📑</span> {t("Executive Dossier (A4)")}
+          </button>
+        </div>
       </div>
     </div>
 
