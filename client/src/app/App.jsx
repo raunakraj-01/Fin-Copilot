@@ -255,8 +255,8 @@ function BusinessApp({ user, onLogout }) {
             )}
           </div>
 
-          <button type="button" className="defense-pill-btn" onClick={() => setShowDefenseModal(true)} title="8th Semester Capstone Project Defense Dossier">
-            🎓 Capstone
+          <button type="button" className="defense-pill-btn" onClick={() => setShowDefenseModal(true)} title="Institutional Diligence & Regulatory Audit Pack">
+            🏛️ Audit Pack
           </button>
 
           <label className="kavach-select-label" title="Switch supplier business profile">
@@ -302,7 +302,7 @@ function BusinessApp({ user, onLogout }) {
                 </div>
                 <div className="user-menu-divider" />
                 <button type="button" className="menu-item-btn" onClick={() => { setShowDefenseModal(true); setShowUserMenu(false); }}>
-                  🎓 Capstone Project Defense
+                  🏛️ Institutional Audit & Verification Pack
                 </button>
                 <button type="button" className="menu-item-btn" onClick={() => { toggleTheme(); setShowUserMenu(false); }}>
                   {theme === 'dark' ? '☀️ Switch to Light Mode' : '🌙 Switch to Dark Mode'}

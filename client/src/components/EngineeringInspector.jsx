@@ -75,9 +75,9 @@ export default function EngineeringInspector({ onClose }) {
       <div className="inspector-modal">
         <div className="inspector-header no-print">
           <div>
-            <span className="inspector-tag">8TH SEMESTER CAPSTONE DEFENSE</span>
+            <span className="inspector-tag">ENTERPRISE SYSTEM INVARIANTS & BENCHMARKS</span>
             <h2>Computer Science & Algorithmic Architecture</h2>
-            <small>Formal Computational Model, Complexity Bounds, and Engine Benchmarking</small>
+            <small>Formal Computational Model, Integer-Paise Arithmetic Invariants, and Engine Benchmarking</small>
           </div>
           <button type="button" className="secondary" onClick={onClose}>
             ✕ Close

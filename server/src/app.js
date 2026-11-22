@@ -46,6 +46,31 @@ app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (_req, res) => res.json(app.locals.demoMode === true ? { ok: true, demoMode: true }
   : app.locals.localSyntheticDev === true ? { ok: true, localSyntheticDev: true } : { ok: true }));
+
+// SRE Cloud Probes: Liveness & Readiness for AWS ECS / GCP Cloud Run / Kubernetes
+app.get('/api/healthz', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/readyz', async (_req, res) => {
+  try {
+    const mongoose = (await import('mongoose')).default;
+    const dbConnected = mongoose.connection?.readyState === 1 || app.locals.demoMode === true || app.locals.localSyntheticDev === true;
+    if (!dbConnected) {
+      return res.status(503).json({ status: 'not_ready', error: 'Database connection not ready' });
+    }
+    res.status(200).json({
+      status: 'ready',
+      uptimeSec: Math.round(process.uptime()),
+      heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      environment: process.env.NODE_ENV || 'development',
+      demoMode: !!app.locals.demoMode,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(503).json({ status: 'error', message: err.message });
+  }
+});
 app.use('/api/auth', auth);
 app.use('/api/workspaces/:workspaceId', requireBusiness);
 app.use('/api/workspaces', workspaces);
