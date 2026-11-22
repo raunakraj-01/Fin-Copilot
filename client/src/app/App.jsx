@@ -10,6 +10,7 @@ import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
 import CapstoneDefenseModal from '../components/CapstoneDefenseModal.jsx';
+import ActionCenter from '../pages/ActionCenter.jsx';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport, '/setup-import'],
