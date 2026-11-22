@@ -22,6 +22,15 @@ const paymentPromise = new mongoose.Schema({
   closedAs: { type: String, enum: ['superseded', 'cancelled'] },
   history: { type: [promiseHistory], default: [] },
 });
+const paymentReviewEvent = new mongoose.Schema({
+  status: { type: String, enum: ['approved_to_schedule', 'deferred', 'needs_discussion'], required: true },
+  note: { type: String, trim: true, maxlength: 500, default: '' },
+  amountPaise: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
+  settledPaise: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
+  dueDate: { type: String, required: true, validate: isDateOnly },
+  at: { type: Date, required: true },
+  actorUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+}, { _id: false });
 
 const schema = new mongoose.Schema({
   workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
@@ -34,7 +43,16 @@ const schema = new mongoose.Schema({
   amountPaise: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
   settledPaise: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
   gatewayReceipts: { type: [{ paymentOfferId: String, amountPaise: Number, date: String }], default: [] },
+  settlementEvents: { type: [{ source: { type: String, enum: ['bank', 'promise', 'tally', 'gateway'], required: true },
+    sourceId: { type: String, required: true }, direction: { type: String, enum: ['receipt', 'payment'], required: true },
+    amountPaise: { type: Number, required: true, min: 1, validate: Number.isSafeInteger }, date: { type: String, required: true, validate: isDateOnly },
+    dueDate: { type: String, validate: { validator: value => !value || isDateOnly(value) } }, completedInvoice: { type: Boolean, default: false },
+    verified: { type: Boolean, default: true }, reference: { type: String, default: '' } }], default: [] },
   paymentPromises: { type: [paymentPromise], default: [] },
+  paymentReview: { status: { type: String, enum: ['approved_to_schedule', 'deferred', 'needs_discussion'] },
+    note: { type: String, trim: true, maxlength: 500, default: '' }, amountPaise: Number, settledPaise: Number,
+    dueDate: String, reviewedAt: Date, reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } },
+  paymentReviewHistory: { type: [paymentReviewEvent], default: [] },
   promiseVersion: { type: Number, default: 0 },
   status: { type: String, enum: ['open', 'partial', 'paid', 'cancelled'], default: 'open' },
   dueDate: { type: String, required: true, validate: isDateOnly },

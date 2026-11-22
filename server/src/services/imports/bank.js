@@ -30,8 +30,9 @@ export function normalizeBankRows(rows, mapping, accountKey, corrections = [], e
       item: { accountKey, transactionId, date, description, creditPaise, debitPaise, identity: digest([accountKey, transactionId]) } };
   });
 }
-export const reservedPaise = transaction => transaction.allocations.filter(a => a.status !== 'rejected').reduce((sum, a) => sum + a.amountPaise, 0);
-export const availablePaise = transaction => transaction.creditPaise - reservedPaise(transaction);
+export const reservedPaise = transaction => transaction.allocations.filter(a => (a.direction || 'credit') === 'credit' && a.status !== 'rejected').reduce((sum, a) => sum + a.amountPaise, 0);
+export const availablePaise = transaction => Math.max(0, transaction.creditPaise - reservedPaise(transaction));
+export const availableDebitPaise = transaction => Math.max(0, transaction.debitPaise - transaction.allocations.filter(a => a.direction === 'debit' && a.status !== 'rejected').reduce((sum, a) => sum + a.amountPaise, 0));
 export function matchingSuggestions(transaction, invoices) {
   const narration = canonicalId(transaction.description);
   return invoices.map(item => {

@@ -3,6 +3,7 @@ import { isDateOnly } from '../utils/dates.js';
 const allocation = new mongoose.Schema({
   requestId: { type: String, required: true }, cashItemId: { type: mongoose.Schema.Types.ObjectId, required: true },
   amountPaise: { type: Number, required: true, min: 1, validate: Number.isSafeInteger }, promiseId: { type: String, default: null },
+  direction: { type: String, enum: ['credit', 'debit'], default: 'credit' },
   status: { type: String, enum: ['pending', 'applied', 'rejected'], required: true }, error: String, at: Date,
 }, { _id: false });
 const schema = new mongoose.Schema({

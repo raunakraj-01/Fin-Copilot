@@ -1259,6 +1259,55 @@ tbody tr:hover { background: var(--surface-2); }
 .shock-source { display: inline-block; margin: 0 12px 8px 0; }
 tr[id^="cash-source-"]:target { background: var(--accent-soft); outline: 2px solid var(--accent); }
 
+.action-center-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.action-center-header > div:first-child { max-width: 760px; }
+.action-center-header .eyebrow { margin: 0 0 8px; color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .11em; }
+.action-center-header h1 { margin: 0 0 8px; }
+.action-center-header p:last-child { margin: 0; color: var(--muted); }
+.action-center-header .page-actions { flex: 0 0 auto; }
+.action-briefing { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 3px solid var(--accent); }
+.action-briefing h2 { margin-bottom: 6px; }
+.action-briefing p { margin: 5px 0; }
+.action-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.action-card { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
+.action-card h3 { margin: 0; font-size: 17px; }
+.action-card p { color: var(--muted); }
+.action-card ul { display: grid; gap: 7px; padding-left: 18px; color: var(--text); }
+.action-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.action-count { min-width: 26px; height: 26px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 13px; font-weight: 600; }
+.action-card-warning { border-top: 3px solid var(--warning); }
+.action-card-warning .action-count { background: var(--warning-soft); color: var(--warning); }
+.action-card-urgent { border-top: 3px solid var(--danger); }
+.action-card-urgent .action-count { background: var(--danger-soft); color: var(--danger); }
+.action-card .muted, .action-briefing .muted, .stock-row p { color: var(--muted); font-size: 13px; }
+.action-card > button { margin-top: 8px; }
+.stock-watch { margin: 16px 0; }
+.stock-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
+.stock-row.is-low { border-left: 3px solid var(--warning); padding-left: 12px; }
+.stock-row p { margin: 5px 0 0; }
+.stock-row-actions { display: flex; align-items: flex-end; gap: 8px; }
+.stock-row-actions label { max-width: 130px; font-size: 12px; }
+.stock-row-actions input { min-height: 36px; }
+.stock-watch .form-grid { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.order-tracking-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.order-tracking-form > button, .order-tracking-form > p { align-self: end; margin: 0; }
+.payable-review-row { margin: 12px 0; padding-top: 10px; border-top: 1px solid var(--border); }
+.payable-review-row > p { margin: 4px 0; }
+.payable-review-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 8px; margin: 8px 0 12px; }
+.payable-review-form > button { min-height: 40px; }
+
+@media (max-width: 900px) {
+  .action-center-header, .action-briefing { align-items: stretch; flex-direction: column; }
+  .action-center-header .page-actions { width: auto; }
+}
+@media (max-width: 760px) {
+  .action-card-grid { grid-template-columns: 1fr; }
+  .stock-row { align-items: stretch; flex-direction: column; }
+  .stock-row-actions { flex-wrap: wrap; }
+  .order-tracking-form { grid-template-columns: 1fr; }
+  .payable-review-form { grid-template-columns: 1fr; }
+}
+
 /* Auth uses the same ledger surfaces as the workspace. */
 body > #root > .decision-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
 body > #root > .decision-page > .decision-card { width: min(100%, 440px); padding: 32px; }
@@ -1281,7 +1330,7 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
   :root, .sidebar-collapsed { --sidebar: 0px; }
   .sidebar { inset: auto 0 0 0; width: auto; height: 64px; padding: 8px; border-top: 1px solid #435159; border-right: 0; }
   .brand { display: none; }
-  .sidebar nav { height: 100%; margin: 0; grid-template-columns: repeat(7, minmax(48px, 1fr)); gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .sidebar nav { height: 100%; margin: 0; grid-template-columns: repeat(8, minmax(48px, 1fr)); gap: 4px; overflow-x: auto; scrollbar-width: none; }
   .sidebar nav::-webkit-scrollbar { display: none; }
   .sidebar nav a { min-height: 48px; }
   .sidebar nav a[aria-current="page"] { border-bottom-color: #8cb4c9; }

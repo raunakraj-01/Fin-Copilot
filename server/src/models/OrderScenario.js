@@ -7,6 +7,12 @@ const costLineSchema = new mongoose.Schema({
   description: { type: String, required: true, trim: true },
   amountPaise: money, paymentDate: dateField,
 }, { _id: false });
+const trackingEventSchema = new mongoose.Schema({
+  status: { type: String, enum: ['prospective', 'terms_requested', 'accepted', 'in_production', 'delivered', 'awaiting_collection', 'completed', 'cancelled'], required: true },
+  note: { type: String, trim: true, maxlength: 500, default: '' },
+  at: { type: Date, required: true },
+  actorUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+}, { _id: false });
 
 const schema = new mongoose.Schema({
   workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
@@ -22,6 +28,10 @@ const schema = new mongoose.Schema({
   } }], default: [] },
   simulatedMinimumAdvancePaise: { type: Number, default: null, min: 0, validate: value => value == null || Number.isSafeInteger(value) },
   scenarioWarnings: { type: [String], default: [] },
+  trackingStatus: { type: String, enum: ['prospective', 'terms_requested', 'accepted', 'in_production', 'delivered', 'awaiting_collection', 'completed', 'cancelled'], default: 'prospective' },
+  trackingNote: { type: String, trim: true, maxlength: 500, default: '' },
+  trackingUpdatedAt: Date,
+  trackingHistory: { type: [trackingEventSchema], default: [] },
 }, { timestamps: true });
 schema.path('advancePaise').validate(function (value) {
   return this.orderValuePaise == null || value <= this.orderValuePaise;

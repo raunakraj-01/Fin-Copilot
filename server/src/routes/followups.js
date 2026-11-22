@@ -6,6 +6,9 @@ import CollectionFollowUp from '../models/CollectionFollowUp.js';
 import { loadDecisionContext } from '../services/rescue/decisionContext.js';
 import { eligible, recommendCollections, liveFollowupsEnabled, runFollowups, validateDispatch, finishFollowup } from '../services/finance/followups.js';
 import { requireAutomation } from '../middleware/auth.js';
+import CollectionAction from '../models/CollectionAction.js';
+import CashItem from '../models/CashItem.js';
+import { appendAudit } from '../services/audit.js';
 
 const id = z.string().regex(/^[a-f\d]{24}$/i);
 const router = Router({ mergeParams: true });
@@ -18,6 +21,24 @@ router.get('/', asyncRoute(async (req, res) => {
   res.json({ ...recommendCollections(context), liveEnabled: liveFollowupsEnabled(), receivables: context.cashItems.filter(eligible).map(item => ({ id: item.id, externalId: item.externalId, counterparty: item.counterparty })), rules: rules.map(rule => ({ ...rule,
     id: String(rule._id), counterparty: context.cashItems.find(item => item.id === String(rule.cashItemId))?.counterparty || 'Unavailable invoice',
     externalId: context.cashItems.find(item => item.id === String(rule.cashItemId))?.externalId })) });
+}));
+router.get('/actions', asyncRoute(async (req, res) => {
+  const filter = { workspaceId: req.params.workspaceId };
+  if (req.query.cashItemId) filter.cashItemId = validate(id, req.query.cashItemId);
+  const actions = await CollectionAction.find(filter).sort({ at: -1, _id: -1 }).limit(500).lean();
+  res.json({ actions: actions.map(action => ({ ...action, id: String(action._id) })) });
+}));
+router.post('/actions', asyncRoute(async (req, res) => {
+  const data = validate(z.object({ cashItemId: id, requestId: z.string().uuid(), type: z.enum(['reminder_draft', 'customer_response', 'dispute']),
+    note: z.string().trim().min(1).max(2000), followUpId: id.optional() }).strict(), req.body);
+  const item = await CashItem.findOne({ _id: data.cashItemId, workspaceId: req.params.workspaceId });
+  if (!item) fail(404, 'NOT_FOUND', 'Cash record not found');
+  if (data.followUpId && !await CollectionFollowUp.exists({ _id: data.followUpId, workspaceId: req.params.workspaceId, cashItemId: item._id }))
+    fail(404, 'NOT_FOUND', 'Follow-up not found for this cash record');
+  const action = await CollectionAction.findOneAndUpdate({ workspaceId: req.params.workspaceId, requestId: data.requestId },
+    { $setOnInsert: { ...data, workspaceId: req.params.workspaceId, status: data.type === 'reminder_draft' ? 'draft' : 'recorded', actorUserId: req.user._id } },
+    { upsert: true, new: true, runValidators: true });
+  res.status(201).json({ action });
 }));
 router.post('/', asyncRoute(async (req, res) => {
   const data = validate(z.object({ cashItemId: id, phone: z.string().regex(/^\+?\d{10,15}$/).transform(v => v.replace(/^\+/, '')),
@@ -67,4 +88,22 @@ automationRouter.post('/jobs/:claimId/ack', asyncRoute(async (req, res) => {
   if (data.outcome === 'accepted' && !data.providerMessageId) fail(400, 'INVALID_ACK', 'Accepted sends need the provider message ID');
   const rule = await finishFollowup(claimId, data.outcome, data.providerMessageId, req.service.workspaceId);
   res.json({ recorded: Boolean(rule) });
+}));
+automationRouter.post('/messages/:providerMessageId/status', asyncRoute(async (req, res) => {
+  const providerMessageId = validate(z.string().trim().min(1).max(300), req.params.providerMessageId);
+  const { status } = validate(z.object({ status: z.enum(['sent', 'delivered', 'read', 'failed']) }).strict(), req.body);
+  const rule = await CollectionFollowUp.findOne({ workspaceId: req.service.workspaceId, 'history.providerMessageId': providerMessageId });
+  if (!rule) fail(404, 'NOT_FOUND', 'Provider message is not recorded for this business');
+  const key = `delivery:${providerMessageId}:${status}`;
+  const result = await CollectionAction.updateOne({ workspaceId: req.service.workspaceId, requestId: key }, { $setOnInsert: {
+    workspaceId: req.service.workspaceId, cashItemId: rule.cashItemId, followUpId: rule._id, requestId: key,
+    type: 'reminder_sent', status, note: `WhatsApp message ${status}`, providerMessageId,
+  } }, { upsert: true });
+  if (result.upsertedCount) {
+    await CollectionFollowUp.updateOne({ _id: rule._id, workspaceId: req.service.workspaceId }, { $push: {
+      history: { $each: [{ at: new Date(), message: '', outcome: status, providerMessageId }], $slice: -50 },
+    } });
+    await appendAudit({ workspaceId: req.service.workspaceId, serviceId: req.service, action: `whatsapp.${status}`, entityType: 'followup', entityId: String(rule._id) });
+  }
+  res.json({ recorded: true, duplicate: !result.upsertedCount });
 }));

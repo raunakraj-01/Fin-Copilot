@@ -4,6 +4,7 @@ import CashItem from '../../models/CashItem.js';
 import Workspace from '../../models/Workspace.js';
 import { buildForecast } from './forecast.js';
 import { makeCandidates, applyActions, actionFeeEvents } from '../rescue/analyze.js';
+import CollectionAction from '../../models/CollectionAction.js';
 
 const day = 86400000;
 export const rupees = value => `INR ${(value / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -70,11 +71,19 @@ export async function finishFollowup(claimId, outcome, providerMessageId, worksp
   if (!rule) return null;
   const attempts = rule.attempts + 1;
   // Atomic claim consumption makes repeated callbacks harmless.
-  return CollectionFollowUp.findOneAndUpdate({ _id: rule._id, claimId, ...scope }, {
+  const finished = await CollectionFollowUp.findOneAndUpdate({ _id: rule._id, claimId, ...scope }, {
     $set: { claimId: null, attempts, state: rule.state !== 'active' ? rule.state : outcome === 'failed' ? 'paused' : attempts >= rule.maxAttempts ? 'exhausted' : 'active',
       nextRunAt: new Date(Date.now() + rule.cadenceDays * day), lastOutcome: outcome },
     $push: { history: { $each: [{ at: new Date(), message: rule.lastMessage, outcome, ...(providerMessageId ? { providerMessageId } : {}) }], $slice: -20 } },
   }, { new: true });
+  if (finished && ['draft_ready', 'accepted', 'failed'].includes(outcome)) {
+    await CollectionAction.updateOne({ workspaceId: rule.workspaceId, requestId: `followup:${claimId}` }, { $setOnInsert: {
+      workspaceId: rule.workspaceId, cashItemId: rule.cashItemId, followUpId: rule._id, requestId: `followup:${claimId}`,
+      type: outcome === 'draft_ready' ? 'reminder_draft' : 'reminder_sent', status: outcome === 'draft_ready' ? 'draft' : outcome,
+      note: rule.lastMessage || '', ...(providerMessageId ? { providerMessageId } : {}),
+    } }, { upsert: true });
+  }
+  return finished;
 }
 
 export async function runFollowups({ mode = 'demo', workspaceId, ruleId, now = new Date() } = {}) {

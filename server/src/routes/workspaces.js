@@ -12,6 +12,7 @@ import { parseUpload, suggestMapping } from '../services/imports/parse.js';
 import { normalizeRows } from '../services/imports/normalize.js';
 import { workspaceCreate, workspacePatch } from '../validators/finance.js';
 import Workspace from '../models/Workspace.js';
+import { appendAudit } from '../services/audit.js';
 
 const router = Router();
 const shape = workspace => ({ id: String(workspace._id), name: workspace.name, asOfDate: workspace.asOfDate,
@@ -24,6 +25,7 @@ router.get('/', requireSession, asyncRoute(async (req, res) => {
 
 router.post('/', requireSession, asyncRoute(async (req, res) => {
   const workspace = await Workspace.create({ ...validate(workspaceCreate, req.body), ownerUserId: req.user._id });
+  await appendAudit({ workspaceId: workspace._id, userId: req.user._id, action: 'workspace.created', entityType: 'workspace', entityId: String(workspace._id), changedFields: Object.keys(req.body || {}) });
   res.status(201).json({ workspace: { ...shape(workspace), role: 'owner' } });
 }));
 router.get('/:workspaceId', asyncRoute(async (req, res) => {

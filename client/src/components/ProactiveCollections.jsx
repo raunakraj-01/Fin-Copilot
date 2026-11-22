@@ -7,6 +7,8 @@ const outcomeLabel = outcome => ({ draft_ready: 'Draft ready · not sent', accep
 
 export default function ProactiveCollections({ workspaceId, token, enabled }) {
   const [data, setData] = useState(null);
+  const [actions, setActions] = useState([]);
+  const [actionForms, setActionForms] = useState({});
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -22,14 +24,16 @@ export default function ProactiveCollections({ workspaceId, token, enabled }) {
     return result;
   }
   async function refresh() {
-    const result = await request();
-    if (currentWorkspace.current === workspaceId) setData(result);
+    const [result, history] = await Promise.all([request(), request('/actions')]);
+    if (currentWorkspace.current === workspaceId) { setData(result); setActions(history.actions || []); }
   }
   useEffect(() => {
     setData(null); setError(''); setNotice(''); setForm({ cashItemId: '', phone: '', cadenceDays: '3', maxAttempts: '3', mode: 'demo', recipientOptIn: false });
     if (!enabled || !workspaceId) return;
     let active = true;
-    const load = () => request().then(result => { if (active) setData(result); }).catch(cause => { if (active) setError(cause.message); });
+    const load = () => Promise.all([request(), request('/actions')]).then(([result, history]) => {
+      if (active) { setData(result); setActions(history.actions || []); }
+    }).catch(cause => { if (active) setError(cause.message); });
     load();
     const timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
     return () => { active = false; clearInterval(timer); };
@@ -70,6 +74,10 @@ export default function ProactiveCollections({ workspaceId, token, enabled }) {
       </form>
       {!data?.liveEnabled && <p>Live sending is disabled. The downloadable n8n workflow can be connected later to your WhatsApp Business account.</p>}
       {notice && <p role="status">{notice}</p>}
+      {actions.length > 0 && <details><summary>Collection action history ({actions.length})</summary><ol>{actions.map(action => <li key={action.id}>
+        {dateTime(action.at)} IST · {action.type.replaceAll('_', ' ')}{action.amountPaise ? ` · INR ${(action.amountPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : ''}
+        {action.promisedDate && ` · promised ${action.promisedDate}`}{action.receivedDate && ` · received ${action.receivedDate}`}{action.note && <p>{action.note}</p>}
+      </li>)}</ol></details>}
       {data?.rules?.map(rule => <article className="decision-notice" key={rule.id}>
         <h3>{rule.counterparty} · {rule.externalId || 'Invoice'}</h3>
         <p>{rule.mode === 'demo' ? 'Local drafts' : 'n8n automatic sending'} · +{rule.phone} · {rule.state} · {rule.attempts}/{rule.maxAttempts} cycles</p>
@@ -78,6 +86,15 @@ export default function ProactiveCollections({ workspaceId, token, enabled }) {
           {rule.mode === 'demo' && <button type="button" disabled={busy} onClick={() => act(() => request(`/${rule.id}/demo-run`, 'POST', {}))}>Run demo cycle now</button>}</>}
         {rule.lastMessage && <><p>{rule.lastMessage}</p><a href={`https://wa.me/${rule.phone}?text=${encodeURIComponent(rule.lastMessage)}`} target="_blank" rel="noopener noreferrer">Review latest draft in WhatsApp</a></>}
         {rule.history.length > 0 && <details><summary>Follow-up history ({rule.history.length})</summary><ol>{rule.history.map((entry, index) => <li key={index}>{dateTime(entry.at)} IST · {outcomeLabel(entry.outcome)}<p>{entry.message}</p></li>)}</ol></details>}
+        <form className="form-grid" onSubmit={event => { event.preventDefault(); const value = actionForms[rule.id] || { type: 'customer_response', note: '' };
+          act(async () => { await request('/actions', 'POST', { cashItemId: rule.cashItemId, followUpId: rule.id, requestId: crypto.randomUUID(), ...value });
+            setActionForms(current => ({ ...current, [rule.id]: { type: value.type, note: '' } })); setNotice(value.type === 'dispute' ? 'Dispute recorded for owner review.' : 'Customer update added to the collection history.'); }); }}>
+          <label>Log customer update<select value={(actionForms[rule.id]?.type) || 'customer_response'} onChange={event => setActionForms(current => ({ ...current,
+            [rule.id]: { ...(current[rule.id] || { note: '' }), type: event.target.value } }))}><option value="customer_response">Customer response</option><option value="dispute">Dispute</option></select></label>
+          <label>Response or dispute details<textarea required maxLength={2000} value={actionForms[rule.id]?.note || ''} onChange={event => setActionForms(current => ({ ...current,
+            [rule.id]: { ...(current[rule.id] || { type: 'customer_response' }), note: event.target.value } }))} /></label>
+          <button type="submit" className="secondary" disabled={busy}>Add to history</button>
+        </form>
       </article>)}
     </>}
     {error && <p role="alert">{error}</p>}

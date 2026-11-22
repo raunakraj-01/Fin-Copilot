@@ -56,8 +56,54 @@ function MatchCredit({ transaction, invoices, workspaceId, onChanged }) {
       <p>Confirm this receipt has not already been entered through Already settled, Payment promises or a payment gateway. Amounts on/before the cash snapshot must already be included in opening cash.</p>
       <button disabled={!invoiceId}>Confirm match</button>
     </fieldset></form>}
-    {transaction.allocations.map(a => <p key={a.requestId}>Match {money(a.amountPaise)} · {a.status}{a.error && ` · ${a.error}`}
+    {transaction.allocations.filter(a => !a.direction || a.direction === 'credit').map(a => <p key={a.requestId}>Match {money(a.amountPaise)} · {a.status}{a.error && ` · ${a.error}`}
       {a.status === 'pending' && <button disabled={busy} type="button" onClick={() => match({ requestId: a.requestId, cashItemId: a.cashItemId, amountPaise: a.amountPaise, ...(a.promiseId ? { promiseId: a.promiseId } : {}) })}>Finish pending match</button>}</p>)}
+    {message && <p role="status">{message}</p>}
+  </div>;
+}
+function MatchDebit({ transaction, ledgerRecords, workspaceId, onChanged }) {
+  const storageKey = `bank-debit-match:${workspaceId}:${transaction.id}`;
+  const request = useRef(null);
+  if (!request.current) { try { request.current = JSON.parse(sessionStorage.getItem(storageKey)); } catch { /* optional retry storage */ } }
+  const [itemId, setItemId] = useState(request.current?.details.cashItemId || '');
+  const [amount, setAmount] = useState(request.current ? String(request.current.details.amountPaise / 100) : '');
+  const [busy, setBusy] = useState(false); const [message, setMessage] = useState('');
+  async function match(input) {
+    setBusy(true); setMessage('');
+    try {
+      await json(`/workspaces/${workspaceId}/bank/${transaction.id}/match-debit`, 'POST', input);
+      if (request.current?.requestId === input.requestId) { request.current = null; try { sessionStorage.removeItem(storageKey); } catch { /* optional */ } }
+      setAmount(''); setMessage('Supplier payment matched. Ledger balance and forecast updated.'); onChanged();
+    } catch (cause) { setMessage(cause.message); onChanged(); }
+    finally { setBusy(false); }
+  }
+  function submit(event) {
+    event.preventDefault();
+    try {
+      const amountPaise = parseRupees(amount); if (!amountPaise) throw new Error('Match amount must be positive');
+      const details = { cashItemId: itemId, amountPaise };
+      if (!request.current || JSON.stringify(request.current.details) !== JSON.stringify(details)) request.current = { details, requestId: crypto.randomUUID() };
+      try { sessionStorage.setItem(storageKey, JSON.stringify(request.current)); } catch { /* retry key remains in memory */ }
+      match({ ...details, requestId: request.current.requestId });
+    } catch (cause) { setMessage(cause.message); }
+  }
+  const available = transaction.availableDebitPaise ?? transaction.debitPaise;
+  return <div>
+    {transaction.debitSuggestions?.length > 0 && <div><h4>Suggested supplier payments · review before confirming</h4><ul>{transaction.debitSuggestions.map(suggestion => {
+      const item = ledgerRecords.find(record => record.id === suggestion.cashItemId);
+      return <li key={suggestion.cashItemId}>{item?.externalId || item?.counterparty} · {suggestion.reasons.join('; ')}
+        <button type="button" className="secondary" disabled={busy} onClick={() => { setItemId(suggestion.cashItemId); setAmount(String(Math.min(available, item.outstandingPaise) / 100)); }}>Use suggestion</button></li>;
+    })}</ul></div>}
+    {transaction.reviewState === 'open' && available > 0 && !transaction.allocations.some(allocation => allocation.status === 'pending') && <form onSubmit={submit} className="form-grid"><fieldset disabled={busy} className="form-grid">
+      <legend>Approve supplier payment or expense match</legend>
+      <label>Ledger record for {transaction.transactionId}<select required value={itemId} onChange={event => setItemId(event.target.value)}><option value="">Select supplier bill or expense</option>
+        {ledgerRecords.filter(record => record.outstandingPaise > 0 && record.confidenceState !== 'needs_review').map(record => <option key={record.id} value={record.id}>{record.externalId || record.counterparty} · {record.counterparty} · {money(record.outstandingPaise)} outstanding</option>)}</select></label>
+      <label>Amount to match (₹)<input type="text" inputMode="decimal" required value={amount} onChange={event => setAmount(event.target.value)} /></label>
+      <p>Match only a bank payment already included in the cash snapshot. Partial allocations are supported and retries use the same request ID.</p>
+      <button disabled={!itemId}>Confirm supplier payment</button>
+    </fieldset></form>}
+    {transaction.allocations.filter(allocation => allocation.direction === 'debit').map(allocation => <p key={allocation.requestId}>Supplier payment {money(allocation.amountPaise)} · {allocation.status}{allocation.error && ` · ${allocation.error}`}
+      {allocation.status === 'pending' && <button disabled={busy} type="button" onClick={() => match({ requestId: allocation.requestId, cashItemId: allocation.cashItemId, amountPaise: allocation.amountPaise })}>Finish pending match</button>}</p>)}
     {message && <p role="status">{message}</p>}
   </div>;
 }
@@ -83,7 +129,7 @@ export default function BankReconciliation({ workspaceId, refreshKey, onChanged 
   async function run(action) { setBusy(true); setMessage(''); try { await action(); } catch (e) { setMessage(e.message); } finally { setBusy(false); } }
   const changed = () => { load().catch(e => setMessage(e.message)); onChanged?.(); };
   return <section className="card"><h2>Bank receipts & invoice matching</h2>
-    <p>Import a bank statement with a stable transaction ID, YYYY-MM-DD date, description and separate credit/debit columns. Use the same account name for repeat imports. Statement imports are read-only until a customer receipt is matched; other amounts require review against your cash records.</p>
+    <p>Import a bank statement with a stable transaction ID, date, description, and separate credit/debit columns. Match credits to customer invoices and debits to supplier bills or expenses. Partial allocations are supported; unmatched amounts stay in the owner review queue.</p>
     <a href="/templates/bank-statement.csv" download>Download bank statement template</a>
     <form className="form-grid" onSubmit={e => { e.preventDefault(); run(async () => {
       const body = new FormData(); body.append('accountKey', account); body.append('file', file);
@@ -112,8 +158,9 @@ export default function BankReconciliation({ workspaceId, refreshKey, onChanged 
       <button type="button" className="secondary" disabled={busy || offset + 500 >= (data.total || 0)} onClick={() => setOffset(offset + 500)}>Older bank rows</button></div>}
     {data?.transactions?.length === 0 && <p>No bank transactions imported.</p>}
     {data?.transactions?.map(transaction => <article className="card" key={transaction.id}><h3>{transaction.transactionId} · {transaction.date}</h3>
-      <p>{transaction.accountKey} · {transaction.description} · Credit {money(transaction.creditPaise)} · Debit {money(transaction.debitPaise)} · Unallocated credit {money(transaction.availablePaise)} · {transaction.reviewState}</p>
+      <p>{transaction.accountKey} · {transaction.description} · Credit {money(transaction.creditPaise)} · Debit {money(transaction.debitPaise)} · Unallocated credit {money(transaction.availablePaise)} · Unallocated debit {money(transaction.availableDebitPaise ?? transaction.debitPaise)} · {transaction.reviewState}</p>
       {transaction.creditPaise > 0 && <MatchCredit transaction={transaction} invoices={data.invoices || []} workspaceId={workspaceId} onChanged={changed} />}
+      {transaction.debitPaise > 0 && <MatchDebit transaction={transaction} ledgerRecords={data.ledgerRecords || []} workspaceId={workspaceId} onChanged={changed} />}
       {(transaction.availablePaise > 0 || transaction.debitPaise > 0 || transaction.reviewState === 'excluded') && <ReviewRow transaction={transaction} workspaceId={workspaceId} onChanged={changed} />}
       {transaction.reviewNote && <p>Review note: {transaction.reviewNote}</p>}
     </article>)}

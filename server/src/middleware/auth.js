@@ -28,7 +28,7 @@ export function requireOwner(req, _res, next) {
 }
 export const requireBusiness = asyncRoute(async (req, res, next) => {
   if (!mongoose.isValidObjectId(req.params.workspaceId)) fail(404, 'NOT_FOUND', 'Business not found');
-  const serviceRoute = req.method === 'POST' && ['/sync/batches', '/reliability/observations'].includes(req.path);
+  const serviceRoute = req.method === 'POST' && ['/sync/batches', '/sync/runs', '/reliability/observations'].includes(req.path);
   if (serviceRoute) {
     const token = req.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];
     const device = token && await SyncDevice.findOne({ workspaceId: req.params.workspaceId, tokenHash: tokenHash(token), revokedAt: null, kind: 'sync' }).lean();

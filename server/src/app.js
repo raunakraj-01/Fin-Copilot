@@ -21,6 +21,12 @@ import offers from './routes/offers.js';
 import followups, { automationRouter } from './routes/followups.js';
 import automation from './routes/automation.js';
 import razorpayWebhook from './routes/razorpayWebhook.js';
+import trust from './routes/trust.js';
+import inventory from './routes/inventory.js';
+import captures, { automationRouter as captureAutomation } from './routes/captures.js';
+import procurement from './routes/procurement.js';
+import fulfillment from './routes/fulfillment.js';
+import { auditBusinessRequest } from './services/audit.js';
 import { errorResponse } from './utils/http.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -73,7 +79,7 @@ app.get('/api/readyz', async (_req, res) => {
   }
 });
 app.use('/api/auth', auth);
-app.use('/api/workspaces/:workspaceId', requireBusiness);
+app.use('/api/workspaces/:workspaceId', requireBusiness, auditBusinessRequest);
 app.use('/api/workspaces', workspaces);
 app.use('/api/workspaces/:workspaceId/imports', imports);
 app.use('/api/workspaces/:workspaceId/bank', bank);
@@ -91,7 +97,13 @@ app.use('/api/workspaces/:workspaceId/reliability', reliabilityRoutes);
 app.use('/api/workspaces/:workspaceId/offers', offers);
 app.use('/api/workspaces/:workspaceId/followups', followups);
 app.use('/api/workspaces/:workspaceId/automation', automation);
+app.use('/api/workspaces/:workspaceId/trust', trust);
+app.use('/api/workspaces/:workspaceId/inventory', inventory);
+app.use('/api/workspaces/:workspaceId/captures', captures);
+app.use('/api/workspaces/:workspaceId/procurement', procurement);
+app.use('/api/workspaces/:workspaceId/fulfillment', fulfillment);
 app.use('/api/followup-automation', automationRouter);
+app.use('/api/capture-automation', captureAutomation);
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
 if (process.env.NODE_ENV === 'production' || existsSync(path.join(dist, 'index.html'))) {

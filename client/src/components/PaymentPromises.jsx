@@ -7,7 +7,7 @@ const empty = { itemId: '', promiseId: '', amount: '', date: '', note: '', mode:
 const statusLabel = status => ({ review_external_settlement: 'Payment recorded elsewhere — review',
   superseded: 'Replaced', cancelled: 'Cancelled', fulfilled: 'Fulfilled', broken: 'Broken', partial: 'Partly received', pending: 'Pending' }[status] || status);
 
-export default function PaymentPromises({ workspaceId, refreshKey, onChanged }) {
+export default function PaymentPromises({ workspaceId, refreshKey, onChanged, initialDraft, onDraftConsumed }) {
   useLanguage();
   const [data, setData] = useState(null);
   const [form, setForm] = useState(empty);
@@ -23,7 +23,17 @@ export default function PaymentPromises({ workspaceId, refreshKey, onChanged }) 
     let active = true;
     setData(null); setForm(empty); setRetryId(null); setMessage('');
     Promise.all([api(`/workspaces/${workspaceId}/promises`), api(`/workspaces/${workspaceId}/forecast`)])
-      .then(([result, forecast]) => { if (active) { setData(result); setRisks(forecast.promiseRisks || []); } })
+      .then(([result, forecast]) => { if (active) {
+        setData(result); setRisks(forecast.promiseRisks || []);
+        if (initialDraft?.type === 'payment_promise_draft') {
+          const invoice = result.items.find(item => item.externalId === initialDraft.invoiceId || item.id === initialDraft.invoiceId);
+          setForm({ ...empty, itemId: invoice?.id || '', amount: String((initialDraft.amountPaise || 0) / 100), date: initialDraft.promisedDate || '',
+            note: `Captured from WhatsApp${initialDraft.senderPhone ? ` · ${initialDraft.senderPhone}` : ''}` });
+          setMessage(invoice ? 'WhatsApp promise draft loaded. Confirm the invoice, amount, and date before saving.'
+            : `Could not match invoice ${initialDraft.invoiceId} automatically. Select the right invoice and verify the amount/date before saving.`);
+          onDraftConsumed?.();
+        }
+      } })
       .catch(error => { if (active) setMessage(error.message); });
     return () => { active = false; };
   }, [workspaceId, refreshKey]);

@@ -1,11 +1,11 @@
 import { t, useLanguage } from '../i18n/index.js';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
 import { inputRupees, parseRupees } from './OrderAnalyzer/money.js';
 import SavedScenarios, { SaveScenario } from './OrderAnalyzer/SavedScenarios.jsx';
 import AsyncActionButton from '../components/AsyncActionButton.jsx';
 
-export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
+export default function OrderAnalyzer({ workspaceId, apiBaseUrl, businessRole = 'owner', orderDraft, onOrderDraftConsumed }) {
   useLanguage();
   const [form, setForm] = useState({ label: '', orderValue: '', advance: '0', advanceDate: '', finalCollectionDate: '', delayedCollectionDays: '14' });
   const [costLines, setCostLines] = useState([{ description: '', amount: '', paymentDate: '' }]);
@@ -15,6 +15,17 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
   const [analyzedOrder, setAnalyzedOrder] = useState(null);
   const [savedVersion, setSavedVersion] = useState(0);
   const { result, error, loading, run, clear } = useAnalysis(workspaceId, 'orders', apiBaseUrl);
+  useEffect(() => {
+    if (!orderDraft) return;
+    clear(); setInputError(''); setAnalyzedOrder(null);
+    setForm({ label: `${orderDraft.customerName || 'Customer'} · ${orderDraft.quantity || ''} × ${orderDraft.itemName || 'WhatsApp order'}`,
+      orderValue: inputRupees(orderDraft.orderValuePaise || 0), advance: inputRupees(orderDraft.advancePaise || 0),
+      advanceDate: orderDraft.advanceDate || orderDraft.deliveryDate || '',
+      finalCollectionDate: orderDraft.finalCollectionDate || orderDraft.deliveryDate || '', delayedCollectionDays: '14' });
+    setCostLines([]);
+    setEditNotice('WhatsApp order draft loaded. Add known material costs, review every date and amount, then analyze before quoting.');
+    onOrderDraftConsumed?.();
+  }, [orderDraft]);
   function changed() { clear(); setInputError(''); setEditNotice(''); }
   const change = event => { changed(); setForm(current => ({ ...current, [event.target.name]: event.target.value })); };
   const changeCost = (index, field, value) => { changed(); setCostLines(current => current.map((line, position) => position === index ? { ...line, [field]: value } : line)); };
@@ -95,6 +106,6 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl }) {
       <Notices warnings={result.warnings} assumptions={result.assumptions} />
       <SaveScenario key={`${workspaceId}:${apiBaseUrl}`} order={analyzedOrder} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} onSaved={() => setSavedVersion(value => value + 1)} />
     </section>}
-    <SavedScenarios key={`${workspaceId}:${apiBaseUrl}`} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} reloadKey={savedVersion} onEdit={editSaved} />
+    <SavedScenarios key={`${workspaceId}:${apiBaseUrl}`} workspaceId={workspaceId} apiBaseUrl={apiBaseUrl} reloadKey={savedVersion} onEdit={editSaved} businessRole={businessRole} />
   </main>;
 }

@@ -6,6 +6,8 @@ import Workspace from '../models/Workspace.js';
 import PaymentObservation from '../models/PaymentObservation.js';
 import { calendarDays, pseudonym, reliability } from '../services/finance/reliability.js';
 import { requireOwner } from '../middleware/auth.js';
+import CashItem from '../models/CashItem.js';
+import { paymentTimingSuggestion } from '../services/finance/paymentTiming.js';
 
 const router = Router({ mergeParams: true });
 const gstin = z.string().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/);
@@ -47,5 +49,29 @@ router.get('/buyers/:gstin', asyncRoute(async (req, res) => {
   const observations = await PaymentObservation.find({ workspaceId: req.params.workspaceId, buyerHash: pseudonym(buyer), clearedDate: { $gte: since.toISOString().slice(0, 10) } }).lean();
   const result = reliability(observations);
   res.json(result ? { available: true, ...result } : { available: false, reason: 'Insufficient independent suppliers' });
+}));
+router.get('/payment-timing/:cashItemId', asyncRoute(async (req, res) => {
+  requireOwner(req);
+  const workspace = await workspaceOr404(req.params.workspaceId);
+  if (!/^[a-f\d]{24}$/i.test(req.params.cashItemId)) fail(404, 'NOT_FOUND', 'Cash record not found');
+  const item = await CashItem.findOne({ _id: req.params.cashItemId, workspaceId: workspace._id, category: 'receivable', status: { $in: ['open', 'partial'] } }).lean();
+  if (!item) fail(404, 'NOT_FOUND', 'Open customer invoice not found');
+  if (item.confidenceState === 'needs_review') fail(409, 'NEEDS_REVIEW', 'Verify this invoice before requesting a timing suggestion');
+  const history = await CashItem.find({ workspaceId: workspace._id, category: 'receivable', status: 'paid' }).select('counterparty category status settlementEvents').lean();
+  res.json(paymentTimingSuggestion(item, history, 3, workspace.asOfDate));
+}));
+router.post('/payment-timing/:cashItemId/apply', asyncRoute(async (req, res) => {
+  requireOwner(req);
+  const workspace = await workspaceOr404(req.params.workspaceId);
+  const { confirm, expectedDate } = validate(z.object({ confirm: z.literal(true), expectedDate: dateOnly }).strict(), req.body);
+  const item = await CashItem.findOne({ _id: req.params.cashItemId, workspaceId: workspace._id, category: 'receivable', status: { $in: ['open', 'partial'] } });
+  if (!item) fail(404, 'NOT_FOUND', 'Open customer invoice not found');
+  const history = await CashItem.find({ workspaceId: workspace._id, category: 'receivable', status: 'paid' }).select('counterparty category status settlementEvents').lean();
+  const suggestion = paymentTimingSuggestion(item.toObject(), history, 3, workspace.asOfDate);
+  if (!suggestion.available || suggestion.expectedDate !== expectedDate) fail(409, 'CONFLICT', 'The payment timing suggestion changed. Review the current evidence again.');
+  const updated = await CashItem.findOneAndUpdate({ _id: item._id, workspaceId: workspace._id, __v: item.__v },
+    { $set: { expectedDate, confidenceState: 'owner_assumption' }, $inc: { __v: 1 } }, { new: true, runValidators: true });
+  if (!updated) fail(409, 'CONFLICT', 'Invoice changed. Refresh before applying the suggestion.');
+  res.json({ applied: true, expectedDate: updated.expectedDate, confidenceState: updated.confidenceState, evidenceCount: suggestion.evidenceCount });
 }));
 export default router;
