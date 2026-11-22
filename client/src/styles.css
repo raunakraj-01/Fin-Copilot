@@ -127,28 +127,42 @@ code { padding: 2px 5px; border-radius: 4px; color: var(--text); background: var
   flex-direction: column;
 }
 
+.kavach-header-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  padding: 12px 24px 8px;
+  background: linear-gradient(to bottom, var(--bg) 65%, rgba(244, 245, 241, 0.75) 85%, transparent 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: center;
+}
+
+html.dark .kavach-header-container {
+  background: linear-gradient(to bottom, var(--bg) 65%, rgba(13, 22, 20, 0.75) 85%, transparent 100%);
+}
+
 .kavach-floating-nav {
-  width: min(96%, 1380px);
-  margin: 16px auto 20px;
-  padding: 8px 18px;
+  width: min(100%, 1400px);
+  margin: 0 auto;
+  height: 52px;
+  padding: 6px 14px 6px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(22, 51, 45, 0.08);
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.98);
   border-radius: 9999px;
-  box-shadow: 0 6px 28px rgba(22, 51, 45, 0.05);
-  position: sticky;
-  top: 12px;
-  z-index: 100;
+  border: 1px solid rgba(22, 51, 45, 0.08);
+  box-shadow: 0 4px 24px rgba(22, 51, 45, 0.05), 0 1px 3px rgba(22, 51, 45, 0.03);
+  position: relative;
   transition: all 0.2s ease;
 }
 
 html.dark .kavach-floating-nav {
-  background: rgba(19, 34, 30, 0.94);
+  background: rgba(19, 34, 30, 0.98);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
@@ -163,8 +177,8 @@ html.dark .kavach-floating-nav {
 }
 
 .kavach-shield-badge {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   background: var(--brand-forest);
   color: #ffffff;
@@ -174,8 +188,8 @@ html.dark .kavach-floating-nav {
 }
 
 .kavach-shield-badge svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
 }
 
 .kavach-brand-titles {
@@ -185,7 +199,7 @@ html.dark .kavach-floating-nav {
 }
 
 .kavach-brand-name {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 700;
   color: var(--brand-forest);
   letter-spacing: -0.01em;
@@ -196,7 +210,7 @@ html.dark .kavach-brand-name {
 }
 
 .kavach-brand-sub {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -206,11 +220,20 @@ html.dark .kavach-brand-name {
 .kavach-nav-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   background: rgba(22, 51, 45, 0.04);
-  padding: 4px;
+  padding: 3px 5px;
   border-radius: 9999px;
-  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow: visible;
+}
+
+.kavach-nav-tabs::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 html.dark .kavach-nav-tabs {
@@ -218,9 +241,9 @@ html.dark .kavach-nav-tabs {
 }
 
 .kavach-nav-tab {
-  padding: 7px 16px;
+  padding: 5px 13px;
   border-radius: 9999px;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--muted);
   text-decoration: none;
@@ -230,15 +253,15 @@ html.dark .kavach-nav-tabs {
 }
 
 .kavach-nav-tab:hover {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.7);
+  color: var(--brand-forest);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .kavach-nav-tab.active, .kavach-nav-tab[aria-current="page"] {
   background: var(--brand-forest);
   color: #ffffff !important;
   font-weight: 600;
-  box-shadow: 0 2px 10px rgba(22, 51, 45, 0.22);
+  box-shadow: 0 2px 8px rgba(22, 51, 45, 0.22);
 }
 
 html.dark .kavach-nav-tab.active, html.dark .kavach-nav-tab[aria-current="page"] {
@@ -249,22 +272,21 @@ html.dark .kavach-nav-tab.active, html.dark .kavach-nav-tab[aria-current="page"]
 .kavach-nav-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   flex-shrink: 0;
 }
 
 .live-workspace-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
+  gap: 6px;
+  padding: 4px 11px;
   border-radius: 9999px;
   background: rgba(46, 189, 133, 0.12);
   border: 1px solid rgba(46, 189, 133, 0.25);
   color: #126343;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.01em;
 }
 
 html.dark .live-workspace-pill {
@@ -286,104 +308,284 @@ html.dark .live-workspace-pill {
   50% { transform: scale(1.35); opacity: 0.7; }
 }
 
-.defense-pill-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border-radius: 9999px;
-  background: #f0f4ee;
-  border: 1px solid var(--border);
-  color: var(--brand-forest);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  min-height: 32px;
+.kavach-bell-wrap, .kavach-user-menu-wrap {
+  position: relative;
 }
 
-.defense-pill-btn:hover {
-  background: var(--border);
-}
-
-html.dark .defense-pill-btn {
-  background: var(--surface-2);
-  color: var(--text);
-}
-
-.kavach-select-label {
-  display: inline-flex;
-  align-items: center;
-}
-
-.kavach-pill-select {
-  min-height: 32px;
-  height: 32px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 9999px;
-  background: #ffffff;
-  border: 1px solid var(--border);
-  color: var(--text);
-  cursor: pointer;
-}
-
-html.dark .kavach-pill-select {
-  background: var(--surface);
-}
-
-.kavach-icon-btn {
-  min-height: 32px;
-  width: 32px;
-  padding: 0;
-  display: grid;
-  place-items: center;
+.bell-badge-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  font-size: 14px;
-  cursor: pointer;
+  background: #ef4444;
+  border: 1.5px solid #ffffff;
 }
 
-.kavach-avatar-badge {
-  width: 34px;
-  height: 34px;
+/* Interactive Popover Menus */
+.kavach-popover-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(22, 51, 45, 0.1);
+  box-shadow: 0 12px 36px rgba(22, 51, 45, 0.12), 0 2px 8px rgba(22, 51, 45, 0.04);
+  padding: 8px;
+  z-index: 150;
+  animation: popoverFadeIn 0.16s ease-out;
+}
+
+@keyframes popoverFadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+html.dark .kavach-popover-menu {
+  background: #162823;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.kavach-notifications-menu {
+  width: 290px;
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(22, 51, 45, 0.06);
+  font-size: 12px;
+}
+
+.badge-count {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  padding: 2px 7px;
+  border-radius: 9999px;
+}
+
+.popover-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.popover-item:hover {
+  background: #f4f7f3;
+}
+
+html.dark .popover-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.popover-item strong {
+  display: block;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.popover-item p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.alert-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.alert-dot.danger { background: #ef4444; }
+.alert-dot.warning { background: #f59e0b; }
+
+.kavach-user-menu {
+  width: 240px;
+}
+
+.user-menu-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+}
+
+.menu-avatar {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--brand-forest);
   color: #ffffff;
   display: grid;
   place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.user-menu-profile strong {
+  display: block;
+  font-size: 12.5px;
+}
+
+.user-menu-profile p {
+  margin: 1px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.user-menu-divider {
+  height: 1px;
+  background: rgba(22, 51, 45, 0.08);
+  margin: 6px 0;
+}
+
+.menu-item-btn {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.menu-item-btn:hover {
+  background: #f0f4ee;
+}
+
+.menu-item-btn.menu-signout {
+  color: #dc2626;
+}
+
+.menu-item-btn.menu-signout:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Luxury micro-pills */
+.kavach-business-select {
+  max-width: 120px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 11px;
   font-weight: 600;
-  font-size: 14px;
-  font-family: var(--font-sans);
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(22, 51, 45, 0.15);
+  border-radius: 9999px;
+  background: #f4f6f2;
+  border: 1px solid rgba(22, 51, 45, 0.1);
+  color: var(--brand-forest);
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.kavach-lang-select {
+  width: 48px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 9999px;
+  background: #f4f6f2;
+  border: 1px solid rgba(22, 51, 45, 0.1);
+  color: var(--brand-forest);
   cursor: pointer;
 }
 
-html.dark .kavach-avatar-badge {
-  background: #2ebd85;
-  color: #0d1614;
-  border-color: var(--surface);
+.defense-pill-btn {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #f4f6f2;
+  border: 1px solid rgba(22, 51, 45, 0.1);
+  color: var(--brand-forest);
+  cursor: pointer;
+}
+
+.defense-pill-btn:hover {
+  background: #e9eee6;
+}
+
+.kavach-icon-btn {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f4f6f2;
+  border: 1px solid rgba(22, 51, 45, 0.1);
+  cursor: pointer;
+  color: var(--text);
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.kavach-icon-btn:hover, .kavach-icon-btn.active {
+  background: #e8eee5;
+  border-color: rgba(22, 51, 45, 0.2);
+}
+
+.kavach-avatar-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--brand-forest);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(22, 51, 45, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.kavach-avatar-badge:hover {
+  transform: scale(1.05);
 }
 
 .kavach-signout-btn {
-  min-height: 32px;
-  padding: 4px 12px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .kavach-signout-btn:hover {
-  background: var(--surface-2);
-  color: var(--danger);
-  border-color: var(--danger);
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
 }
 
 .sr-only {
