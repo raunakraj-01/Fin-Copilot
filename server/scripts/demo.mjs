@@ -51,6 +51,11 @@ try {
   const demo = express();
   demo.use((_req, res, next) => { res.set('Referrer-Policy', 'no-referrer'); res.set('X-Frame-Options', 'DENY'); next(); });
   demo.use(express.static(clientDist));
+  demo.use((req, res, next) => {
+    if (req.path.startsWith('/api')) return app(req, res, next);
+    next();
+  });
+  demo.get('*', (_req, res) => res.sendFile(`${clientDist}/index.html`));
   demo.use(app);
   server = demo.listen(port, 'localhost');
   await new Promise((resolve, reject) => { server.once('listening', resolve); server.once('error', reject); });

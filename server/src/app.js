@@ -23,6 +23,7 @@ import razorpayWebhook from './routes/razorpayWebhook.js';
 import { errorResponse } from './utils/http.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 
 const app = express();
 app.disable('x-powered-by');
@@ -65,8 +66,8 @@ app.use('/api/workspaces/:workspaceId/offers', offers);
 app.use('/api/workspaces/:workspaceId/followups', followups);
 app.use('/api/followup-automation', automationRouter);
 
-if (process.env.NODE_ENV === 'production') {
-  const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
+const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
+if (process.env.NODE_ENV === 'production' || existsSync(path.join(dist, 'index.html'))) {
   app.use(express.static(dist));
   app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
