@@ -3,6 +3,7 @@ import app from './app.js';
 import { connectDb } from './config/db.js';
 import { ensureLocalOllama } from './services/ai/startOllama.js';
 import { startFollowupWorker } from './services/finance/followups.js';
+import { startMorningBriefScheduler } from './services/automation/morningBriefScheduler.js';
 
 const port = Number(process.env.PORT || 5000);
 app.locals.localSyntheticDev = process.env.LOCAL_SYNTHETIC_DEV === '1'
@@ -14,6 +15,7 @@ try {
   await ensureLocalOllama();
   await connectDb(process.env.MONGODB_URI);
   startFollowupWorker();
+  startMorningBriefScheduler();
   server = app.listen(port, () => {
     console.log(`[Fin-Copilot Startup] Production API ready at http://localhost:${port}/api`);
     console.log(`[Fin-Copilot Startup] Healthcheck: http://localhost:${port}/api/healthz | Readiness: http://localhost:${port}/api/readyz`);

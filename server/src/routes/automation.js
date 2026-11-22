@@ -3,6 +3,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
 import { generateMorningBrief } from '../services/automation/morningBrief.js';
+import { morningBriefEnabled } from '../services/automation/morningBriefScheduler.js';
 import { parseTallyXml } from '../services/imports/tallyXml.js';
 import { runFollowups } from '../services/finance/followups.js';
 import CashItem from '../models/CashItem.js';
@@ -16,7 +17,7 @@ router.get('/morning-brief', asyncRoute(async (req, res) => {
   await workspaceOr404(req.params.workspaceId);
   const asOfDate = req.query.asOfDate ? String(req.query.asOfDate) : undefined;
   const brief = await generateMorningBrief(req.params.workspaceId, asOfDate);
-  res.json(brief);
+  res.json({ ...brief, schedulerEnabled: morningBriefEnabled(), scheduleIST: process.env.MORNING_BRIEF_SCHEDULE || '07:00' });
 }));
 
 // POST Morning Cash Brief dispatch

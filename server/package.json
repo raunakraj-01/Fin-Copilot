@@ -8,6 +8,8 @@
     "test": "vitest run",
     "seed": "node src/seed/index.js",
     "db:check": "node scripts/check-database.mjs",
+    "test:brief": "node scripts/test-morning-brief.mjs",
+    "test:followup": "node scripts/test-followup.mjs",
     "test:atlas-isolation": "node scripts/test-atlas-isolation.mjs",
     "demo": "node scripts/demo.mjs"
   },

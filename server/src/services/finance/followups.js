@@ -86,6 +86,67 @@ export async function finishFollowup(claimId, outcome, providerMessageId, worksp
   return finished;
 }
 
+export async function dispatchFollowupWebhook(rule, current) {
+  const webhookUrl = process.env.FOLLOWUP_WEBHOOK_URL || process.env.MORNING_BRIEF_WEBHOOK_URL;
+  if (!webhookUrl || !liveFollowupsEnabled()) return false;
+
+  const item = current.item;
+  const outstandingPaise = Math.max(0, item.amountPaise - (item.settledPaise || 0));
+  const inrFormatted = `₹${(outstandingPaise / 100).toLocaleString('en-IN')}`;
+  const cleanPhone = (rule.phone || '').replace(/[^0-9]/g, '');
+  const encodedMsg = encodeURIComponent(current.message);
+
+  const payload = {
+    type: 'payment_reminder',
+    workspaceId: String(rule.workspaceId),
+    cashItemId: String(rule.cashItemId),
+    counterparty: item.counterparty,
+    externalId: item.externalId || String(item._id),
+    amountPaise: outstandingPaise,
+    dueDate: item.dueDate,
+    phone: rule.phone,
+    attempt: rule.attempts + 1,
+    maxAttempts: rule.maxAttempts,
+    message: current.message,
+    whatsappUrl: `https://wa.me/${cleanPhone}?text=${encodedMsg}`,
+    whatsappText: [
+      `🔔 *Payment Follow-Up #${rule.attempts + 1}/${rule.maxAttempts}*`,
+      `👤 *Customer:* ${item.counterparty}`,
+      `📄 *Invoice:* ${item.externalId || 'INV'}`,
+      `💰 *Outstanding:* ${inrFormatted}`,
+      `📅 *Due Date:* ${item.dueDate}`,
+      `📱 *Phone:* ${rule.phone}`,
+      ``,
+      `💬 *Follow-Up Message:*`,
+      `"${current.message}"`,
+      ``,
+      `👉 *Click to Send WhatsApp:* https://wa.me/${cleanPhone}?text=${encodedMsg}`
+    ].join('\n')
+  };
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      console.log(`[FollowUp] Dispatched reminder #${rule.attempts + 1} for ${item.counterparty} (${item.externalId || item._id}) -> HTTP ${res.status}`);
+      await finishFollowup(rule.claimId, 'accepted', `webhook:${rule.claimId}`, rule.workspaceId);
+      return true;
+    } else {
+      console.error(`[FollowUp] Webhook HTTP ${res.status} for rule ${rule._id}`);
+      await finishFollowup(rule.claimId, 'failed', null, rule.workspaceId);
+      return false;
+    }
+  } catch (err) {
+    console.error(`[FollowUp] Webhook dispatch error for rule ${rule._id}:`, err.message);
+    await finishFollowup(rule.claimId, 'failed', null, rule.workspaceId);
+    return false;
+  }
+}
+
 export async function runFollowups({ mode = 'demo', workspaceId, ruleId, now = new Date() } = {}) {
   if (mode === 'n8n' && !liveFollowupsEnabled()) return [];
   const query = { mode, state: 'active', claimId: null, nextRunAt: { $lte: now },
@@ -100,8 +161,12 @@ export async function runFollowups({ mode = 'demo', workspaceId, ruleId, now = n
     if (!current) continue;
     rule.lastMessage = current.message;
     await rule.save();
-    if (mode === 'demo') await finishFollowup(rule.claimId, 'draft_ready');
-    else jobs.push({ claimId: rule.claimId, phone: rule.phone, message: current.message, invoice: current.item.externalId || String(current.item._id) });
+    if (mode === 'demo') {
+      const dispatched = await dispatchFollowupWebhook(rule, current);
+      if (!dispatched) await finishFollowup(rule.claimId, 'draft_ready');
+    } else {
+      jobs.push({ claimId: rule.claimId, phone: rule.phone, message: current.message, invoice: current.item.externalId || String(current.item._id) });
+    }
   }
   return jobs;
 }
