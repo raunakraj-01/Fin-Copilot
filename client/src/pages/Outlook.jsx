@@ -14,7 +14,7 @@ import { exportForecastToCsv, exportToTallyXml } from '../services/exportAudit.j
 
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 
-export default function Outlook({ workspaceId, onNavigate, user, workspaceName }) {
+export default function Outlook({ workspaceId, onNavigate, user, workspaceName, promiseDraft, onPromiseDraftConsumed }) {
   useLanguage();
   const [forecast, setForecast] = useState(null);
   const [error, setError] = useState('');

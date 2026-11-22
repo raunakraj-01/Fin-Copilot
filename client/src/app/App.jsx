@@ -9,6 +9,7 @@ import OrderAnalyzer from '../pages/OrderAnalyzer.jsx';
 import CashShockLab from '../pages/CashShockLab.jsx';
 import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
+import ActionCenter from '../pages/ActionCenter.jsx';
 import CapstoneDefenseModal from '../components/CapstoneDefenseModal.jsx';
 
 const pages = {
@@ -25,7 +26,7 @@ const pages = {
 const navSections = [
   {
     title: 'Monitor & Operations',
-    keys: ['outlook', 'operations'],
+    keys: ['outlook', 'actions', 'operations'],
   },
   {
     title: 'Planning & Rescue',
@@ -53,6 +54,8 @@ function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
   const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'outlook');
   const [operationsItemId, setOperationsItemId] = useState(null);
+  const [capturedOrderDraft, setCapturedOrderDraft] = useState(null);
+  const [capturedPromiseDraft, setCapturedPromiseDraft] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowSidebarCollapsed') === '1' : false));
   const [theme, setTheme] = useState(() => (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('cashflowTheme') || 'light' : 'light'));
   const [showDefenseModal, setShowDefenseModal] = useState(false);
@@ -326,6 +329,14 @@ function BusinessApp({ user, onLogout }) {
         user={user}
         onWorkspaceCreated={selectWorkspace}
         onNavigate={navigate}
+        orderDraft={capturedOrderDraft}
+        onOrderDraftConsumed={() => setCapturedOrderDraft(null)}
+        promiseDraft={capturedPromiseDraft}
+        onPromiseDraftConsumed={() => setCapturedPromiseDraft(null)}
+        onCaptureApproved={action => {
+          if (action?.type === 'order_analysis_draft') { setCapturedOrderDraft(action); navigate('orders'); }
+          if (action?.type === 'payment_promise_draft') { setCapturedPromiseDraft(action); navigate('outlook'); }
+        }}
         operationsItemId={operationsItemId}
         onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }}
       />
