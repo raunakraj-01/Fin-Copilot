@@ -10,11 +10,14 @@ export default function CapstoneDefenseModal({ onClose }) {
         {/* Modal Header */}
         <header className="defense-modal-header">
           <div className="defense-title-block">
-            <span className="defense-kicker">INSTITUTIONAL TECHNICAL & REGULATORY AUDIT PACK</span>
+            <span className="defense-kicker">
+              <span className="kavach-kicker-dot" />
+              INSTITUTIONAL TECHNICAL & REGULATORY AUDIT PACK
+            </span>
             <h2>Fin-Copilot: Formal Invariants & SRE Verification</h2>
             <p>Comprehensive Institutional Dossier for Working Capital Lenders, Statutory CAs, and Enterprise Due Diligence</p>
           </div>
-          <button type="button" className="secondary close-btn" onClick={onClose} aria-label="Close Audit Pack">
+          <button type="button" className="defense-close-btn" onClick={onClose} aria-label="Close Audit Pack">
             ✕ Close
           </button>
         </header>
@@ -178,7 +181,7 @@ export default function CapstoneDefenseModal({ onClose }) {
                     <span>Vitest Test Suites</span>
                   </div>
                   <div className="test-stat">
-                    <strong>233 Passed Tests</strong>
+                    <strong>234 Passed Tests</strong>
                     <span>100% Pass Rate</span>
                   </div>
                   <div className="test-stat">
