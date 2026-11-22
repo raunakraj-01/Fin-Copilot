@@ -2,6 +2,7 @@ import { sessionFetch } from '../services/session.js';
 import React, { useEffect, useState } from 'react';
 import { inputRupees, parseRupees } from './OrderAnalyzer/money.js';
 import ProactiveCollections from '../components/ProactiveCollections.jsx';
+import AutomationHub from '../components/AutomationHub.jsx';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
@@ -89,6 +90,7 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
   return <section className="operations">
     <h1>Operations</h1><p>Manage Tally sync, buyer reliability, and collection messages.</p>
     {!workspaceId ? <p>Select a workspace first.</p> : <>
+      <AutomationHub workspaceId={workspaceId} token={token} />
       <ProactiveCollections workspaceId={workspaceId} token={token} enabled={canPreview} />
       <div className="card"><h2>Tally connection</h2><p>Enroll a sync device for this business. Payment observations stay isolated within this business; cross-business pooling is disabled.</p>
         <p>Payment telemetry: <strong>{consent ? 'enabled' : 'disabled'}</strong> <button type="button" className="secondary" onClick={async () => { try { const data = await ownerRequest('reliability/consent', 'PATCH', { share: !consent }); setConsent(data.share); } catch (cause) { setError(cause.message); } }}>{consent ? 'Withdraw consent' : 'Enable consent'}</button></p>

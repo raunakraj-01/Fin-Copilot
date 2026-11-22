@@ -19,6 +19,7 @@ import sync from './routes/sync.js';
 import reliabilityRoutes from './routes/reliability.js';
 import offers from './routes/offers.js';
 import followups, { automationRouter } from './routes/followups.js';
+import automation from './routes/automation.js';
 import razorpayWebhook from './routes/razorpayWebhook.js';
 import { errorResponse } from './utils/http.js';
 import path from 'node:path';
@@ -89,6 +90,7 @@ app.use('/api/workspaces/:workspaceId/sync', sync);
 app.use('/api/workspaces/:workspaceId/reliability', reliabilityRoutes);
 app.use('/api/workspaces/:workspaceId/offers', offers);
 app.use('/api/workspaces/:workspaceId/followups', followups);
+app.use('/api/workspaces/:workspaceId/automation', automation);
 app.use('/api/followup-automation', automationRouter);
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
