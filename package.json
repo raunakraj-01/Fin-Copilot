@@ -6,8 +6,13 @@
     "test": "npm --prefix server test",
     "build": "npm --prefix client run build",
     "db:check": "npm --prefix server run db:check --",
+    "seed:realworld": "npm --prefix server run seed:realworld --",
+    "clean:workspaces": "npm --prefix server run clean:workspaces --",
     "test:brief": "npm --prefix server run test:brief --",
     "test:followup": "npm --prefix server run test:followup --",
+    "test:gemini": "npm --prefix server run test:gemini --",
+    "test:ai": "npm --prefix server run test:ai --",
+    "test:delay": "npm --prefix server run test:delay --",
     "test:atlas-isolation": "npm --prefix server run test:atlas-isolation --",
     "demo": "npm run build && npm --prefix server run demo"
   },

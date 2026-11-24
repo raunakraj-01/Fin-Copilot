@@ -1,0 +1,25 @@
+Bill ID,Supplier,Amount INR,Settled INR,Due Date,Expected Date,Status,Negotiable,Max Extension Days,Mandatory,Discretionary,Estimated Action Cost INR,Fee Payment Date
+BILL/2026/389,Supreme Petrochem Granules Ltd,500000,0,2026-11-06,2026-11-06,open,yes,25,no,no,3500,2026-11-26
+BILL/2026/401,Aditi Corrugation Kraft Mills,420000,0,2026-11-14,2026-11-14,open,no,0,yes,no,0,
+BILL/2026/403,Finolex Industrial Cables & Motors,120000,40000,2026-11-16,2026-11-16,partial,yes,20,no,no,1000,2026-12-05
+BILL/2026/408,Prabhat Dies & Tooling,185000,0,2026-11-24,2026-11-24,open,no,0,yes,no,0,
+BILL/2026/411,Radhey Shyam Printing Inks,95000,0,2026-11-22,2026-11-22,open,yes,15,no,no,500,2026-12-07
+BILL/2026/415,Vijayalaxmi Transport Services,75000,0,2026-11-10,2026-11-10,open,no,0,yes,no,0,
+BILL/2026/420,Shree Ram Machine Tools AMC,45000,0,2026-12-04,2026-12-04,open,yes,21,no,no,800,2026-12-24
+BILL/2026/425,Universal Strapping & Adhesives,65000,0,2026-12-12,2026-12-12,open,yes,14,no,no,400,2026-12-26
+OVERHEAD/RENT/NOV,Industrial Shed Lease Peenya,85000,0,2026-11-03,2026-11-03,open,no,0,yes,no,0,
+OVERHEAD/PAYROLL/NOV,Factory Staff & Labor Wages,250000,0,2026-11-07,2026-11-07,open,no,0,yes,no,0,
+COMPLIANCE/PF/NOV,EPFO & ESIC Labor Compliance,38000,0,2026-11-15,2026-11-15,open,no,0,yes,no,0,
+EXP/EXPO/2027,PackExpo India Stall Booking,65000,0,2026-11-18,2026-11-18,open,yes,30,no,yes,0,
+TAX/GST/OCT-RETURN,GSTR-3B Monthly GST Liability,145000,0,2026-11-20,2026-11-20,open,no,0,yes,no,0,
+UTILITY/BESCOM/NOV,BESCOM HT Industrial Power,62500.5,0,2026-11-23,2026-11-23,open,no,0,yes,no,0,
+EXP/BRAND/MEDIA,Digital Catalog & Corporate Video,35000,0,2026-11-28,2026-11-28,open,yes,45,no,yes,0,
+OVERHEAD/RENT/DEC,Industrial Shed Lease Peenya,85000,0,2026-12-03,2026-12-03,open,no,0,yes,no,0,
+OVERHEAD/PAYROLL/DEC,Factory Staff & Labor Wages,250000,0,2026-12-07,2026-12-07,open,no,0,yes,no,0,
+TAX/ADVANCE-TAX/Q3,Income Tax Advance Tax Q3,90000,0,2026-12-15,2026-12-15,open,no,0,yes,no,0,
+COMPLIANCE/PF/DEC,EPFO & ESIC Labor Compliance,38000,0,2026-12-15,2026-12-15,open,no,0,yes,no,0,
+TAX/GST/NOV-RETURN,GSTR-3B Monthly GST Liability,130000,0,2026-12-20,2026-12-20,open,no,0,yes,no,0,
+UTILITY/BESCOM/DEC,BESCOM HT Industrial Power,58000,0,2026-12-23,2026-12-23,open,no,0,yes,no,0,
+BILL/2026/PAID-01,Settled Corrugation Starch Gum,24000,24000,2026-10-15,2026-10-15,paid,no,0,no,no,0,
+BILL/2026/PAID-02,Industrial Lubricants & Oils,18500,18500,2026-10-22,2026-10-22,paid,no,0,no,no,0,
+BILL/2026/CANC-01,Cancelled Diesel Genset Rental,80000,0,2026-11-05,2026-11-05,cancelled,no,0,no,yes,0,
