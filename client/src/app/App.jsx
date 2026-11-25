@@ -11,6 +11,8 @@ import Copilot from '../pages/Copilot.jsx';
 import Operations from '../pages/Operations.jsx';
 import ActionCenter from '../pages/ActionCenter.jsx';
 import CapstoneDefenseModal from '../components/CapstoneDefenseModal.jsx';
+import PillNav from '../components/PillNav/PillNav.jsx';
+import logo from './logo.svg';
 
 const pages = {
   setup: ['Setup & Import', 'Configure your cash workspace', SetupImport, '/setup-import'],
@@ -137,83 +139,45 @@ function BusinessApp({ user, onLogout }) {
     <div className="kavach-header-container">
       <header className="kavach-floating-nav" role="banner">
         <div className="kavach-nav-brand">
-          <div className="kavach-shield-badge" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
-          </div>
           <div className="kavach-brand-titles">
             <span className="kavach-brand-name">Kavach</span>
             <span className="kavach-brand-sub">Fin-Copilot</span>
           </div>
         </div>
 
-        <nav className="kavach-nav-tabs" aria-label={t("Main navigation")}>
-          <a
-            href={pages.outlook[3]}
-            aria-label={t("Cash Outlook")}
-            className={`kavach-nav-tab ${page === 'outlook' ? 'active' : ''}`}
-            aria-current={page === 'outlook' ? 'page' : undefined}
-            onClick={event => followLink(event, 'outlook')}
-          >
-            {t("Dashboard")}
-          </a>
-          <a
-            href={pages.orders[3]}
-            aria-label={t("New Order Analyzer")}
-            className={`kavach-nav-tab ${page === 'orders' ? 'active' : ''}`}
-            aria-current={page === 'orders' ? 'page' : undefined}
-            onClick={event => followLink(event, 'orders')}
-          >
-            {t("Buyer search")}
-          </a>
-          <a
-            href={pages.rescue[3]}
-            aria-label={t("Rescue Planner")}
-            className={`kavach-nav-tab ${page === 'rescue' ? 'active' : ''}`}
-            aria-current={page === 'rescue' ? 'page' : undefined}
-            onClick={event => followLink(event, 'rescue')}
-          >
-            {t("Rescue Planner")}
-          </a>
-          <a
-            href={pages.shock[3]}
-            aria-label={t("Cash Shock Lab")}
-            className={`kavach-nav-tab ${page === 'shock' ? 'active' : ''}`}
-            aria-current={page === 'shock' ? 'page' : undefined}
-            onClick={event => followLink(event, 'shock')}
-          >
-            {t("Shock Lab")}
-          </a>
-          <a
-            href={pages.copilot[3]}
-            aria-label={t("Cash Copilot")}
-            className={`kavach-nav-tab ${page === 'copilot' ? 'active' : ''}`}
-            aria-current={page === 'copilot' ? 'page' : undefined}
-            onClick={event => followLink(event, 'copilot')}
-          >
-            {t("RAG Assistant")}
-          </a>
-          <a
-            href={pages.operations[3]}
-            aria-label={t("Operations")}
-            className={`kavach-nav-tab ${page === 'operations' ? 'active' : ''}`}
-            aria-current={page === 'operations' ? 'page' : undefined}
-            onClick={event => followLink(event, 'operations')}
-          >
-            {t("Operations")}
-          </a>
-          <a
-            href={pages.setup[3]}
-            aria-label={t("Setup & Import")}
-            className={`kavach-nav-tab ${page === 'setup' ? 'active' : ''}`}
-            aria-current={page === 'setup' ? 'page' : undefined}
-            onClick={event => followLink(event, 'setup')}
-          >
-            {t("Setup")}
-          </a>
-        </nav>
+        <PillNav
+          logo={logo}
+          logoAlt="Kavach"
+          logoHref={pages.outlook[3]}
+          onLogoClick={event => followLink(event, 'outlook')}
+          items={[
+            { label: t("Dashboard"), href: pages.outlook[3], ariaLabel: t("Cash Outlook"), key: 'outlook' },
+            { label: t("Buyer search"), href: pages.orders[3], ariaLabel: t("New Order Analyzer"), key: 'orders' },
+            { label: t("Rescue Planner"), href: pages.rescue[3], ariaLabel: t("Rescue Planner"), key: 'rescue' },
+            { label: t("Shock Lab"), href: pages.shock[3], ariaLabel: t("Cash Shock Lab"), key: 'shock' },
+            { label: t("RAG Assistant"), href: pages.copilot[3], ariaLabel: t("Cash Copilot"), key: 'copilot' },
+            { label: t("Operations"), href: pages.operations[3], ariaLabel: t("Operations"), key: 'operations' },
+            { label: t("Setup"), href: pages.setup[3], ariaLabel: t("Setup & Import"), key: 'setup' }
+          ]}
+          activeHref={pages[page][3]}
+          onItemClick={(item, index, event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            if (item.key) navigate(item.key);
+            else if (item.href) {
+              const k = pageFromPath(item.href);
+              if (k) navigate(k);
+            }
+          }}
+          itemStyle="plain"
+          hoverEffect="glide"
+          indicator="pill"
+          size="lg"
+          theme={theme}
+          highlightColor={theme === 'dark' ? '#2ebd85' : '#16332d'}
+          highlightTextColor={theme === 'dark' ? '#0d1614' : '#ffffff'}
+          ariaLabel={t("Main navigation")}
+        />
 
         <div className="kavach-nav-actions">
           <div className="live-workspace-pill" title="Protected continuous bank & ledger sync active">

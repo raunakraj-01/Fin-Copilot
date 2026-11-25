@@ -147,8 +147,9 @@ html.dark .kavach-header-container {
 .kavach-floating-nav {
   width: min(100%, 1400px);
   margin: 0 auto;
-  height: 52px;
-  padding: 6px 14px 6px 18px;
+  min-height: 52px;
+  height: auto;
+  padding: 4px 14px 4px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;

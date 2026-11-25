@@ -31,3 +31,10 @@ if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== 'func
 if (!globalThis.sessionStorage || typeof globalThis.sessionStorage.getItem !== 'function') {
   globalThis.sessionStorage = new MemoryStorage();
 }
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
