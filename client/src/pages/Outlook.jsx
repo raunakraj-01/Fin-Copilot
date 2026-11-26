@@ -16,11 +16,12 @@ import { exportForecastToCsv, exportToTallyXml } from '../services/exportAudit.j
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 const compactMoney = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', notation: 'compact', maximumFractionDigits: 1 }).format(value / 100);
 
-export default function Outlook({ workspaceId, onNavigate, user, workspaceName, promiseDraft, onPromiseDraftConsumed }) {
+export default function Outlook({ workspaceId, onNavigate, user, workspaceName, businessRole = 'owner', promiseDraft, onPromiseDraftConsumed }) {
   useLanguage();
   const [forecast, setForecast] = useState(null);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [forecastRefreshKey, setForecastRefreshKey] = useState(0);
   const [showDossier, setShowDossier] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
@@ -34,7 +35,7 @@ export default function Outlook({ workspaceId, onNavigate, user, workspaceName, 
     api(`/workspaces/${workspaceId}/forecast`).then(value => { if (active) setForecast(value); })
       .catch(reason => { if (active) setError(reason.message); });
     return () => { active = false; };
-  }, [workspaceId, refreshKey]);
+  }, [workspaceId, refreshKey, forecastRefreshKey]);
 
   if (!workspaceId) return <section className="outlook-state"><h1>{t("Cash Outlook")}</h1><p>{t("Create a workspace and import records first.")}</p>
     <button type="button" onClick={() => onNavigate?.('setup')}>{t('Open Setup & Import')}</button></section>;
@@ -166,7 +167,8 @@ export default function Outlook({ workspaceId, onNavigate, user, workspaceName, 
       <p>{freshness.lastUpdatedAt ? `${t('Last updated')}: ${new Date(freshness.lastUpdatedAt).toLocaleDateString(locale())}` : t('No source update recorded')}</p>
       <p>{freshness.lastSuccessfulSyncAt ? `${t('Last successful Tally sync')}: ${new Date(freshness.lastSuccessfulSyncAt).toLocaleDateString(locale())}` : t('No successful Tally sync recorded')}</p>
     </section>
-    <SpendingCheck key={`spending-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} />
+    <SpendingCheck key={`spending-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey}
+      businessRole={businessRole} onNavigate={onNavigate} onDataResolved={() => setForecastRefreshKey(value => value + 1)} />
     <PaymentPromises key={workspaceId} workspaceId={workspaceId} onChanged={() => setRefreshKey(value => value + 1)}
       initialDraft={promiseDraft} onDraftConsumed={onPromiseDraftConsumed} />
     {events.length === 0 && <p className="notice">{t("No future cash movements are scheduled. Add or import records on Setup & Import, and check any data warnings below.")}</p>}

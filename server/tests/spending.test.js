@@ -51,6 +51,10 @@ it('reports exact excluded receipt/payment amounts for missing dates, overdue bi
   expect(result.dataQuality.excludedReceiptsPaise).toBe(1234);
   expect(result.dataQuality.issues.filter(i => i.blocking)).toHaveLength(4);
   expect(result.expected.spendablePaise).toBeNull();
+  const missingIssue = result.dataQuality.issues.find(i => i.itemId === 'missing');
+  expect(missingIssue.reasonCode).toBe('missing_date');
+  expect(missingIssue.totalAmountPaise).toBe(40000);
+  expect(result.dataQuality.issues.find(i => i.itemId === 'review').totalAmountPaise).toBe(5000);
 });
 
 it('splits installments and residual balance, delays both, and never delays confirmed receipts', () => {

@@ -15,12 +15,15 @@ export function spendingCheck(rawContext, { delayDays = 7, spendPaise = 0, commi
   if (![7, 15, 30].includes(delayDays) || !Number.isSafeInteger(spendPaise) || spendPaise < 0)
     throw new DecisionValidationError('Invalid delay or proposed spending amount', 'spendPaise');
   const issues = [];
-  const issue = (code, message, blocking, amountPaise = 0, itemId = null) => issues.push({ code, message, blocking, amountPaise, itemId });
-  for (const bank of context.bankReviewIssues || []) issue('BANK_REVIEW', bank.message, true, bank.amountPaise, bank.transactionId);
+  const issue = (code, message, blocking, amountPaise = 0, itemId = null, meta = null) =>
+    issues.push({ code, message, blocking, amountPaise, itemId, ...(meta || {}) });
+  for (const bank of context.bankReviewIssues || []) {
+    issue('BANK_REVIEW', bank.message, true, bank.amountPaise, bank.transactionId, { reasonCode: 'bank_review' });
+  }
   const ageDays = daysBetween(today, context.asOfDate);
-  if (ageDays > 0) issue('STALE_CASH', `Cash snapshot is ${ageDays} days old. Update the as-of date and bank cash in Setup & Import.`, true);
-  if (ageDays < 0) issue('FUTURE_CASH', 'Cash snapshot is dated in the future. Use a current cash snapshot for a spending decision.', true);
-  if (!commitmentsConfirmed) issue('CONFIRM_COMMITMENTS', 'Confirm that wages, tax payments, supplier bills, loan payments and other commitments are included for this horizon.', true);
+  if (ageDays > 0) issue('STALE_CASH', `Cash snapshot is ${ageDays} days old. Update the as-of date and bank cash in Setup & Import.`, true, 0, null, { reasonCode: 'stale_cash' });
+  if (ageDays < 0) issue('FUTURE_CASH', 'Cash snapshot is dated in the future. Use a current cash snapshot for a spending decision.', true, 0, null, { reasonCode: 'future_cash' });
+  if (!commitmentsConfirmed) issue('CONFIRM_COMMITMENTS', 'Confirm that wages, tax payments, supplier bills, loan payments and other commitments are included for this horizon.', true, 0, null, { reasonCode: 'confirm_commitments' });
   let excludedReceiptsPaise = 0;
   let excludedPaymentsPaise = 0;
   let overduePromisesPaise = 0;
@@ -30,26 +33,45 @@ export function spendingCheck(rawContext, { delayDays = 7, spendPaise = 0, commi
     if (!remaining) continue;
     const receipt = item.category === 'receivable';
     const label = item.externalId || item.counterparty || item.id;
+    const itemMeta = {
+      category: item.category,
+      counterparty: item.counterparty || label,
+      externalId: item.externalId || null,
+      totalAmountPaise: item.amountPaise,
+      settledPaise: item.settledPaise,
+      dueDate: item.dueDate || null,
+      expectedDate: item.expectedDate || null,
+    };
     let reason;
-    if (item.confidenceState === 'needs_review') reason = 'needs verification';
-    else {
+    let reasonCode = null;
+    if (item.confidenceState === 'needs_review') {
+      reason = 'needs verification';
+      reasonCode = 'needs_review';
+    } else {
       if (receipt) {
         for (const p of currentPromises(item, context.asOfDate)) {
           remaining -= p.forecastPaise;
           if (p.promisedDate <= context.asOfDate) overduePromisesPaise = integer(overduePromisesPaise + p.forecastPaise);
-          if (p.status === 'review_external_settlement') issue('PROMISE_ALLOCATION', `${label}: a payment recorded elsewhere needs promise review.`, true, p.forecastPaise, item.id);
+          if (p.status === 'review_external_settlement') {
+            issue('PROMISE_ALLOCATION', `${label}: a payment recorded elsewhere needs promise review.`, true, p.forecastPaise, item.id, { ...itemMeta, reasonCode: 'promise_allocation' });
+          }
         }
       }
       if (!remaining) continue;
-      if (!item.expectedDate) reason = 'has no expected payment date';
-      else if (item.expectedDate <= context.asOfDate) reason = 'has an overdue or snapshot-day amount without a future payment date';
+      if (!item.expectedDate) {
+        reason = 'has no expected payment date';
+        reasonCode = 'missing_date';
+      } else if (item.expectedDate <= context.asOfDate) {
+        reason = 'has an overdue or snapshot-day amount without a future payment date';
+        reasonCode = 'overdue';
+      }
     }
     if (!reason) continue;
     if (receipt) excludedReceiptsPaise = integer(excludedReceiptsPaise + remaining);
     else excludedPaymentsPaise = integer(excludedPaymentsPaise + remaining);
-    issue(receipt ? 'EXCLUDED_RECEIPT' : 'EXCLUDED_PAYMENT', `${label}: ${reason}. This amount is excluded from the forecast.`, true, remaining, item.id);
+    issue(receipt ? 'EXCLUDED_RECEIPT' : 'EXCLUDED_PAYMENT', `${label}: ${reason}. This amount is excluded from the forecast.`, true, remaining, item.id, { ...itemMeta, reasonCode });
   }
-  if (overduePromisesPaise) issue('OVERDUE_PROMISES', 'Due or broken promise amounts are excluded until new future dates are agreed; neither scenario assumes recovery.', false, overduePromisesPaise);
+  if (overduePromisesPaise) issue('OVERDUE_PROMISES', 'Due or broken promise amounts are excluded until new future dates are agreed; neither scenario assumes recovery.', false, overduePromisesPaise, null, { reasonCode: 'overdue_promises' });
   const expectedForecast = buildForecast(context);
   // Delay only money still expected from customers. Actual dated receipts and all
   // outgoing commitments keep their dates; broken promises are never resurrected.
