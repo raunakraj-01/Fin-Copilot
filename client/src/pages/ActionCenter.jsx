@@ -102,7 +102,7 @@ export default function ActionCenter({ workspaceId, businessRole = 'owner', onNa
   const syncStale = lastSyncAt && Number.isFinite(lastSyncAt.valueOf()) && (Date.now() - lastSyncAt.valueOf()) > 2 * 86400000;
   const ledgerStale = data?.forecast?.dataFreshness?.stale === true;
   const syncSummary = businessRole !== 'owner' ? 'sync status is visible to the business owner'
-    : data?.sync?.latestRun ? `${data.sync.latestRun.status} · ${data.sync.latestRun.appliedCount} applied · ${data.sync.latestRun.pendingCount} pending` : 'no sync run recorded';
+    : data?.sync?.latestRun ? `${data.sync.latestRun.status} , ${data.sync.latestRun.appliedCount} applied , ${data.sync.latestRun.pendingCount} pending` : 'no sync run recorded';
   const alerts = useMemo(() => {
     const rows = [];
     if (cashWarning) rows.push(`Cash reserve risk on ${cashWarning}`);
@@ -128,7 +128,7 @@ export default function ActionCenter({ workspaceId, businessRole = 'owner', onNa
     syncStale, ledgerStale, data?.forecast?.dataFreshness?.staleDays]);
 
   const digest = useMemo(() => {
-    const lines = [`CashFlow Copilot daily briefing · ${data?.workspace?.name || 'Business'} · snapshot ${snapshot}`];
+    const lines = [`CashFlow Copilot daily briefing , ${data?.workspace?.name || 'Business'} , snapshot ${snapshot}`];
     if (cashWarning) lines.push(`Cash: review forecast risk on ${cashWarning}.`);
     else lines.push('Cash: no negative balance or reserve breach found in the current forecast.');
     if (dueCollections.length) lines.push(`Collections: ${dueCollections.length} invoice(s) due or overdue.`);
@@ -216,13 +216,13 @@ export default function ActionCenter({ workspaceId, businessRole = 'owner', onNa
   if (!workspaceId) return <section><h1>Action Center</h1><p>Select a business to see its proactive actions.</p></section>;
   const reserveText = cashWarning ? `${negativeComesFirst ? 'Cash may turn negative' : 'Cash may fall below reserve'} on ${cashWarning}.` : 'Current forecast shows no reserve breach.';
   return <section className="action-center">
-    <header className="action-center-header"><div><p className="eyebrow">OWNER BRIEFING · {today}</p><h1>Action Center</h1>
+    <header className="action-center-header"><div><p className="action-date">Briefing date: {today}</p><h1>Action Center</h1>
       <p>Today’s next steps, assembled from your cash forecast, invoices, bank activity, Tally sync, saved order plans, and stock levels.</p></div>
       <div className="page-actions"><button type="button" className="secondary" onClick={() => refresh().catch(cause => setError(cause.message))}>Refresh actions</button>
         <button type="button" onClick={() => navigator.clipboard?.writeText?.(digest)?.then(() => setMessage('Daily briefing copied.')).catch(() => setError('Could not copy the briefing.'))}>Copy daily briefing</button></div>
     </header>
     <div className="action-briefing card"><div><h2>{alerts.length ? `${alerts.length} action group${alerts.length === 1 ? '' : 's'} need attention` : 'You’re up to date'}</h2>
-      <p>{reserveText} Business data snapshot: {snapshot}{data?.workspace?.asOfDate && snapshot !== today ? ` · today is ${today}` : ''}.</p>
+      <p>{reserveText} Business data snapshot: {snapshot}{data?.workspace?.asOfDate && snapshot !== today ? ` , today is ${today}` : ''}.</p>
       <p className="muted">Signals refresh while this page is open. Date-based alerts use the workspace snapshot. Inventory reorder alerts use the thresholds you enter.</p></div>
       <button className="secondary" type="button" onClick={enableNotifications}>{notificationEnabled ? 'Browser daily alert is on' : 'Turn on daily browser alert'}</button></div>
 
@@ -232,7 +232,7 @@ export default function ActionCenter({ workspaceId, businessRole = 'owner', onNa
         <p>{reserveText}{risk?.worstDate ? ` Lowest forecast cash is ${money(risk.worstCashPaise)} on ${risk.worstDate}.` : ''}</p>
       </ActionCard>
       <ActionCard title="Customer collections" count={dueCollections.length + promiseIssues.length} tone={dueCollections.length ? 'warning' : 'normal'} action="Open collection follow-ups" onAction={() => onNavigate('operations')}>
-        {dueCollections.length ? <ul>{dueCollections.slice(0, 4).map(item => <li key={item.id}>{item.counterparty} · {item.externalId || 'Invoice'} · {money(Math.max(0, item.amountPaise - item.settledPaise))} · expected {item.expectedDate}</li>)}</ul>
+        {dueCollections.length ? <ul>{dueCollections.slice(0, 4).map(item => <li key={item.id}>{item.counterparty} , {item.externalId || 'Invoice'} , {money(Math.max(0, item.amountPaise - item.settledPaise))} , expected {item.expectedDate}</li>)}</ul>
           : <p>No open customer invoice is due within seven days of this snapshot.</p>}
         {promiseIssues.length > 0 && <p>{promiseIssues.length} payment promise(s) are broken or need settlement review. Open Cash Outlook to revise the dates.</p>}
       </ActionCard>
@@ -241,7 +241,7 @@ export default function ActionCenter({ workspaceId, businessRole = 'owner', onNa
           const draft = paymentDrafts[item.id] || { status: item.paymentReview?.status || '', note: item.paymentReview?.note || '' };
           const reviewLabel = item.paymentReviewStale ? 'Previous decision is outdated because the bill changed'
             : item.paymentReview?.status?.replaceAll('_', ' ') || 'No owner decision recorded';
-          return <div className="payable-review-row" key={item.id}><p><strong>{item.counterparty}</strong> · {item.externalId || 'Bill'} · {money(Math.max(0, item.amountPaise - item.settledPaise))} · due {item.dueDate || item.expectedDate}</p>
+          return <div className="payable-review-row" key={item.id}><p><strong>{item.counterparty}</strong> , {item.externalId || 'Bill'} , {money(Math.max(0, item.amountPaise - item.settledPaise))} , due {item.dueDate || item.expectedDate}</p>
             <p className="decision-muted">Decision: {reviewLabel}</p>
             {businessRole === 'owner' && <form className="payable-review-form" onSubmit={event => savePaymentDecision(event, item)}>
               <label>Owner decision<select required value={draft.status} onChange={event => setPaymentDrafts(current => ({ ...current, [item.id]: { ...draft, status: event.target.value } }))}>
@@ -258,27 +258,27 @@ export default function ActionCenter({ workspaceId, businessRole = 'owner', onNa
       <ActionCard title="Invoice capture & bank matching" count={needsReview.length + unresolvedBank.length + (ledgerStale ? 1 : 0)} tone={needsReview.length || unresolvedBank.length || ledgerStale ? 'warning' : 'normal'} action="Review imports and bank rows" onAction={() => onNavigate('setup')}>
         <p>{needsReview.length} ledger record(s) need verification; {unresolvedBank.length} recent bank transaction(s) remain unmatched or partly unmatched.</p>
         {ledgerStale && <p className="issue">Cash records have not changed for {data.forecast.dataFreshness.staleDays} days. Confirm recent bank and invoice activity was imported.</p>}
-        <p className="muted">Tally sync: {syncSummary}{data.sync?.actionableError ? ` · ${data.sync.actionableError.message}` : ''}{data.syncChanges.length ? ` · ${data.syncChanges.length} change(s) awaiting approval` : ''}{syncStale ? ' · last successful sync is more than 2 days old' : ''}.</p>
+        <p className="muted">Tally sync: {syncSummary}{data.sync?.actionableError ? ` , ${data.sync.actionableError.message}` : ''}{data.syncChanges.length ? ` , ${data.syncChanges.length} change(s) awaiting approval` : ''}{syncStale ? ' , last successful sync is more than 2 days old' : ''}.</p>
       </ActionCard>
       <ActionCard title="Order follow-through" count={staleScenarios.length + orderFollowups.length} tone={staleScenarios.length || orderFollowups.length ? 'warning' : 'normal'} action="Review saved order analyses" onAction={() => onNavigate('orders')}>
         {orderFollowups.length > 0 && <p>{orderFollowups.length} accepted order(s) have reached their proposed final collection date.</p>}
-        {staleScenarios.length ? <ul>{staleScenarios.slice(0, 4).map(scenario => <li key={scenario._id}>{scenario.label || 'Saved order'} · {scenario.freshness?.message || 'Cash inputs changed; recalculate before relying on this result.'}</li>)}</ul>
+        {staleScenarios.length ? <ul>{staleScenarios.slice(0, 4).map(scenario => <li key={scenario._id}>{scenario.label || 'Saved order'} , {scenario.freshness?.message || 'Cash inputs changed; recalculate before relying on this result.'}</li>)}</ul>
           : <p>{activeOrders.length ? `${activeOrders.length} order(s) are being tracked through owner-entered progress.` : 'No accepted order is being tracked yet.'}</p>}
         <p className="muted">Progress and date alerts are reminders only; actual receipts and costs still need to be recorded in the ledger.</p>
       </ActionCard>
       <ActionCard title="Stock and reorder watch" count={lowStock.length} tone={lowStock.length ? 'warning' : 'normal'}>
-        {lowStock.length ? <ul>{lowStock.slice(0, 4).map(item => <li key={item.id}>{item.name}: {item.quantityOnHand} {item.unit} on hand · reorder {item.reorderQuantity} · estimate {money(item.suggestedPurchaseCostPaise)}{item.supplier ? ` from ${item.supplier}` : ''}</li>)}</ul>
+        {lowStock.length ? <ul>{lowStock.slice(0, 4).map(item => <li key={item.id}>{item.name}: {item.quantityOnHand} {item.unit} on hand , reorder {item.reorderQuantity} , estimate {money(item.suggestedPurchaseCostPaise)}{item.supplier ? ` from ${item.supplier}` : ''}</li>)}</ul>
           : <p>{data.inventory.length ? 'No stock item has reached its reorder point.' : 'Add a stock item and reorder threshold to start receiving alerts.'}</p>}
         {lowStock.some(item => item.suggestedPurchaseCostPaise > (data.forecast?.safeToSpendPaise ?? 0)) && <p className="issue">At least one suggested reorder costs more than the current reserve-aware safe-to-spend estimate. Review cash before ordering.</p>}
         <p className="muted">Reorder quantities and lead times are owner-entered; stock consumption is not yet inferred from production orders.</p>
       </ActionCard>
       {businessRole === 'owner' && <ActionCard title="WhatsApp message review" count={pendingCaptures.length} tone={pendingCaptures.length ? 'warning' : 'normal'} action="Review captured messages" onAction={() => document.querySelector('.whatsapp-capture-desk')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-        {pendingCaptures.length ? <ul>{pendingCaptures.slice(0, 4).map(capture => <li key={capture.id}>{capture.senderName || capture.senderPhone || 'Customer'} · {capture.captureType} · {new Date(capture.receivedAt).toLocaleDateString('en-IN')}</li>)}</ul>
+        {pendingCaptures.length ? <ul>{pendingCaptures.slice(0, 4).map(capture => <li key={capture.id}>{capture.senderName || capture.senderPhone || 'Customer'} , {capture.captureType} , {new Date(capture.receivedAt).toLocaleDateString('en-IN')}</li>)}</ul>
           : <p>No WhatsApp message is waiting for owner review.</p>}
         <p className="muted">Approving creates an editable draft for the order analyzer or payment promises.</p>
       </ActionCard>}
       {businessRole === 'owner' && <ActionCard title="Supplier procurement" count={procurementNeedsReview.length + procurementDue.length} tone={procurementNeedsReview.length || procurementDue.length ? 'warning' : 'normal'} action="Review supplier purchases" onAction={() => document.querySelector('.procurement-desk')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-        {procurementNeedsReview.length ? <ul>{procurementNeedsReview.slice(0, 4).map(request => <li key={request.id}>{request.name} · {request.supplier} · {request.status.replaceAll('_', ' ')}</li>)}</ul>
+        {procurementNeedsReview.length ? <ul>{procurementNeedsReview.slice(0, 4).map(request => <li key={request.id}>{request.name} , {request.supplier} , {request.status.replaceAll('_', ' ')}</li>)}</ul>
           : <p>No supplier quote or cash approval is waiting.</p>}
         {procurementDue.length > 0 && <p>{procurementDue.length} supplier payment commitment date(s) fall within the next seven days.</p>}
         <p className="muted">Check quoted terms and cash impact before approving a purchase commitment.</p>
@@ -319,7 +319,7 @@ function StockRow({ item, busy, onSave, onRemove, canEdit }) {
   const validQuantity = /^\d+$/.test(quantity) && Number.isSafeInteger(Number(quantity));
   useEffect(() => setQuantity(String(item.quantityOnHand)), [item.quantityOnHand]);
   return <article className={`stock-row${item.atReorderPoint ? ' is-low' : ''}`}>
-    <div><strong>{item.name}</strong>{item.sku && <span> · {item.sku}</span>}<p>{item.quantityOnHand} {item.unit} on hand · reorder at {item.reorderPoint} · lead time {item.leadTimeDays} days · estimated order {money(item.suggestedPurchaseCostPaise)}</p></div>
+    <div><strong>{item.name}</strong>{item.sku && <span> , {item.sku}</span>}<p>{item.quantityOnHand} {item.unit} on hand , reorder at {item.reorderPoint} , lead time {item.leadTimeDays} days , estimated order {money(item.suggestedPurchaseCostPaise)}</p></div>
     {canEdit && <div className="stock-row-actions"><label>Update quantity<input type="number" min="0" step="1" value={quantity} onChange={event => setQuantity(event.target.value)} /></label>
       <button type="button" className="secondary" disabled={busy || !validQuantity} onClick={() => onSave(quantity)}>Save count</button>
       <button type="button" className="secondary" disabled={busy} onClick={onRemove}>Remove</button></div>}

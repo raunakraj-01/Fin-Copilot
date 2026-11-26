@@ -35,7 +35,7 @@ export default function Copilot({ workspaceId }) {
   }
   return <section className="copilot">
     <div>
-      <h1>Cash Copilot · Fin-RAG Intelligence</h1>
+      <h1>Cash Copilot</h1>
       <p>Ask about your cash runway, debtor aging, Section 43B(h) payables, and statutory GST milestones. Answers are strictly grounded in your workspace records.</p>
     </div>
     {!workspaceId && <p>Create or select a workspace in Setup & Import first.</p>}
@@ -65,11 +65,11 @@ export default function Copilot({ workspaceId }) {
       {entry.sources?.length > 0 && (
         <details className="rag-sources-wrap" style={{ marginTop: 10 }}>
           <summary className="rag-sources-header" style={{ cursor: 'pointer' }}>
-            🔍 Grounded in {entry.sources.length} retrieved financial record{entry.sources.length === 1 ? '' : 's'}
+            Grounded in {entry.sources.length} retrieved financial record{entry.sources.length === 1 ? '' : 's'}
           </summary>
           <div className="rag-sources-grid" style={{ marginTop: 8 }}>
             {entry.sources.map(src => (
-              <div key={src.kuId} className="rag-source-card">
+              <div key={src.kuId} className="rag-source-row">
                 <strong>{src.title}</strong>
                 <div style={{ color: 'var(--muted)', margin: '2px 0' }}>
                   {src.amount ? `${src.amount} · ` : ''}{src.date || 'Scheduled'}

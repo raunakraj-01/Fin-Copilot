@@ -1,0 +1,16 @@
+html, body { overflow-x: clip; }
+.outlook-workspace, .outlook-workspace *, .outlook-state, .outlook-state * { box-sizing: border-box; }
+.outlook-workspace h1, .outlook-workspace h2, .outlook-state h1 {
+  min-width: 0;
+  overflow-wrap: break-word;
+  font-family: var(--outlook-display);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.outlook-workspace button:focus-visible, .outlook-state button:focus-visible,
+.outlook-workspace [tabindex]:focus-visible { outline: 2px solid var(--outlook-focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .outlook-workspace *, .outlook-workspace *::before, .outlook-workspace *::after,
+  .outlook-state *, .outlook-state *::before, .outlook-state *::after { scroll-behavior: auto; animation: none; transition: none; }
+}

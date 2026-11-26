@@ -48,8 +48,8 @@ export default function AuthGate({ children }) {
     setCsrf(''); setUser(null); localStorage.removeItem('cashflowProfiles'); localStorage.removeItem('cashflowWorkspaceId'); sessionStorage.clear();
   }
 
-  if (loading) return <main className="decision-card"><p role="status">Checking your session...</p></main>;
-  if (!user) return <main className="decision-page"><section className="decision-card">
+  if (loading) return <main className="decision-page auth-page auth-page--loading"><section className="decision-card"><p role="status">Checking your session?</p></section></main>;
+  if (!user) return <main className="decision-page auth-page"><section className="decision-card">
     <h1>{recover ? 'Recover your account' : register ? 'Create your account' : 'Sign in to CashFlow Copilot'}</h1>
     <form onSubmit={recover ? recoverAccount : authenticate} className="form-grid"><fieldset disabled={busy}>
       {register && <label>Your name<input required maxLength={100} autoComplete="name" value={name} onChange={event => setName(event.target.value)} /></label>}
@@ -65,9 +65,9 @@ export default function AuthGate({ children }) {
       {recover ? 'Return to sign in' : 'Recover with a saved code'}</button>}
     {error && <p role="alert">{error}</p>}
   </section></main>;
-  if (inviteToken) return <main className="decision-card"><h1>Accept accountant invitation</h1><p>Signed in as {user.email}. The invitation must match this email.</p>
+  if (inviteToken) return <main className="decision-page auth-page auth-page--invite"><section className="decision-card"><h1>Accept accountant invitation</h1><p>Signed in as {user.email}. The invitation must match this email.</p>
     <button disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await json('/auth/invitations/accept', 'POST', { token: inviteToken }); setInviteToken(''); } catch (cause) { setError(cause.message); } finally { setBusy(false); } }}>Accept invitation</button>
     <button className="secondary" onClick={() => setInviteToken('')}>Skip invitation</button><button className="secondary" onClick={logout}>Sign out</button>
-    {error && <p role="alert">{error}</p>}</main>;
+    {error && <p role="alert">{error}</p>}</section></main>;
   return <>{error && <p role="alert">{error}</p>}{children(user, logout)}</>;
 }

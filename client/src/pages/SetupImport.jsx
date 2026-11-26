@@ -116,7 +116,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
     });
   }
 
-  return <section>
+  return <section className="setup-page">
     <h1>{t("Setup & Import")}</h1>
     <p>{t("Set opening cash and reserve, then add or import records.")}</p>
     <form onSubmit={createWorkspace} className="card form-grid">

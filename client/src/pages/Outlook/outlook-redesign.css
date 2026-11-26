@@ -1,0 +1,278 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Vantage (deal 2/3, seed cashflow-copilot-welcome-indian-74a5·92a2d9ba·2026-11-26·r0) · redesign: full
+ * nav: kept · signature: live closing-cash forecast · states: loading, empty, error, full · vantage: terrain/steel · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H5 E4 S5 R5 V4 · weakest: E, moved the live forecast ahead of its supporting actions */
+/* Hallmark · dropped "Sunrise Textiles", Tiruppur, "21.4% coverage", ₹8,42,000 fallback, ₹5,76,800, four buyer checks, ₹2,14,700, two overdue invoices, and the sample histogram · 46a names the unsourced claims */
+/* Hallmark · finish-review: in-thread · recapture · full 1440 and 375 screens unavailable without Puppeteer */
+@import url("./tokens.css");
+@import url("./base.css");
+
+.outlook-workspace {
+  display: grid;
+  gap: var(--space-lg);
+  color: var(--outlook-ink);
+  font-family: var(--outlook-body);
+}
+
+.outlook-workspace .outlook-heading {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: var(--outlook-rule-width) solid var(--outlook-rule);
+}
+
+.outlook-workspace .outlook-heading h1 {
+  margin: 0 0 var(--space-2xs);
+  color: var(--outlook-ink);
+  font-size: clamp(1.8rem, 2.6vw, 2.35rem);
+  line-height: 1.08;
+}
+
+.outlook-workspace .outlook-heading p,
+.outlook-workspace .outlook-chart-heading p,
+.outlook-workspace .outlook-tools-heading p {
+  margin: 0;
+  color: var(--outlook-muted);
+  font-size: var(--text-sm);
+}
+
+.outlook-heading-actions, .outlook-chart-controls {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.outlook-snapshot, .outlook-chart-range {
+  color: var(--outlook-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.outlook-workspace button, .outlook-state button {
+  min-height: 44px;
+  border-radius: var(--outlook-radius-control);
+  font-family: var(--outlook-body);
+  transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+}
+
+.outlook-workspace button:hover:not(:disabled), .outlook-state button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.outlook-workspace button:active:not(:disabled), .outlook-state button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.outlook-workspace button:disabled, .outlook-state button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.outlook-workspace button[aria-busy="true"], .outlook-state button[aria-busy="true"] { cursor: progress; }
+.outlook-workspace button[aria-invalid="true"], .outlook-state button[aria-invalid="true"] { border-color: var(--outlook-danger); }
+
+.outlook-workspace .outlook-note {
+  max-width: 72ch;
+  color: var(--outlook-muted);
+  font-size: var(--text-sm);
+}
+
+.outlook-workspace .outlook-risk-note {
+  margin: 0;
+  border: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-left: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-radius: var(--outlook-radius);
+  background: var(--outlook-surface);
+}
+
+.outlook-workspace .outlook-forecast-panel {
+  height: auto;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-lg);
+  border: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-radius: var(--outlook-radius);
+  background: var(--outlook-surface);
+  box-shadow: none;
+}
+
+.outlook-workspace .outlook-chart-heading {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.outlook-workspace .outlook-chart-heading h2,
+.outlook-workspace .outlook-tools-heading h2,
+.outlook-workspace .cash-desk-actions h2,
+.outlook-workspace .outlook-data-freshness h2,
+.outlook-workspace > .card h2 {
+  margin: 0 0 var(--space-2xs);
+  color: var(--outlook-ink);
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.outlook-workspace .outlook-chart-controls { flex-wrap: wrap; }
+.outlook-workspace .horizon-picker { display: inline-flex; gap: var(--space-2xs); }
+.outlook-workspace .horizon-btn {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 var(--space-sm);
+  border: var(--outlook-rule-width) solid var(--outlook-rule-strong);
+  background: var(--outlook-surface);
+  color: var(--outlook-ink);
+  font-size: var(--text-sm);
+}
+.outlook-workspace .horizon-btn.active, .outlook-workspace .horizon-btn[aria-pressed="true"] {
+  border-color: var(--outlook-brand);
+  background: var(--outlook-brand);
+  color: var(--outlook-on-brand);
+}
+.outlook-workspace .outlook-chart-plot { height: 320px; min-width: 0; }
+.outlook-workspace .outlook-chart .recharts-cartesian-grid line { stroke: var(--outlook-rule); }
+.outlook-workspace .outlook-chart .recharts-text { fill: var(--outlook-muted); font-family: var(--outlook-body); font-size: 12px; }
+.outlook-workspace .outlook-chart .recharts-tooltip-wrapper { color: var(--outlook-ink); }
+.outlook-workspace .outlook-chart-key { display: flex; flex-wrap: wrap; gap: var(--space-md); padding-top: var(--space-xs); color: var(--outlook-muted); font-size: var(--text-sm); }
+.outlook-workspace .outlook-chart-key span { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.outlook-workspace .outlook-chart-key i { width: 18px; height: 2px; display: inline-block; background: var(--outlook-accent-bright); }
+.outlook-workspace .outlook-chart-key .outlook-chart-key-reserve { background: var(--outlook-rule-strong); }
+
+.outlook-workspace .outlook-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-radius: var(--outlook-radius);
+  background: var(--outlook-surface);
+}
+.outlook-workspace .outlook-metrics .card {
+  min-width: 0;
+  min-height: 112px;
+  margin: 0;
+  padding: var(--space-md);
+  justify-content: flex-start;
+  border: 0;
+  border-left: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.outlook-workspace .outlook-metrics .card:first-child { border-left: 0; }
+.outlook-workspace .outlook-metrics small { color: var(--outlook-muted); font-size: var(--text-sm); line-height: 1.35; }
+.outlook-workspace .outlook-metrics strong { min-width: 0; color: var(--outlook-ink); font-family: var(--outlook-display); font-size: clamp(1.2rem, 2vw, 1.55rem); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.outlook-workspace .outlook-metrics span { color: var(--outlook-muted); font-size: var(--text-xs); line-height: 1.4; }
+.outlook-workspace .outlook-risk-negative strong { color: var(--outlook-danger); }
+
+.outlook-workspace .outlook-tools {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(0, 3fr);
+  align-items: start;
+  gap: var(--space-lg);
+  padding: var(--space-md) 0;
+  border-top: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-bottom: var(--outlook-rule-width) solid var(--outlook-rule);
+}
+.outlook-workspace .outlook-tool-list { min-width: 0; display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.outlook-workspace .outlook-tool-list button {
+  min-height: 44px;
+  padding: 0 var(--space-sm);
+  border: var(--outlook-rule-width) solid var(--outlook-rule-strong);
+  background: var(--outlook-surface);
+  color: var(--outlook-ink);
+  font-size: var(--text-sm);
+}
+.outlook-workspace .outlook-tool-list button.is-active { border-color: var(--outlook-brand); background: var(--outlook-brand); color: var(--outlook-on-brand); }
+
+.outlook-workspace .cash-desk-actions {
+  margin: 0;
+  padding: var(--space-lg);
+  border: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-radius: var(--outlook-radius);
+  background: var(--outlook-surface);
+  box-shadow: none;
+}
+.outlook-workspace .cash-desk-actions ol { margin: var(--space-sm) 0 0; padding: 0; list-style: none; }
+.outlook-workspace .cash-desk-actions li {
+  min-width: 0;
+  padding: var(--space-sm) 0;
+  border-top: var(--outlook-rule-width) solid var(--outlook-rule);
+}
+.outlook-workspace .cash-desk-actions li > div { min-width: 0; }
+.outlook-workspace .cash-desk-actions li strong { color: var(--outlook-ink); overflow-wrap: break-word; }
+.outlook-workspace .cash-desk-actions li p { margin: var(--space-2xs) 0; color: var(--outlook-muted); }
+.outlook-workspace .cash-desk-actions li small { color: var(--outlook-ink); }
+.outlook-workspace .cash-desk-actions li button { flex: 0 0 auto; }
+.outlook-workspace .outlook-data-freshness {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-top: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-bottom: var(--outlook-rule-width) solid var(--outlook-rule);
+}
+.outlook-workspace .outlook-data-freshness h2 { margin: 0; }
+.outlook-workspace .outlook-data-freshness p { min-width: 0; color: var(--outlook-muted); font-size: var(--text-sm); overflow-wrap: break-word; }
+.outlook-workspace .outlook-data-freshness p:nth-of-type(1) { color: var(--outlook-ink); }
+
+.outlook-workspace > .card, .outlook-workspace .outlook-chart:not(.outlook-forecast-panel) {
+  min-width: 0;
+  border: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-radius: var(--outlook-radius);
+  background: var(--outlook-surface);
+  box-shadow: none;
+}
+.outlook-workspace table { width: 100%; border-collapse: collapse; }
+.outlook-workspace th { color: var(--outlook-muted); font-family: var(--outlook-body); font-size: var(--text-sm); font-weight: 500; text-align: left; }
+.outlook-workspace th, .outlook-workspace td { padding: var(--space-sm); border-bottom: var(--outlook-rule-width) solid var(--outlook-rule); }
+.outlook-workspace td { color: var(--outlook-ink); }
+.outlook-workspace .cash-freshness-stale { border-left: var(--outlook-rule-width) solid var(--outlook-rule) !important; padding-left: var(--space-md) !important; }
+.outlook-workspace .cash-issue-count { color: var(--outlook-muted); font-size: var(--text-sm); }
+
+.outlook-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  border: var(--outlook-rule-width) solid var(--outlook-rule);
+  border-radius: var(--outlook-radius);
+  background: var(--outlook-surface);
+  color: var(--outlook-ink);
+}
+.outlook-state h1 { font-size: 1.7rem; font-variant-numeric: tabular-nums; }
+.outlook-state p { max-width: 60ch; color: var(--outlook-muted); }
+.outlook-skeleton { width: min(100%, 720px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-sm); }
+.outlook-skeleton span { min-height: 84px; border: var(--outlook-rule-width) solid var(--outlook-rule); border-radius: var(--outlook-radius); background: var(--outlook-surface-soft); }
+
+@media (max-width: 900px) {
+  .outlook-workspace .outlook-heading, .outlook-workspace .outlook-chart-heading { align-items: flex-start; flex-direction: column; }
+  .outlook-workspace .outlook-heading-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .outlook-workspace .outlook-tools { grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+  .outlook-workspace .outlook-data-freshness { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .outlook-workspace .outlook-forecast-panel { padding: var(--space-sm); }
+  .outlook-workspace .outlook-chart-controls { justify-content: flex-start; }
+  .outlook-workspace .outlook-chart-plot { height: 248px; }
+  .outlook-workspace .outlook-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .outlook-workspace .outlook-metrics .card:nth-child(3) { border-left: 0; border-top: var(--outlook-rule-width) solid var(--outlook-rule); }
+  .outlook-workspace .outlook-metrics .card:nth-child(4) { border-top: var(--outlook-rule-width) solid var(--outlook-rule); }
+  .outlook-workspace .outlook-data-freshness { grid-template-columns: minmax(0, 1fr); gap: var(--space-xs); }
+}
+
+@media (max-width: 400px) {
+  .outlook-workspace .outlook-metrics { grid-template-columns: minmax(0, 1fr); }
+  .outlook-workspace .outlook-metrics .card { border-left: 0; border-top: var(--outlook-rule-width) solid var(--outlook-rule); }
+  .outlook-workspace .outlook-metrics .card:first-child { border-top: 0; }
+  .outlook-workspace .outlook-heading-actions { align-items: flex-start; flex-direction: column; }
+}

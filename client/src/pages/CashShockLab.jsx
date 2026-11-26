@@ -28,7 +28,7 @@ function Explanations({ workspaceId, apiBaseUrl, report }) {
     }
   }
   return <section className="decision-card" aria-label={t("Evidence-backed explanations")}>
-    <span className="decision-kicker">{t("Evidence-backed copilot")}</span><h2>{t("Understand the decision")}</h2>
+    <h2>{t("Understand the decision")}</h2>
     <p>{t("Ask about the current records. Every amount comes from the cash engine; AI can select relevant evidence when configured.")}</p>
     <div className="decision-controls">{[['shortage', 'Why is cash short?'], ['collection', 'Which collection helps most?'], ['stress', 'Why does a plan fail under stress?']].map(([id, label]) => <button key={id} disabled={state.busy} onClick={() => explain(id)}>{t(label)}</button>)}</div>
     {state.busy && <p role="status">{t("Preparing a source-backed explanation…")}</p>}
@@ -55,7 +55,7 @@ export default function CashShockLab({ workspaceId, apiBaseUrl }) {
   }, [result]);
   const series = result ? [{ label: 'Original forecast', daily: result.baseline.daily, color: '#275e80' },
     { label: `${result.delayDays}-day customer delay`, daily: result.stressed.daily, color: '#a45143' }] : [];
-  return <main className="decision-page">
+  return <main className="decision-page decision-page--shock">
     <header><h1>{t("Cash Shock Lab")}</h1>
       <p className="decision-intro">{t("Test how late customer payments change your cash position and rescue options.")}</p></header>
     {!workspaceId ? <p className="decision-empty">{t("Create or select a workspace in Setup & Import to test its cash plan.")}</p> : <section className="decision-card">

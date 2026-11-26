@@ -1,0 +1,36 @@
+:root {
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --outlook-paper: var(--bg);
+  --outlook-surface: var(--surface);
+  --outlook-surface-soft: var(--surface-2);
+  --outlook-ink: var(--text);
+  --outlook-muted: var(--muted);
+  --outlook-rule: var(--border);
+  --outlook-rule-strong: var(--border-strong);
+  --outlook-brand: var(--brand-forest);
+  --outlook-accent-bright: var(--brand-forest);
+  --outlook-accent-soft: var(--brand-mint-light);
+  --outlook-danger: var(--danger);
+  --outlook-on-brand: var(--surface);
+  --outlook-focus: var(--brand-forest);
+  --outlook-display: var(--font-sans);
+  --outlook-body: var(--font-sans);
+  --outlook-radius: 6px;
+  --outlook-radius-control: 8px;
+  --outlook-rule-width: 1px;
+}
+
+html.dark, :root.dark {
+  --outlook-brand: var(--brand-mint);
+  --outlook-accent-bright: var(--brand-mint);
+  --outlook-accent-soft: var(--accent-soft);
+  --outlook-on-brand: var(--bg);
+  --outlook-focus: var(--brand-mint);
+}

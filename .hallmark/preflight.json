@@ -1,0 +1,13 @@
+﻿{
+  "scanned": "2026-11-26",
+  "findings": {
+    "fonts": "Plus Jakarta Sans, Newsreader, IBM Plex Mono (client/src/styles.css:5,26-28)",
+    "palette": "Green and mint light/dark custom properties (client/src/styles.css:3-35,42-52)",
+    "motion": "Handwritten CSS transitions; no motion library (client/src/styles.css:86,103,111)",
+    "spacing": "CSS spacing values and responsive breakpoints (client/src/styles.css; client/src/components/landing-page.css)",
+    "framework": "React 19 + Vite SPA (client/package.json: scripts and dependencies; client/src/main.jsx:1-4)",
+    "product": "CashFlow Copilot dashboard and existing welcome page (client/src/app/App.jsx:1-; client/src/components/LandingPage.jsx:1-23)"
+  },
+  "preserve": ["font stack", "green/mint palette", "React/Vite conventions", "existing app behavior and routes"],
+  "introduce": ["page-specific shape", "theme and visual hierarchy", "Hallmark tokens", "Floor and gate compliance"]
+}

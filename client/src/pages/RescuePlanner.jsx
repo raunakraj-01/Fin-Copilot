@@ -41,7 +41,7 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) 
       if (!controller.signal.aborted) setSaveState({ planId: plan.planId, busy: false, message: '', error: saveError.message || 'Could not save this plan' });
     }
   }
-  return <main className="decision-page">
+  return <main className="decision-page decision-page--rescue">
     <header><h1>{t("Build a cash rescue plan")}</h1><p className="decision-intro">{t("Compare earlier collections and flexible payment dates against your reserve.")}</p></header>
     {!workspaceId ? <div className="decision-empty">{t("Create or select a workspace, verify its records, then return to find rescue options.")}</div> : <section className="decision-card"><div className="decision-controls">
       <label>{t("Cash objective")}<select value={objective} disabled={loading} onChange={event => { saveController.current?.abort(); setObjective(event.target.value); clear(); setSaveState({ planId: null, busy: false, message: '', error: '' }); }}><option value="nonnegative">{t("Keep cash at or above zero")}</option><option value="minimum_reserve">{t("Preserve the minimum reserve")}</option></select></label>

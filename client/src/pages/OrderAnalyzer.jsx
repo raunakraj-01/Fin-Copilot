@@ -57,7 +57,7 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl, businessRole = 
     { label: 'Delayed final payment', daily: result.delayedCustomerScenario?.daily, color: '#a45143' },
     { label: 'Minimum advance terms', daily: result.minimumAdvance.scenario?.daily, color: '#4b7768' },
   ] : [];
-  return <main className="decision-page">
+  return <main className="decision-page decision-page--orders">
     <header><h1>{t("Can this order fit your cash plan?")}</h1><p className="decision-intro">{t("Compare production costs, payment timing, and the required advance against your reserve.")}</p></header>
     {!workspaceId ? <div className="decision-empty">{t("Create or select a workspace first. Your opening cash, reserve, and existing obligations are needed for this analysis.")}</div> : <form ref={formRef} onSubmit={analyze} className="decision-card">
       <fieldset disabled={loading}><div className="decision-form-grid">
@@ -87,7 +87,6 @@ export default function OrderAnalyzer({ workspaceId, apiBaseUrl, businessRole = 
       </article>
       <section className="decision-card"><h2>{t("Daily cash comparison")}</h2><CashChart series={series} reserve={result.minimumReservePaise} /><DailyTable series={series} />{result.delayedCustomerScenario && <p>{t("With final payment delayed to ")}{displayDate(result.delayedCustomerScenario.finalCollectionDate)}{t(", lowest cash is ")}{t(rupees(result.delayedCustomerScenario.worstCashPaise))}.</p>}</section>
       {result.negotiationEnvelope?.length > 0 && <section className="decision-card" aria-label={t("Negotiation terms envelope")}>
-        <span className="decision-kicker">{t("Contract strategy")}</span>
         <h2>{t("Negotiation Envelope (What terms should I offer?)")}</h2>
         <p className="decision-muted">{t("Explore combinations of customer advance and payment timing. Highlighted rows preserve your minimum reserve.")}</p>
         <div className="table-scroll"><table className="decision-table">
