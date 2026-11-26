@@ -20,6 +20,7 @@
   --app-radius: 8px;
   --app-radius-control: 6px;
   --app-line: 1px;
+  --app-nav-shadow: var(--shadow-lg);
   --app-space-xs: 8px;
   --app-space-sm: 12px;
   --app-space-md: 16px;
@@ -36,6 +37,43 @@ html, body { overflow-x: clip; scrollbar-color: var(--app-muted) var(--app-paper
 body { background: var(--app-paper); background-image: none; color: var(--app-ink); font-family: var(--app-font); caret-color: var(--app-accent); }
 ::selection { color: var(--app-ink); background: var(--app-accent-soft); }
 :focus-visible { outline: 2px solid var(--app-focus); outline-offset: 2px; }
+
+.kavach-header-container {
+  padding: var(--app-space-sm) var(--app-space-lg) var(--app-space-xs);
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.kavach-floating-nav {
+  width: min(100%, 1400px);
+  min-width: 0;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  gap: var(--app-space-sm);
+  background: var(--app-surface);
+  border: var(--app-line) solid var(--app-rule);
+  box-shadow: var(--app-nav-shadow);
+}
+html.dark .kavach-floating-nav { background: var(--app-surface); }
+.kavach-floating-nav > .pill-nav { min-width: 0; flex: 1 1 auto; justify-content: center; }
+.kavach-nav-actions { min-width: 0; gap: var(--app-space-xs); }
+.kavach-select-label { min-width: 0; }
+.kavach-business-select {
+  width: clamp(112px, 11vw, 156px);
+  min-width: 0;
+  max-width: 156px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .kavach-floating-nav { gap: var(--app-space-xs); padding-inline: var(--app-space-sm); }
+  .kavach-business-select { width: 132px; }
+}
+@media (max-width: 900px) {
+  .kavach-header-container { padding: var(--app-space-xs) var(--app-space-sm); }
+  .kavach-floating-nav { border-radius: var(--app-radius); }
+  .kavach-business-select { width: 116px; }
+}
 
 .content {
   width: min(100%, 1440px);

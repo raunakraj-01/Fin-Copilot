@@ -173,6 +173,7 @@ function BusinessApp({ user, onLogout }) {
           hoverEffect="glide"
           indicator="pill"
           size="lg"
+          surface="none"
           theme={theme}
           highlightColor={theme === 'dark' ? '#2ebd85' : '#16332d'}
           highlightTextColor={theme === 'dark' ? '#0d1614' : '#ffffff'}
@@ -180,11 +181,6 @@ function BusinessApp({ user, onLogout }) {
         />
 
         <div className="kavach-nav-actions">
-          <div className="live-workspace-pill" title="Protected continuous bank & ledger sync active">
-            <span className="pulse-dot"></span>
-            <span>Live workspace</span>
-          </div>
-
           {/* Interactive Notification Bell */}
           <div className="kavach-bell-wrap">
             <button
@@ -224,11 +220,11 @@ function BusinessApp({ user, onLogout }) {
             )}
           </div>
 
-          <label className="kavach-select-label" title="Switch supplier business profile">
+          <label className="kavach-select-label" title={profiles.find(profile => profile.id === workspaceId)?.name || 'Switch supplier business profile'}>
             <span className="sr-only">Business</span>
-            <select aria-label="Supplier profile" value={workspaceId} onChange={event => selectWorkspace(event.target.value)} className="kavach-pill-select kavach-business-select">
+            <select aria-label="Supplier profile" title={profiles.find(profile => profile.id === workspaceId)?.name || 'Switch supplier business profile'} value={workspaceId} onChange={event => selectWorkspace(event.target.value)} className="kavach-pill-select kavach-business-select">
               <option value="">Select business</option>
-              {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}
+              {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
             </select>
           </label>
 
