@@ -55,6 +55,7 @@ body { background: var(--app-paper); background-image: none; color: var(--app-in
 }
 html.dark .kavach-floating-nav { background: var(--app-surface); }
 .kavach-floating-nav > .pill-nav { min-width: 0; flex: 1 1 auto; justify-content: center; }
+.kavach-nav-brand { transform: translateX(var(--app-space-md)); }
 .kavach-nav-actions { min-width: 0; gap: var(--app-space-xs); }
 .kavach-select-label { min-width: 0; }
 .kavach-business-select {
