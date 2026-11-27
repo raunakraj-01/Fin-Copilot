@@ -1,5 +1,5 @@
 import { t, useLanguage, setLanguage } from '../i18n/index.js';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AuthGate from '../components/AuthGate.jsx';
 import { api } from '../services/api.js';
 import SetupImport from '../pages/SetupImport.jsx';
@@ -54,7 +54,8 @@ const icons = {
 
 function BusinessApp({ user, onLogout }) {
   const language = useLanguage();
-  const [page, setPage] = useState(() => pageFromPath(window.location.pathname) || 'outlook');
+  const initialPathPage = useRef(pageFromPath(window.location.pathname));
+  const [page, setPage] = useState(() => initialPathPage.current || 'outlook');
   const [operationsItemId, setOperationsItemId] = useState(null);
   const [capturedOrderDraft, setCapturedOrderDraft] = useState(null);
   const [capturedPromiseDraft, setCapturedPromiseDraft] = useState(null);
@@ -93,6 +94,11 @@ function BusinessApp({ user, onLogout }) {
         else localStorage.removeItem(`cashflowWorkspace:${user.id}`);
         return selected;
       });
+      if (data.workspaces.length === 0 && !initialPathPage.current) {
+        initialPathPage.current = 'setup';
+        window.history.replaceState(null, '', pages.setup[3]);
+        setPage('setup');
+      }
     }).catch(e => { if (active) setAccessError(e.message); });
     refresh(); window.addEventListener('focus', refresh);
     return () => { active = false; window.removeEventListener('focus', refresh); };

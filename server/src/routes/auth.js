@@ -17,10 +17,13 @@ router.post('/register', asyncRoute(async (req, res) => {
   await checkAuthThrottle(req, res, 'register', data.email);
   await recordAuthAttempt(req, res, 'register', data.email);
   await User.init();
+  if (await User.exists({ email: data.email })) {
+    fail(409, 'CONFLICT', 'This email ID already exists. Please sign in instead.');
+  }
   const passwordHash = await hashPassword(data.password);
   let user;
   try { user = await User.create({ name: data.name, email: data.email, passwordHash }); }
-  catch (error) { if (error.code === 11000) fail(409, 'CONFLICT', 'Unable to create an account with these details'); throw error; }
+  catch (error) { if (error.code === 11000) fail(409, 'CONFLICT', 'This email ID already exists. Please sign in instead.'); throw error; }
   const csrfToken = await createSession(user, res);
   res.status(201).json({ user: userShape(user), csrfToken });
 }));

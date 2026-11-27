@@ -45,6 +45,8 @@ it('shows the daily snapshot, freshness, reserve-aware headroom, and prioritized
 
 it('requires confirming the exact opening balance and snapshot date before creating a workspace', () => {
   render(<SetupImport onWorkspaceCreated={() => {}} />);
+  expect(screen.queryByRole('button', { name: /seeded demo workspace/i })).toBeNull();
+  expect(screen.getByLabelText(/Import file \(CSV, XLSX, XML, or JSON\)/).getAttribute('accept')).toBe('.csv,.xlsx,.xml,.json');
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' })
     .formatToParts(new Date());
   const today = Object.fromEntries(parts.map(part => [part.type, part.value]));

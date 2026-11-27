@@ -65,6 +65,12 @@ it('stores salted password hashes and opaque hashed sessions, with protected coo
   await request(app).post('/api/auth/login').send({ email: a.email, password: 'wrong' }).expect(401);
 });
 
+it('rejects duplicate email registration with a clear message', async () => {
+  const existing = await register('First Owner');
+  const dup = await request(app).post('/api/auth/register').send({ name: 'Second Owner', email: existing.email, password }).expect(409);
+  expect(dup.body.error.message).toContain('email ID already exists');
+});
+
 it('uses Secure host-only cookies in production', async () => {
   vi.stubEnv('NODE_ENV', 'production');
   const owner = await register(); const cookie = owner.response.headers['set-cookie'][0];

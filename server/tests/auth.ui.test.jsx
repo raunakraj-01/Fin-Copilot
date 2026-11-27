@@ -16,6 +16,7 @@ test('keeps private views hidden until login and sends subsequent mutations with
   const fetch = vi.fn(async url => url.endsWith('/auth/me') ? response({ error: { message: 'Sign in' } }, 401) : response({ user, csrfToken: 'session-csrf' }));
   vi.stubGlobal('fetch', fetch); gate();
   await screen.findByRole('heading', { name: 'Sign in to CashFlow Copilot' });
+  expect(screen.queryByRole('button', { name: 'Recover with a saved code' })).toBeNull();
   expect(screen.queryByText(/Private records/)).toBeNull();
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: user.email } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'My long password 42' } });
@@ -41,6 +42,19 @@ test('registration validates a long password and submits no client-selected role
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   await screen.findByText('Private records for Owner');
   expect(JSON.parse(fetch.mock.calls.find(([url]) => url.endsWith('/auth/register'))[1].body)).toEqual({ name: 'Owner', email: user.email, password: 'My long password 42' });
+});
+
+test('shows duplicate email message when registering an existing email ID', async () => {
+  const fetch = vi.fn(async url => url.endsWith('/auth/me')
+    ? response({ error: {} }, 401)
+    : response({ error: { code: 'CONFLICT', message: 'This email ID already exists. Please sign in instead.' } }, 409));
+  vi.stubGlobal('fetch', fetch); gate();
+  fireEvent.click(await screen.findByRole('button', { name: 'Create an account' }));
+  fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Owner' } });
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: user.email } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'My long password 42' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+  await screen.findByText('This email ID already exists. Please sign in instead.');
 });
 
 test('logout and an expired API session unmount private data', async () => {
@@ -122,12 +136,25 @@ test('gives every dashboard page a bookmarkable URL and follows browser navigati
   expect(screen.getByRole('link', { name: 'Rescue Planner' }).getAttribute('aria-current')).toBe('page');
 });
 
-test('opens the signed-in owner in Cash Outlook by default', async () => {
+test('opens a first-time user without workspaces in Setup & Import without demo button', async () => {
   vi.stubGlobal('fetch', vi.fn(async url => response(url.endsWith('/auth/me') ? { user, csrfToken: 'csrf' } : { workspaces: [] })));
+  render(<App />);
+  await screen.findByRole('heading', { name: 'Setup & Import' });
+  expect(window.location.pathname).toBe('/setup-import');
+  expect(screen.queryByRole('button', { name: /seeded demo workspace/i })).toBeNull();
+  expect(screen.getByLabelText(/Import file \(CSV, XLSX, XML, or JSON\)/)).toBeTruthy();
+});
+
+test('opens a returning owner with a workspace in Cash Outlook by default', async () => {
+  vi.stubGlobal('fetch', vi.fn(async url => {
+    if (url.endsWith('/auth/me')) return response({ user, csrfToken: 'csrf' });
+    if (url.endsWith('/forecast')) return response({ asOfDate: '2026-11-21', openingCashPaise: 0, minimumReservePaise: 0,
+      daily: [], warnings: [], promiseRisks: [], risk: { contributingItems: [], explanation: 'Cash stays above reserve.' } });
+    if (url.endsWith('/promises')) return response({ asOfDate: '2026-11-21', items: [] });
+    if (url.includes('/spending-check')) return response({ error: { message: 'No spending check' } }, 503);
+    return response({ workspaces: [{ id: 'w1', name: 'My Business', role: 'owner' }] });
+  }));
   render(<App />);
   await screen.findByRole('heading', { name: 'Cash Outlook' });
   expect(window.location.pathname).toBe('/cash-outlook');
-  fireEvent.click(screen.getByRole('button', { name: 'Open Setup & Import' }));
-  expect(window.location.pathname).toBe('/setup-import');
-  await screen.findByRole('heading', { name: 'Setup & Import' });
 });

@@ -6,11 +6,9 @@ export default function AuthGate({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [register, setRegister] = useState(false);
-  const [recover, setRecover] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [recoveryCode, setRecoveryCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const invite = new URLSearchParams(window.location.search).get('invite');
@@ -34,14 +32,6 @@ export default function AuthGate({ children }) {
     } catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
 
-  async function recoverAccount(event) {
-    event.preventDefault(); setBusy(true); setError('');
-    try {
-      const result = await json('/auth/recover', 'POST', { email, recoveryCode, newPassword: password });
-      setRecover(false); setRecoveryCode(''); setPassword(''); setError(result.message || 'Password changed. Sign in with your new password.');
-    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
-  }
-
   async function logout() {
     try { await json('/auth/logout', 'POST', {}); }
     catch (cause) { if (cause.status !== 401) { setError(cause.message); return; } }
@@ -50,19 +40,16 @@ export default function AuthGate({ children }) {
 
   if (loading) return <main className="decision-page auth-page auth-page--loading"><section className="decision-card"><p role="status">Checking your session?</p></section></main>;
   if (!user) return <main className="decision-page auth-page"><section className="decision-card">
-    <h1>{recover ? 'Recover your account' : register ? 'Create your account' : 'Sign in to CashFlow Copilot'}</h1>
-    <form onSubmit={recover ? recoverAccount : authenticate} className="form-grid"><fieldset disabled={busy}>
+    <h1>{register ? 'Create your account' : 'Sign in to CashFlow Copilot'}</h1>
+    <form onSubmit={authenticate} className="form-grid"><fieldset disabled={busy}>
       {register && <label>Your name<input required maxLength={100} autoComplete="name" value={name} onChange={event => setName(event.target.value)} /></label>}
       <label>Email<input required type="email" autoComplete="username" maxLength={254} value={email} onChange={event => setEmail(event.target.value)} /></label>
-      {recover && <label>Unused recovery code<input required autoComplete="one-time-code" value={recoveryCode} onChange={event => setRecoveryCode(event.target.value.toUpperCase())} /></label>}
-      <label>{recover ? 'New password' : 'Password'}<input required type="password" minLength={register || recover ? 8 : 1} maxLength={128}
-        autoComplete={register || recover ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} /></label>
-      {(register || recover) && <p>Use at least 8 characters.</p>}
-      <button>{busy ? 'Please wait' : recover ? 'Change password' : register ? 'Create account' : 'Sign in'}</button>
+      <label>Password<input required type="password" minLength={register ? 8 : 1} maxLength={128}
+        autoComplete={register ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} /></label>
+      {register && <p>Use at least 8 characters.</p>}
+      <button>{busy ? 'Please wait' : register ? 'Create account' : 'Sign in'}</button>
     </fieldset></form>
-    <button className="secondary" onClick={() => { setRegister(!register); setRecover(false); setError(''); }}>{register ? 'Use an existing account' : 'Create an account'}</button>
-    {!register && <button className="secondary" onClick={() => { setRecover(value => !value); setError(''); setPassword(''); setRecoveryCode(''); }}>
-      {recover ? 'Return to sign in' : 'Recover with a saved code'}</button>}
+    <button className="secondary" onClick={() => { setRegister(!register); setError(''); }}>{register ? 'Use an existing account' : 'Create an account'}</button>
     {error && <p role="alert">{error}</p>}
   </section></main>;
   if (inviteToken) return <main className="decision-page auth-page auth-page--invite"><section className="decision-card"><h1>Accept accountant invitation</h1><p>Signed in as {user.email}. The invitation must match this email.</p>

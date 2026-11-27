@@ -23,6 +23,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
   const openingBalanceKey = `${form.asOfDate}:${form.openingCashInr}`;
   const [kind, setKind] = useState('receivables');
   const [file, setFile] = useState(null);
+  const [xmlPreview, setXmlPreview] = useState(null);
   const [batchId, setBatchId] = useState('');
   const [headers, setHeaders] = useState([]);
   const [mapping, setMapping] = useState({});
@@ -75,17 +76,44 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
     });
   }
 
-  function useSeed() {
-    run('seed', async () => {
-      const { workspace } = await json('/workspaces', 'POST', { name: 'Demo Packaging Supplier', asOfDate: indiaToday(), openingCashPaise: 20000000, minimumReservePaise: 0 });
-      await json(`/workspaces/${workspace.id}/demo-data`, 'POST', {});
-      onWorkspaceCreated(workspace);
-      setMessage(`Using seeded workspace: ${workspace.name}`);
-    });
+  function handleFileChange(event) {
+    const selected = event.target.files?.[0] || null;
+    setFile(selected);
+    setXmlPreview(null);
+    setBatchId('');
+    setRows([]);
+    setCorrections({});
+    setExcluded([]);
+    if (!selected || !selected.name.toLowerCase().endsWith('.xml')) return;
+    const reader = new FileReader();
+    reader.onload = loadEvent => {
+      const content = loadEvent.target?.result;
+      if (typeof content !== 'string') return;
+      const voucherCount = (content.match(/<VOUCHER\b/gi) || []).length;
+      const companyMatch = content.match(/<SVCURRENTCOMPANY>(.*?)<\/SVCURRENTCOMPANY>/i);
+      setXmlPreview({
+        company: companyMatch ? companyMatch[1].trim() : 'Tally Company',
+        voucherCount,
+        rawXml: content,
+      });
+    };
+    reader.readAsText(selected);
   }
 
   function inspect(event) {
     event.preventDefault();
+    if (!workspaceId || !file) return;
+    if (file.name.toLowerCase().endsWith('.xml')) {
+      run('inspect', async () => {
+        const rawXml = xmlPreview?.rawXml ?? await file.text();
+        const result = await json(`/workspaces/${workspaceId}/automation/tally-xml`, 'POST', { xml: rawXml });
+        setFile(null);
+        setXmlPreview(null);
+        setRefreshKey(value => value + 1);
+        setMessage(`Imported ${result.appliedCount} Tally XML voucher(s) from ${result.company}.`);
+      });
+      return;
+    }
     run('inspect', async () => {
       const body = new FormData(); body.append('kind', kind); body.append('file', file);
       const result = await api(`/workspaces/${workspaceId}/imports/inspect`, { method: 'POST', body });
@@ -132,15 +160,30 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
         {workspaceId && <button type="button" className="secondary" disabled={busy || businessRole !== 'owner' || openingBalanceConfirmed !== openingBalanceKey} onClick={updateWorkspace}>{t("Save active workspace")}</button>}
       </div>
     </form>
-    <div className="page-actions"><button type="button" className="secondary" disabled={busy} onClick={useSeed}>{t("Use seeded demo workspace")}</button></div>
-    {workspaceId && <>
-      <p>{t("CSV templates: ")}<a href="/templates/receivables.csv" download>{t("Receivables")}</a> · <a href="/templates/payables.csv" download>{t("Payables")}</a></p>
-      <form onSubmit={inspect} className="card form-grid">
+    <p>{t("CSV templates: ")}<a href="/templates/receivables.csv" download>{t("Receivables")}</a> · <a href="/templates/payables.csv" download>{t("Payables")}</a></p>
+    <form onSubmit={inspect} className="card form-grid">
+      <h2>{t("Import records")}</h2>
+      <p>{t("Upload CSV, Excel (.xlsx), Tally XML (.xml), or JSON (.json) files.")}</p>
+      {!workspaceId && <p role="status">{t("Create your business workspace above first, then inspect or import your file.")}</p>}
+      {!file?.name?.toLowerCase().endsWith('.xml') && (
         <label>{t("Import type")}<select value={kind} onChange={event => setKind(event.target.value)}><option value="receivables">{t("Receivables")}</option><option value="payables">{t("Payables")}</option></select></label>
-        <label>{t("CSV or XLSX file")}<input type="file" accept=".csv,.xlsx" onChange={event => setFile(event.target.files[0])} required /></label>
-        <AsyncActionButton type="submit" disabled={busy || !file} busy={busy && activity === 'inspect'} idleLabel={t("Inspect file")} doneLabel={t("File inspected")} steps={[t("Reading the file…"), t("Detecting columns…"), t("Suggesting mappings…")]} />
-      </form>
-    </>}
+      )}
+      <label>{t("Import file (CSV, XLSX, XML, or JSON)")}<input type="file" accept=".csv,.xlsx,.xml,.json" onChange={handleFileChange} required /></label>
+      {xmlPreview && (
+        <div className="xml-preview-box">
+          <div className="xml-preview-stat"><span>Company:</span><strong>{xmlPreview.company}</strong></div>
+          <div className="xml-preview-stat"><span>Vouchers Detected:</span><strong>{xmlPreview.voucherCount} Vouchers</strong></div>
+        </div>
+      )}
+      <AsyncActionButton
+        type="submit"
+        disabled={busy || !file || !workspaceId}
+        busy={busy && activity === 'inspect'}
+        idleLabel={file?.name?.toLowerCase().endsWith('.xml') ? t("Import Tally XML") : t("Inspect file")}
+        doneLabel={t("File inspected")}
+        steps={[t("Reading the file…"), t("Detecting columns…"), t("Suggesting mappings…")]}
+      />
+    </form>
     {batchId && <div className="card">
       <h2>{t("Column mapping")}</h2>
       <div className="form-grid">{fields.map(field => <label key={field}>{t(field)}

@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
   workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
-  fileName: String, fileType: { type: String, enum: ['csv', 'xlsx'] },
+  fileName: String, fileType: { type: String, enum: ['csv', 'xlsx', 'json'] },
   kind: { type: String, enum: ['receivables', 'payables', 'bank'], required: true },
   accountKey: String,
   sourceSystem: { type: String, enum: ['csv', 'excel', 'tally_export'], required: true },

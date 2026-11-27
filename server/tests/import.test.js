@@ -35,4 +35,15 @@ describe('fixture import', () => {
     expect(rows[0].state).toBe('accepted');
     expect(rows[0].item.amountPaise).toBe(12_000_000);
   });
+
+  it('reads a JSON ledger file and auto-maps camelCase fields', async () => {
+    const buffer = Buffer.from(JSON.stringify([
+      { externalId: 'INV-JSON-1', counterparty: 'Json Buyer', amountInr: 2500, dueDate: '2026-12-01', expectedDate: '2026-12-05' },
+    ]));
+    const parsed = await parseUpload({ originalname: 'receivables.json', buffer });
+    const rows = normalizeRows(parsed.rawRows, suggestMapping(parsed.headers), 'receivables', 'csv');
+    expect(parsed.type).toBe('json');
+    expect(rows[0].state).toBe('accepted');
+    expect(rows[0].item.amountPaise).toBe(250_000);
+  });
 });

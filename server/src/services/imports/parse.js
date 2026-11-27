@@ -2,9 +2,44 @@ import Papa from 'papaparse';
 import { readSheet } from 'read-excel-file/node';
 import { fail } from '../../utils/http.js';
 
+function parseJsonRows(buffer) {
+  let payload;
+  try { payload = JSON.parse(buffer.toString('utf8').replace(/^\uFEFF/, '')); }
+  catch { fail(400, 'VALIDATION_ERROR', 'Invalid JSON file'); }
+  const records = Array.isArray(payload)
+    ? payload
+    : payload && typeof payload === 'object'
+      ? (payload.rows || payload.cashItems || payload.items || payload.records || payload.data)
+      : null;
+  if (!Array.isArray(records) || records.length === 0) {
+    fail(400, 'VALIDATION_ERROR', 'JSON file must contain a non-empty array of records');
+  }
+  if (records.length > 500) fail(400, 'VALIDATION_ERROR', 'Maximum 500 data rows per file');
+  if (records.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+    fail(400, 'VALIDATION_ERROR', 'Each JSON record must be an object');
+  }
+  const headers = [...new Set(records.flatMap(item => Object.keys(item).map(key => String(key).trim())))];
+  if (!headers.length || headers.some(value => !value)) {
+    fail(400, 'VALIDATION_ERROR', 'Headers must be unique and non-empty');
+  }
+  return {
+    type: 'json',
+    headers,
+    rawRows: records.map((item, index) => ({
+      rowNumber: index + 2,
+      values: Object.fromEntries(headers.map(header => {
+        const value = item[header];
+        return [header, value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value).trim()];
+      })),
+    })),
+  };
+}
+
 export async function parseUpload(file) {
-  const type = file.originalname.toLowerCase().endsWith('.csv') ? 'csv' : file.originalname.toLowerCase().endsWith('.xlsx') ? 'xlsx' : null;
-  if (!type) fail(400, 'VALIDATION_ERROR', 'Upload a CSV or XLSX file');
+  const lower = file.originalname.toLowerCase();
+  const type = lower.endsWith('.csv') ? 'csv' : lower.endsWith('.xlsx') ? 'xlsx' : lower.endsWith('.json') ? 'json' : null;
+  if (!type) fail(400, 'VALIDATION_ERROR', 'Upload a CSV, XLSX, or JSON file');
+  if (type === 'json') return parseJsonRows(file.buffer);
   let rows;
   if (type === 'csv') {
     const parsed = Papa.parse(file.buffer.toString('utf8').replace(/^\uFEFF/, ''), { skipEmptyLines: 'greedy' });
@@ -28,13 +63,21 @@ export async function parseUpload(file) {
 }
 
 const aliases = {
-  externalId: ['invoice id', 'bill id', 'external id'], counterparty: ['customer', 'supplier', 'counterparty'],
-  amountInr: ['amount inr', 'amount'], settledInr: ['settled inr', 'settled'],
-  dueDate: ['due date'], expectedDate: ['expected date'], status: ['status'],
-  mandatory: ['mandatory'], negotiable: ['negotiable'], discretionary: ['discretionary'],
-  maxExtensionDays: ['max extension days'], earliestCollectionDate: ['earliest collection date'],
-  maxEarlyCollectionInr: ['max early collection inr'], estimatedActionCostInr: ['estimated action cost inr'],
-  actionCostDate: ['action cost date', 'fee payment date'],
+  externalId: ['invoice id', 'bill id', 'external id', 'externalid', 'invoiceid'],
+  counterparty: ['customer', 'supplier', 'counterparty', 'party'],
+  amountInr: ['amount inr', 'amount', 'amountinr'],
+  settledInr: ['settled inr', 'settled', 'settledinr'],
+  dueDate: ['due date', 'duedate'],
+  expectedDate: ['expected date', 'expecteddate'],
+  status: ['status'],
+  mandatory: ['mandatory'],
+  negotiable: ['negotiable'],
+  discretionary: ['discretionary'],
+  maxExtensionDays: ['max extension days', 'maxextensiondays'],
+  earliestCollectionDate: ['earliest collection date', 'earliestcollectiondate'],
+  maxEarlyCollectionInr: ['max early collection inr', 'maxearlycollectioninr'],
+  estimatedActionCostInr: ['estimated action cost inr', 'estimatedactioncostinr'],
+  actionCostDate: ['action cost date', 'fee payment date', 'actioncostdate'],
 };
 
 export function suggestMapping(headers) {

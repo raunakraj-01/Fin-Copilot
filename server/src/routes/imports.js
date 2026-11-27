@@ -33,7 +33,7 @@ router.post('/inspect', upload.single('file'), asyncRoute(async (req, res) => {
   const parsed = await parseUpload(req.file);
   const mapping = suggestMapping(parsed.headers);
   const batch = await ImportBatch.create({ workspaceId: req.params.workspaceId, fileName: req.file.originalname,
-    fileType: parsed.type, kind, sourceSystem: parsed.type === 'csv' ? 'csv' : 'excel',
+    fileType: parsed.type, kind, sourceSystem: parsed.type === 'xlsx' ? 'excel' : 'csv',
     headers: parsed.headers, rawRows: parsed.rawRows, mapping,
     counts: { accepted: 0, needsReview: 0, rejected: 0, committed: 0 } });
   res.status(201).json({ batchId: String(batch._id), headers: parsed.headers, sampleRows: parsed.rawRows.slice(0, 5), suggestedMapping: mapping });
