@@ -80,7 +80,8 @@ app.get('/api/readyz', publicLimiter, async (_req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
-    res.status(503).json({ status: 'error', message: err.message });
+    console.error('[ReadinessCheck] Error checking readiness:', err);
+    res.status(503).json({ status: 'error', error: 'Service not ready' });
   }
 });
 app.use('/api/auth', auth);
@@ -113,7 +114,7 @@ app.use('/api/capture-automation', captureAutomation);
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
 if (process.env.NODE_ENV === 'production' || existsSync(path.join(dist, 'index.html'))) {
   app.use(express.static(dist));
-  app.get(/^(?!\/api\/).*/, publicLimiter, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+  app.get(/^(?!\/api\/).*/, publicLimiter, (_req, res, next) => res.sendFile(path.join(dist, 'index.html'), err => { if (err) next(err); }));
 }
 
 app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }));
