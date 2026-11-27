@@ -68,14 +68,16 @@ router.post('/payment-link', asyncRoute(async (req, res) => {
         customer: { name: item.counterparty, contact: `+${data.phone}` }, notify: { sms: false, email: false },
         expire_by: Math.floor(Date.parse(`${data.settleBy}T23:59:59+05:30`) / 1000) }),
     });
-  } catch {
+  } catch (error) {
+    console.error('[Offers] Razorpay payment link request error:', error);
     await PaymentOffer.deleteOne({ _id: offer._id, status: 'creating' });
     fail(502, 'PAYMENT_LINK_FAILED', 'Could not reach Razorpay to create the payment link');
   }
   const link = await response.json().catch(() => ({}));
   if (!response.ok || !/^plink_[A-Za-z0-9]+$/.test(link.id || '') || !/^https:\/\//.test(link.short_url || '')) {
+    console.error('[Offers] Razorpay rejected payment link creation:', link.error || response.status);
     await PaymentOffer.deleteOne({ _id: offer._id, status: 'creating' });
-    fail(502, 'PAYMENT_LINK_FAILED', link.error?.description || 'Razorpay did not create a valid payment link');
+    fail(502, 'PAYMENT_LINK_FAILED', 'Razorpay did not create a valid payment link');
   }
   offer.gatewayLinkId = link.id; offer.paymentUrl = link.short_url; offer.status = 'created'; await offer.save();
   res.status(201).json({ id: String(offer._id), paymentUrl: offer.paymentUrl, status: offer.status,

@@ -176,10 +176,10 @@ export async function startTelegramCopilot() {
             await sendTelegramMessage(chatId, replyBody);
             console.log(`[TelegramCopilot] Replied to ${senderName}`);
           } catch (err) {
-            console.error('[TelegramCopilot] Error answering query:', err.message);
+            console.error('[TelegramCopilot] Error answering query:', err);
             await sendTelegramMessage(
               chatId,
-              `⚠️ Error analyzing financial data: ${err.message}`
+              '⚠️ Unable to analyze your financial data right now. Please try again shortly.'
             );
           }
         }

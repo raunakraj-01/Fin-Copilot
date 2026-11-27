@@ -10,8 +10,10 @@ export function persistenceHandler(operation, dependencies = {}) {
       validateId(req.params.workspaceId, 'workspaceId');
       await operation(req, res);
     } catch (error) {
-      if (error.status === 409) return res.status(409).json({ error: { code: error.code || 'CONFLICT', message: error.message } });
       if (error instanceof DecisionValidationError) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.message, details: error.details } });
+      if (error?.status === 409 && error?.isOperational !== false && !error?.name?.startsWith('Mongo')) {
+        return res.status(409).json({ error: { code: error.code || 'CONFLICT', message: error.message } });
+      }
       (dependencies.logError ?? console.error)(error);
       res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not complete this request', details: [] } });
     }
