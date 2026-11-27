@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
 import { createXmlUpload, validateXmlMeta } from '../middleware/upload.js';
@@ -74,31 +75,46 @@ router.post('/tally-xml', upload.single('file'), asyncRoute(async (req, res) => 
     fail(400, 'VALIDATION_ERROR', 'No valid financial vouchers found in Tally XML');
   }
 
-  const batchId = crypto.randomUUID();
+  const batchId = randomUUID();
   const createdItems = [];
 
   for (const v of parsed.vouchers) {
     const key = {
       workspaceId: req.params.workspaceId,
-      externalId: v.externalId,
-    };
-
-    const doc = {
-      workspaceId: req.params.workspaceId,
       category: v.category,
-      counterparty: v.counterparty,
-      amountPaise: v.amountPaise,
-      settledPaise: 0,
-      status: 'open',
-      dueDate: v.dueDate,
-      expectedDate: v.expectedDate,
       sourceSystem: 'tally_export',
-      confidenceState: 'verified',
       externalId: v.externalId,
     };
 
-    const saved = await CashItem.findOneAndUpdate(key, { $set: doc }, { upsert: true, new: true });
-    createdItems.push(saved);
+    const existing = await CashItem.findOne(key);
+    if (existing) {
+      const settled = existing.settledPaise || 0;
+      if (settled > v.amountPaise) {
+        fail(409, 'CONFLICT', `Re-import for ${v.externalId} cannot reduce amount below settled balance`);
+      }
+      existing.counterparty = v.counterparty;
+      existing.amountPaise = v.amountPaise;
+      existing.dueDate = v.dueDate;
+      existing.expectedDate = v.expectedDate;
+      existing.confidenceState = 'verified';
+      if (existing.status !== 'cancelled') {
+        existing.status = settled >= v.amountPaise ? 'paid' : settled > 0 ? 'partial' : 'open';
+      }
+      await existing.save();
+      createdItems.push(existing);
+    } else {
+      const saved = await CashItem.create({
+        ...key,
+        counterparty: v.counterparty,
+        amountPaise: v.amountPaise,
+        settledPaise: 0,
+        status: 'open',
+        dueDate: v.dueDate,
+        expectedDate: v.expectedDate,
+        confidenceState: 'verified',
+      });
+      createdItems.push(saved);
+    }
   }
 
   await SyncBatch.create({

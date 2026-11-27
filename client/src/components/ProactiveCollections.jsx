@@ -1,4 +1,4 @@
-import { sessionFetch } from '../services/session.js';
+import { readJsonSafe, sessionFetch } from '../services/session.js';
 import React, { useEffect, useRef, useState } from 'react';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
@@ -19,8 +19,8 @@ export default function ProactiveCollections({ workspaceId, token, enabled }) {
     const response = await sessionFetch(`${base}/workspaces/${workspaceId}/followups${path}`, { method,
       headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}) });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error?.message || 'Could not load follow-ups');
+    const result = await readJsonSafe(response);
+    if (!response.ok) throw new Error(result?.error?.message || 'Could not load follow-ups');
     return result;
   }
   async function refresh() {

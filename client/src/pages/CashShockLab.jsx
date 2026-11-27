@@ -1,4 +1,4 @@
-import { sessionFetch } from '../services/session.js';
+import { readJsonSafe, sessionFetch } from '../services/session.js';
 import { t, useLanguage } from '../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
@@ -20,8 +20,8 @@ function Explanations({ workspaceId, apiBaseUrl, report }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
         body: JSON.stringify({ ...(report.counterparty ? { counterparty: report.counterparty } : {}), delayDays: report.delayDays, question }),
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error?.message || 'Could not explain this result');
+      const result = await readJsonSafe(response);
+      if (!response.ok) throw new Error(result?.error?.message || 'Could not explain this result');
       if (!controller.signal.aborted) setState({ busy: false, result, error: '' });
     } catch (error) {
       if (!controller.signal.aborted) setState({ busy: false, result: null, error: error.message });

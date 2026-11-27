@@ -1,4 +1,4 @@
-import { sessionFetch } from '../../services/session.js';
+import { readJsonSafe, sessionFetch } from '../../services/session.js';
 import { t, useLanguage } from '../../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { decisionApiBase, rupees } from './DecisionUI.jsx';
@@ -22,8 +22,8 @@ function ActionTracker({ action, outcome, planId, workspaceId, apiBaseUrl, onUpd
       const url = `${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/rescue/plans/${encodeURIComponent(planId)}/actions/${encodeURIComponent(action.actionId)}`;
       const response = await sessionFetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, ownerNotes: notes,
         ...(promiseId !== (action.promiseId || '') ? { promiseId: promiseId || null } : {}) }), signal: controller.signal });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || 'Could not update action');
+      const payload = await readJsonSafe(response);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Could not update action');
       if (!controller.signal.aborted) {
         setFeedback({ busy: false, error: '', message: 'Action updated. Current plan forecast recalculated. Record actual payments in cash records or Payment promises.' });
         onUpdated?.(payload);

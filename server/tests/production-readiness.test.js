@@ -7,6 +7,8 @@ import app from '../src/app.js';
 import { isAllowedOrigin } from '../src/services/auth.js';
 import { dispatchFollowupWebhook } from '../src/services/finance/followups.js';
 import { startTelegramCopilot } from '../src/services/ai/telegramCopilot.js';
+import { parseTallyXml } from '../src/services/imports/tallyXml.js';
+import { readJsonSafe } from '../../client/src/services/session.js';
 import Workspace from '../src/models/Workspace.js';
 import CashItem from '../src/models/CashItem.js';
 import CollectionFollowUp from '../src/models/CollectionFollowUp.js';
@@ -126,4 +128,70 @@ it('fails closed in Telegram Copilot when TELEGRAM_ALLOWED_CHAT_ID is empty', as
   const stop = await startTelegramCopilot();
   expect(typeof stop).toBe('function');
   expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+it('decodes XML entities and comma-formatted amounts in Tally XML and preserves settlements on re-import', async () => {
+  const xml = `<?xml version="1.0" encoding="utf-8"?>
+<ENVELOPE>
+  <BODY><IMPORTDATA><REQUESTDESC><STATICVARIABLES>
+    <SVCURRENTCOMPANY>Sharma &amp; Sons Co</SVCURRENTCOMPANY>
+  </STATICVARIABLES></REQUESTDESC><REQUESTDATA>
+    <TALLYMESSAGE>
+      <VOUCHER VCHTYPE="Sales" ACTION="Create">
+        <DATE>20261110</DATE>
+        <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
+        <VOUCHERNUMBER>V-1</VOUCHERNUMBER>
+        <NARRATION>INV-COMMA-1</NARRATION>
+        <ALLLEDGERENTRIES.LIST>
+          <LEDGERNAME>Alpha &amp; Beta Traders</LEDGERNAME>
+          <AMOUNT>1,00,000.50</AMOUNT>
+        </ALLLEDGERENTRIES.LIST>
+      </VOUCHER>
+    </TALLYMESSAGE>
+  </REQUESTDATA></IMPORTDATA></BODY>
+</ENVELOPE>`;
+
+  const parsed = parseTallyXml(xml);
+  expect(parsed.companyName).toBe('Sharma & Sons Co');
+  expect(parsed.vouchers[0].counterparty).toBe('Alpha & Beta Traders');
+  expect(parsed.vouchers[0].amountPaise).toBe(10_000_050);
+
+  const wsRes = await request(app).post('/api/workspaces').send({
+    name: 'Tally Reimport Test',
+    asOfDate: '2026-11-01',
+    openingCashPaise: 500_000,
+    minimumReservePaise: 0,
+  }).expect(201);
+  const wsId = wsRes.body.workspace.id;
+
+  await request(app).post(`/api/workspaces/${wsId}/automation/tally-xml`).send({ xml }).expect(201);
+
+  // Record partial settlement, then re-import same Tally XML
+  await CashItem.updateOne(
+    { workspaceId: wsId, externalId: 'INV-COMMA-1' },
+    { $set: { settledPaise: 4_000_000, status: 'partial' } },
+  );
+  await request(app).post(`/api/workspaces/${wsId}/automation/tally-xml`).send({ xml }).expect(201);
+
+  const itemAfterReimport = await CashItem.findOne({ workspaceId: wsId, externalId: 'INV-COMMA-1' });
+  expect(itemAfterReimport.settledPaise).toBe(4_000_000);
+  expect(itemAfterReimport.status).toBe('partial');
+
+  // Re-import reducing amount below settled balance must be rejected
+  const smallerXml = xml.replace('1,00,000.50', '10,000.00');
+  await request(app).post(`/api/workspaces/${wsId}/automation/tally-xml`).send({ xml: smallerXml }).expect(409);
+});
+
+it('handles non-JSON HTML reverse-proxy error responses gracefully in readJsonSafe', async () => {
+  const html502 = new Response('<html><body><h1>502 Bad Gateway</h1></body></html>', {
+    status: 502,
+    headers: { 'Content-Type': 'text/html' },
+  });
+  await expect(readJsonSafe(html502)).rejects.toThrow('Service temporarily unavailable (502)');
+
+  const jsonOk = new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+  await expect(readJsonSafe(jsonOk)).resolves.toEqual({ ok: true });
 });

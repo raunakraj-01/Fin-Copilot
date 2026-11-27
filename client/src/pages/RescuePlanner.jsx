@@ -1,4 +1,4 @@
-import { sessionFetch } from '../services/session.js';
+import { readJsonSafe, sessionFetch } from '../services/session.js';
 import { t, useLanguage } from '../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { CashChart, DailyTable, Metric, Notices, decisionApiBase, displayDate, rupees, useAnalysis } from './RescuePlanner/DecisionUI.jsx';
@@ -31,8 +31,8 @@ export default function RescuePlanner({ workspaceId, apiBaseUrl, onOpenOffer }) 
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ objective, actions: plan.actions }), signal: controller.signal,
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || 'Could not save this plan');
+      const payload = await readJsonSafe(response);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Could not save this plan');
       if (!controller.signal.aborted) {
         setSaveState({ planId: plan.planId, busy: false, message: 'Plan saved as a proposal. Cash records were not changed.', error: '' });
         setSavedVersion(value => value + 1);

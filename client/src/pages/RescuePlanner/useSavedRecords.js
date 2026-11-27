@@ -1,4 +1,4 @@
-import { sessionFetch } from '../../services/session.js';
+import { readJsonSafe, sessionFetch } from '../../services/session.js';
 import { useEffect, useRef, useState } from 'react';
 import { decisionApiBase } from './DecisionUI.jsx';
 
@@ -12,9 +12,9 @@ export function useSavedRecords(workspaceId, apiBaseUrl, path, collection, reloa
     setState(previous => background === true ? { ...previous, loading: true, error: '' } : { records: null, loading: true, error: '' });
     try {
       const response = await sessionFetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/${path}`, { signal: controller.signal });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || 'Could not load saved records');
-      if (!Array.isArray(payload[collection])) throw new Error('The server returned an incomplete list');
+      const payload = await readJsonSafe(response);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Could not load saved records');
+      if (!Array.isArray(payload?.[collection])) throw new Error('The server returned an incomplete list');
       if (!controller.signal.aborted) setState({ records: payload[collection], loading: false, error: '' });
     } catch (error) {
       if (!controller.signal.aborted) setState({ records: null, loading: false, error: error.message });
