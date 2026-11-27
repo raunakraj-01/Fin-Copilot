@@ -1,10 +1,44 @@
 import Papa from 'papaparse';
 import { readSheet } from 'read-excel-file/node';
 import { fail } from '../../utils/http.js';
+import { validateLedgerMeta } from '../../middleware/upload.js';
+
+const XLSX_MAGIC = [0x50, 0x4b, 0x03, 0x04];
+const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+
+function hasXlsxMagic(buffer) {
+  return buffer.length >= 4 && XLSX_MAGIC.every((byte, i) => buffer[i] === byte);
+}
+
+function decodeStrictCsvText(buffer) {
+  if (buffer.includes(0x00)) {
+    fail(400, 'VALIDATION_ERROR', 'CSV file contains binary null bytes');
+  }
+  let text;
+  try {
+    text = utf8Decoder.decode(buffer).replace(/^\uFEFF/, '');
+  } catch {
+    fail(400, 'VALIDATION_ERROR', 'CSV file must contain valid UTF-8 text');
+  }
+  const trimmed = text.trimStart().toLowerCase();
+  if (trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.startsWith('<script') || trimmed.startsWith('%pdf-')) {
+    fail(400, 'VALIDATION_ERROR', 'Invalid CSV file content');
+  }
+  return text;
+}
 
 function parseJsonRows(buffer) {
+  if (buffer.includes(0x00)) {
+    fail(400, 'VALIDATION_ERROR', 'JSON file contains binary null bytes');
+  }
+  let text;
+  try {
+    text = utf8Decoder.decode(buffer).replace(/^\uFEFF/, '');
+  } catch {
+    fail(400, 'VALIDATION_ERROR', 'JSON file must contain valid UTF-8 text');
+  }
   let payload;
-  try { payload = JSON.parse(buffer.toString('utf8').replace(/^\uFEFF/, '')); }
+  try { payload = JSON.parse(text); }
   catch { fail(400, 'VALIDATION_ERROR', 'Invalid JSON file'); }
   const records = Array.isArray(payload)
     ? payload
@@ -36,16 +70,21 @@ function parseJsonRows(buffer) {
 }
 
 export async function parseUpload(file) {
-  const lower = file.originalname.toLowerCase();
-  const type = lower.endsWith('.csv') ? 'csv' : lower.endsWith('.xlsx') ? 'xlsx' : lower.endsWith('.json') ? 'json' : null;
-  if (!type) fail(400, 'VALIDATION_ERROR', 'Upload a CSV, XLSX, or JSON file');
+  if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
+    fail(400, 'VALIDATION_ERROR', 'Uploaded file is empty');
+  }
+  const type = validateLedgerMeta(file);
   if (type === 'json') return parseJsonRows(file.buffer);
   let rows;
   if (type === 'csv') {
-    const parsed = Papa.parse(file.buffer.toString('utf8').replace(/^\uFEFF/, ''), { skipEmptyLines: 'greedy' });
+    const csvText = decodeStrictCsvText(file.buffer);
+    const parsed = Papa.parse(csvText, { skipEmptyLines: 'greedy' });
     if (parsed.errors.length) fail(400, 'VALIDATION_ERROR', `CSV parse error: ${parsed.errors[0].message}`);
     rows = parsed.data;
   } else {
+    if (!hasXlsxMagic(file.buffer)) {
+      fail(400, 'VALIDATION_ERROR', 'Invalid XLSX file signature');
+    }
     try { rows = await readSheet(file.buffer); }
     catch { fail(400, 'VALIDATION_ERROR', 'Invalid XLSX file'); }
     rows = rows.filter(row => row.some(value => value != null && value !== '')).map(row => row.map(value => {

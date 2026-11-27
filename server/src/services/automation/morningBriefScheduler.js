@@ -65,9 +65,13 @@ export function startMorningBriefScheduler() {
       console.log(`[MorningBrief] ${date} | Workspace ${wsId} | ${brief.workspaceName || wsId}`);
       console.log(brief.whatsappText);
 
-      // Webhook delivery (gated)
+      // Webhook delivery (gated & pinned to a single workspace to avoid cross-tenant broadcast)
       const webhookUrl = process.env.MORNING_BRIEF_WEBHOOK_URL;
-      if (morningBriefEnabled() && webhookUrl) {
+      const pinnedWorkspaceId = process.env.MORNING_BRIEF_WORKSPACE_ID;
+      const singleTenantSafe = Boolean(pinnedWorkspaceId) || (process.env.NODE_ENV !== 'production' && workspaces.length <= 1);
+      if (morningBriefEnabled() && webhookUrl && !singleTenantSafe) {
+        console.warn('[MorningBrief] Skipping global MORNING_BRIEF_WEBHOOK_URL in multi-tenant mode without MORNING_BRIEF_WORKSPACE_ID.');
+      } else if (morningBriefEnabled() && webhookUrl) {
         const payload = { ...brief, workspaceId: wsId };
         try {
           const res = await fetch(webhookUrl, {

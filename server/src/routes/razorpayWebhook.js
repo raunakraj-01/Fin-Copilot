@@ -24,7 +24,7 @@ router.post('/', asyncRoute(async (req, res) => {
   const offer = await PaymentOffer.findOne({ gatewayLinkId: link.id, referenceId: link.reference_id });
   if (!offer || link.amount !== offer.buyerPaysPaise || link.amount_paid !== offer.buyerPaysPaise) fail(409, 'PAYMENT_MISMATCH', 'Payment link does not match offer');
   const { RAZORPAY_KEY_ID: key, RAZORPAY_KEY_SECRET: apiSecret } = process.env;
-  if (!key?.startsWith('rzp_test_') || !apiSecret) fail(503, 'PAYMENTS_UNAVAILABLE', 'Razorpay test credentials are unavailable');
+  if (!/^rzp_(?:test|live)_/.test(key || '') || !apiSecret) fail(503, 'PAYMENTS_UNAVAILABLE', 'Razorpay credentials are unavailable');
   let verified;
   try {
     const response = await fetch(`https://api.razorpay.com/v1/payment_links/${offer.gatewayLinkId}`, {

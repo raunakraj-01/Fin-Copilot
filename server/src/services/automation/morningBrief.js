@@ -7,6 +7,7 @@
 import { buildForecast } from '../finance/forecast.js';
 import { recommendCollections, rupees } from '../finance/followups.js';
 import { loadDecisionContext } from '../rescue/decisionContext.js';
+import { clientOrigin } from '../auth.js';
 
 export function formatIndianCurrency(amountPaise) {
   const inr = (amountPaise || 0) / 100;
@@ -87,7 +88,7 @@ export async function generateMorningBrief(workspaceId, asOfDate = new Date().to
   }
 
   lines.push(``);
-  lines.push(`👉 *Live Risk Center:* http://localhost:5000/cash-outlook`);
+  lines.push(`👉 *Live Risk Center:* ${clientOrigin().replace(/\/$/, '')}/cash-outlook`);
 
   const whatsappText = lines.join('\n');
   const encodedWhatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;

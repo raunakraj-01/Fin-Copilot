@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
-import multer from 'multer';
 import { z } from 'zod';
 import BankTransaction from '../models/BankTransaction.js';
 import ImportBatch from '../models/ImportBatch.js';
 import CashItem from '../models/CashItem.js';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
+import { createSpreadsheetUpload, safeUploadFilename } from '../middleware/upload.js';
 import { parseUpload } from '../services/imports/parse.js';
 import { canonicalId, digest } from '../services/imports/identity.js';
 import { bankFields, bankMapping, normalizeBankRows, availablePaise, availableDebitPaise, matchingSuggestions } from '../services/imports/bank.js';
@@ -13,7 +13,7 @@ import { matchBankCredit, matchBankDebit } from '../services/finance/bankMatchin
 import { itemPromiseStates } from '../services/finance/promises.js';
 
 const router = Router({ mergeParams: true });
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
+const upload = createSpreadsheetUpload(2 * 1024 * 1024);
 const mappingInput = z.object({ mapping: z.record(z.string(), z.string()).refine(m => Object.keys(m).every(k => bankFields.includes(k))) }).strict();
 const commitInput = z.object({ corrections: z.array(z.object({ rowNumber: z.number().int().min(2), values: z.record(z.string(), z.string()).refine(v => Object.keys(v).every(k => bankFields.includes(k))) }).strict()).default([]),
   excludedRowNumbers: z.array(z.number().int().min(2)).default([]) }).strict();
@@ -31,7 +31,7 @@ router.post('/imports/inspect', upload.single('file'), asyncRoute(async (req, re
   if (!req.file) fail(400, 'VALIDATION_ERROR', 'File is required');
   const parsed = await parseUpload(req.file); const mapping = bankMapping(parsed.headers);
   const batch = await ImportBatch.create({ workspaceId: req.params.workspaceId, kind: 'bank', accountKey,
-    fileName: req.file.originalname, fileType: parsed.type, sourceSystem: parsed.type === 'csv' ? 'csv' : 'excel',
+    fileName: safeUploadFilename(req.file.originalname), fileType: parsed.type, sourceSystem: parsed.type === 'csv' ? 'csv' : 'excel',
     headers: parsed.headers, rawRows: parsed.rawRows, mapping });
   res.status(201).json({ batchId: String(batch._id), headers: parsed.headers, suggestedMapping: mapping });
 }));

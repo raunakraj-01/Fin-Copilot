@@ -28,8 +28,8 @@ export default function CapstoneDefenseModal({ onClose }) {
             ['problem', '1. Macroeconomic Moat'],
             ['architecture', '2. Enterprise SRE Architecture'],
             ['algorithms', '3. Mathematical Formalism'],
-            ['verification', '4. Automated Resilience (234 Tests)'],
-            ['innovations', '5. Proprietary Algorithms & IP'],
+            ['verification', '4. Automated Resilience'],
+            ['innovations', '5. Proprietary Capabilities'],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -84,13 +84,13 @@ export default function CapstoneDefenseModal({ onClose }) {
                 <h4>Component Hierarchy & Data Flow</h4>
                 <div className="code-architecture-box">
                   <code>
-                    [ React 19 Client SPA ] &lt;=== Vite Proxy / Vercel Edge ===&gt; [ Vercel Serverless Function (api/index.js) ]<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br />
-                    [ Recharts Area / Scatter ] &lt;--- JSON REST API &lt;--- [ Express 4 Middleware Pipeline ]<br />
+                    [ React 19 Client SPA ] &lt;=== HTTPS / Same-Origin Proxy ===&gt; [ Express 4 Docker Runtime (server/src) ]<br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br />
+                    [ Recharts Area / Scatter ] &lt;--- JSON REST API &lt;--- [ Auth, CSRF, Rate Limit &amp; Validation Pipeline ]<br />
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br />
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br />
-                    [ In-Memory Client Simulator ] &lt;=================== [ Mongoose 8.x + Cached Connection Pool ]<br />
+                    [ In-Memory Client Simulator ] &lt;=================== [ Mongoose 8.x + Connection Pool ]<br />
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br />
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br />
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ MongoDB Multi-Tenant Store ]
@@ -98,16 +98,16 @@ export default function CapstoneDefenseModal({ onClose }) {
                 </div>
                 <div className="defense-grid-3" style={{ marginTop: 16 }}>
                   <div>
-                    <strong>Stateless Serverless Handlers</strong>
-                    <p>api/index.js with connection caching reuses MongoDB sockets across cold/warm starts.</p>
+                    <strong>Production Docker Runtime</strong>
+                    <p>Multi-stage non-root Node 22 container with graceful shutdown, `/api/healthz`, and `/api/readyz` probes.</p>
                   </div>
                   <div>
                     <strong>Multi-Tenant Workspace Security</strong>
                     <p>All queries scoped to workspaceId with strict business-level role-based authorization.</p>
                   </div>
                   <div>
-                    <strong>CSRF & Dynamic Origin Validator</strong>
-                    <p>HMAC-SHA256 CSRF tokens and Vercel preview domain wildcard matching.</p>
+                    <strong>CSRF &amp; Strict Origin Validator</strong>
+                    <p>HMAC-SHA256 CSRF tokens, __Host- cookies, and explicit ALLOWED_ORIGINS matching.</p>
                   </div>
                 </div>
               </div>
@@ -177,20 +177,20 @@ export default function CapstoneDefenseModal({ onClose }) {
               <div className="defense-info-card">
                 <div className="test-stat-bar">
                   <div className="test-stat">
-                    <strong>41 Test Files</strong>
-                    <span>Vitest Test Suites</span>
+                    <strong>Vitest Suites</strong>
+                    <span>API, Finance &amp; UI</span>
                   </div>
                   <div className="test-stat">
-                    <strong>234 Passed Tests</strong>
-                    <span>100% Pass Rate</span>
+                    <strong>Isolated DB</strong>
+                    <span>In-Memory MongoDB</span>
                   </div>
                   <div className="test-stat">
-                    <strong>0 Failures</strong>
-                    <span>Zero Hallucinations</span>
+                    <strong>Strict Auth</strong>
+                    <span>Rate Limit &amp; RBAC</span>
                   </div>
                   <div className="test-stat">
-                    <strong>&lt; 18.5s</strong>
-                    <span>Full Suite Execution</span>
+                    <strong>Upload Checks</strong>
+                    <span>Magic Byte &amp; XXE</span>
                   </div>
                 </div>
 
@@ -246,9 +246,9 @@ export default function CapstoneDefenseModal({ onClose }) {
                 </div>
 
                 <div className="defense-info-card">
-                  <h4>6. Vercel Serverless Ready</h4>
+                  <h4>6. Containerized Cloud Deployment</h4>
                   <p>
-                    Production deployment architecture with connection pooling, npm workspaces, and dynamic CORS origin validation.
+                    Production Docker packaging with Mongoose connection pooling, npm workspaces, CSP/HSTS headers, and strict origin allowlisting.
                   </p>
                 </div>
               </div>

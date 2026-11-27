@@ -45,6 +45,13 @@ app.use((_req, res, next) => {
   res.set('X-DNS-Prefetch-Control', 'off');
   res.set('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), usb=()');
   res.set('Cross-Origin-Opener-Policy', 'same-origin');
+  res.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  );
+  if (process.env.NODE_ENV === 'production') {
+    res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 app.use((req, res, next) => cors({
@@ -120,7 +127,7 @@ if (process.env.NODE_ENV === 'production' || existsSync(path.join(dist, 'index.h
 app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }));
 app.use((err, _req, res, next) => {
   if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: { code: 'UPLOAD_TOO_LARGE', message: 'Maximum file size is 2 MB' } });
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: { code: 'UPLOAD_TOO_LARGE', message: 'Uploaded file exceeds the maximum allowed size' } });
     return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid upload' } });
   }
   next(err);

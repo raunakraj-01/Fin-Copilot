@@ -5,7 +5,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
       },
     },
@@ -13,8 +13,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-recharts': ['recharts'],
+        manualChunks(id) {
+          if (id.includes('/node_modules/recharts/')) return 'vendor-recharts';
+          if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/') || id.includes('/node_modules/scheduler/')) {
+            return 'vendor-react';
+          }
+          return undefined;
         },
       },
     },

@@ -41,6 +41,79 @@ const navSections = [
 ];
 const pageFromPath = pathname => Object.entries(pages).find(([, page]) => page[3] === pathname)?.[0];
 
+const formatInr = paise => `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round((paise || 0) / 100))}`;
+
+function deriveRiskAlerts(forecast) {
+  if (!forecast) return [];
+  const alerts = [];
+  const worstCash = forecast.risk?.worstCashPaise;
+  const reserve = forecast.minimumReservePaise ?? 0;
+  if (forecast.risk?.firstNegativeDate) {
+    alerts.push({
+      id: 'cash-shortfall',
+      level: 'danger',
+      title: 'Projected Cash Shortfall',
+      detail: `Cash turns negative on ${forecast.risk.firstNegativeDate} (low ${formatInr(worstCash)})`,
+      target: 'rescue',
+    });
+  } else if (typeof worstCash === 'number' && worstCash < reserve) {
+    alerts.push({
+      id: 'reserve-breach',
+      level: 'warning',
+      title: 'Safety Reserve Breach',
+      detail: `Lowest forecast ${formatInr(worstCash)} falls below ${formatInr(reserve)} reserve`,
+      target: 'rescue',
+    });
+  }
+
+  const issueCount = forecast.unresolvedIssues?.totalCount ?? forecast.warnings?.length ?? 0;
+  if (issueCount > 0) {
+    alerts.push({
+      id: 'unresolved-issues',
+      level: 'warning',
+      title: 'Records Need Review',
+      detail: `${issueCount} open item(s) need expected dates or verification`,
+      target: 'setup',
+    });
+  }
+
+  if (forecast.dataFreshness?.stale) {
+    alerts.push({
+      id: 'stale-snapshot',
+      level: 'warning',
+      title: 'Ledger Snapshot Stale',
+      detail: `Last updated ${forecast.dataFreshness.staleDays} day(s) ago`,
+      target: 'setup',
+    });
+  }
+  return alerts;
+}
+
+class DashboardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error) {
+    console.error('[UIErrorBoundary]', error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section className="card" role="alert">
+          <h2>Something went wrong rendering this view</h2>
+          <p>Your ledger data is safe on the server. Try reloading this view or switching pages.</p>
+          <button type="button" onClick={() => this.setState({ hasError: false })}>Retry view</button>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const icons = {
   setup: <><path d="M4 6h16M7 12h10M10 18h4"/><circle cx="7" cy="6" r="1"/><circle cx="17" cy="12" r="1"/><circle cx="10" cy="18" r="1"/></>,
   outlook: <><path d="M4 19V5M4 19h16"/><path d="m7 15 4-4 3 2 5-6"/></>,
@@ -67,6 +140,7 @@ function BusinessApp({ user, onLogout }) {
   const [workspaceId, setWorkspaceId] = useState('');
   const [profiles, setProfiles] = useState([]);
   const [accessError, setAccessError] = useState('');
+  const [riskAlerts, setRiskAlerts] = useState([]);
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -103,6 +177,14 @@ function BusinessApp({ user, onLogout }) {
     refresh(); window.addEventListener('focus', refresh);
     return () => { active = false; window.removeEventListener('focus', refresh); };
   }, [user.id]);
+  useEffect(() => {
+    if (!workspaceId) { setRiskAlerts([]); return undefined; }
+    let active = true;
+    api(`/workspaces/${workspaceId}/forecast`)
+      .then(data => { if (active) setRiskAlerts(deriveRiskAlerts(data)); })
+      .catch(() => { if (active) setRiskAlerts([]); });
+    return () => { active = false; };
+  }, [workspaceId, page]);
   useEffect(() => {
     if (window.location.pathname === '/' || !pageFromPath(window.location.pathname))
       window.history.replaceState(null, '', pages.outlook[3]);
@@ -194,34 +276,39 @@ function BusinessApp({ user, onLogout }) {
               className={`kavach-icon-btn ${showNotifications ? 'active' : ''}`}
               onClick={() => setShowNotifications(v => !v)}
               aria-label="Risk alerts"
-              title="2 Risk Alerts Active"
+              title={riskAlerts.length ? `${riskAlerts.length} Risk Alert(s) Active` : 'No active risk alerts'}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
-              <span className="bell-badge-dot"></span>
+              {riskAlerts.length > 0 && <span className="bell-badge-dot"></span>}
             </button>
             {showNotifications && (
               <div className="kavach-popover-menu kavach-notifications-menu" role="dialog" aria-label="Risk notifications">
                 <div className="popover-header">
                   <strong>Risk Alerts</strong>
-                  <span className="badge-count">2 Active</span>
+                  <span className="badge-count">{riskAlerts.length} Active</span>
                 </div>
-                <div className="popover-item" onClick={() => { navigate('rescue'); setShowNotifications(false); }}>
-                  <span className="alert-dot danger"></span>
-                  <div>
-                    <strong>Delayed Receivables</strong>
-                    <p>₹2,14,700 flagged past standard cycle</p>
+                {riskAlerts.length === 0 ? (
+                  <div className="popover-item" onClick={() => { navigate('outlook'); setShowNotifications(false); }}>
+                    <span className="alert-dot"></span>
+                    <div>
+                      <strong>All clear</strong>
+                      <p>{workspaceId ? 'No active cash shortfalls or unverified alerts' : 'Select or create a workspace to monitor alerts'}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="popover-item" onClick={() => { navigate('outlook'); setShowNotifications(false); }}>
-                  <span className="alert-dot warning"></span>
-                  <div>
-                    <strong>Section 43B(h) Payables</strong>
-                    <p>Statutory 45-day threshold monitored</p>
-                  </div>
-                </div>
+                ) : (
+                  riskAlerts.map(alert => (
+                    <div key={alert.id} className="popover-item" onClick={() => { navigate(alert.target); setShowNotifications(false); }}>
+                      <span className={`alert-dot ${alert.level}`}></span>
+                      <div>
+                        <strong>{alert.title}</strong>
+                        <p>{alert.detail}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -230,7 +317,7 @@ function BusinessApp({ user, onLogout }) {
             <span className="sr-only">Business</span>
             <select aria-label="Supplier profile" title={profiles.find(profile => profile.id === workspaceId)?.name || 'Switch supplier business profile'} value={workspaceId} onChange={event => selectWorkspace(event.target.value)} className="kavach-pill-select kavach-business-select">
               <option value="">Select business</option>
-              {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+              {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}
             </select>
           </label>
 
@@ -287,25 +374,27 @@ function BusinessApp({ user, onLogout }) {
 
     <main className="content">
       {accessError && <p role="alert">{accessError}</p>}
-      <Page
-        key={`${page}:${workspaceId}`}
-        workspaceId={workspaceId}
-        workspaceName={profiles.find(p => p.id === workspaceId)?.name}
-        businessRole={profiles.find(p => p.id === workspaceId)?.role}
-        user={user}
-        onWorkspaceCreated={selectWorkspace}
-        onNavigate={navigate}
-        orderDraft={capturedOrderDraft}
-        onOrderDraftConsumed={() => setCapturedOrderDraft(null)}
-        promiseDraft={capturedPromiseDraft}
-        onPromiseDraftConsumed={() => setCapturedPromiseDraft(null)}
-        onCaptureApproved={action => {
-          if (action?.type === 'order_analysis_draft') { setCapturedOrderDraft(action); navigate('orders'); }
-          if (action?.type === 'payment_promise_draft') { setCapturedPromiseDraft(action); navigate('outlook'); }
-        }}
-        operationsItemId={operationsItemId}
-        onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }}
-      />
+      <DashboardErrorBoundary key={`boundary:${page}:${workspaceId}`}>
+        <Page
+          key={`${page}:${workspaceId}`}
+          workspaceId={workspaceId}
+          workspaceName={profiles.find(p => p.id === workspaceId)?.name}
+          businessRole={profiles.find(p => p.id === workspaceId)?.role}
+          user={user}
+          onWorkspaceCreated={selectWorkspace}
+          onNavigate={navigate}
+          orderDraft={capturedOrderDraft}
+          onOrderDraftConsumed={() => setCapturedOrderDraft(null)}
+          promiseDraft={capturedPromiseDraft}
+          onPromiseDraftConsumed={() => setCapturedPromiseDraft(null)}
+          onCaptureApproved={action => {
+            if (action?.type === 'order_analysis_draft') { setCapturedOrderDraft(action); navigate('orders'); }
+            if (action?.type === 'payment_promise_draft') { setCapturedPromiseDraft(action); navigate('outlook'); }
+          }}
+          operationsItemId={operationsItemId}
+          onOpenOffer={action => { setOperationsItemId(action); navigate('operations'); }}
+        />
+      </DashboardErrorBoundary>
     </main>
 
     <nav className="mobile-bottom-nav no-print" aria-label="Mobile Navigation">

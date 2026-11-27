@@ -9,6 +9,7 @@ export const chatInput = z.object({
 });
 
 const sessions = new Map();
+const MAX_COPILOT_SESSIONS = 1000;
 const ttl = 10 * 60 * 1000;
 const money = value => `${value < 0 ? '−' : ''}₹${new Intl.NumberFormat('en-IN').format(Math.floor(Math.abs(value) / 100))}.${String(Math.abs(value) % 100).padStart(2, '0')}`;
 const days = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
@@ -281,6 +282,10 @@ CFO RESPONSE (Direct, natural, complete, and practical):`;
     }
   }
 
+  if (sessions.size >= MAX_COPILOT_SESSIONS && !sessions.has(key)) {
+    const oldestKey = sessions.keys().next().value;
+    if (oldestKey !== undefined) sessions.delete(oldestKey);
+  }
   sessions.set(key, {
     entity: named?.counterparty || entity || active?.entity,
     updatedAt: Date.now(),
