@@ -1,7 +1,7 @@
 import { t, useLanguage, setLanguage } from '../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import AuthGate from '../components/AuthGate.jsx';
-import { api } from '../services/api.js';
+import { api, json } from '../services/api.js';
 import SetupImport from '../pages/SetupImport.jsx';
 import Outlook from '../pages/Outlook.jsx';
 import RescuePlanner from '../pages/RescuePlanner.jsx';
@@ -141,6 +141,8 @@ function BusinessApp({ user, onLogout }) {
   const [profiles, setProfiles] = useState([]);
   const [accessError, setAccessError] = useState('');
   const [riskAlerts, setRiskAlerts] = useState([]);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoVersion, setDemoVersion] = useState(0);
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -184,7 +186,7 @@ function BusinessApp({ user, onLogout }) {
       .then(data => { if (active) setRiskAlerts(deriveRiskAlerts(data)); })
       .catch(() => { if (active) setRiskAlerts([]); });
     return () => { active = false; };
-  }, [workspaceId, page]);
+  }, [workspaceId, page, demoVersion]);
   useEffect(() => {
     if (window.location.pathname === '/' || !pageFromPath(window.location.pathname))
       window.history.replaceState(null, '', pages.outlook[3]);
@@ -213,6 +215,30 @@ function BusinessApp({ user, onLogout }) {
     const next = [...profiles.filter(item => item.id !== profile.id), profile];
     localStorage.setItem(`cashflowWorkspace:${user.id}`, profile.id);
     setProfiles(next); setWorkspaceId(profile.id);
+  };
+  const openDemoWorkspace = async (reset = false) => {
+    if (demoBusy) return;
+    setDemoBusy(true);
+    setAccessError('');
+    try {
+      const data = await json('/workspaces/demo', 'POST', reset ? { reset: true } : {});
+      if (data?.workspace) {
+        selectWorkspace(data.workspace);
+        if (reset) setDemoVersion(v => v + 1);
+        navigate('outlook');
+      }
+    } catch (error) {
+      setAccessError(error.message || 'Could not load demo workspace');
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+  const handleBusinessChange = value => {
+    if (value === '__try_demo__') {
+      openDemoWorkspace(false);
+      return;
+    }
+    selectWorkspace(value);
   };
   const toggleSidebar = () => setSidebarCollapsed(current => {
     const next = !current;
@@ -315,9 +341,10 @@ function BusinessApp({ user, onLogout }) {
 
           <label className="kavach-select-label" title={profiles.find(profile => profile.id === workspaceId)?.name || 'Switch supplier business profile'}>
             <span className="sr-only">Business</span>
-            <select aria-label="Supplier profile" title={profiles.find(profile => profile.id === workspaceId)?.name || 'Switch supplier business profile'} value={workspaceId} onChange={event => selectWorkspace(event.target.value)} className="kavach-pill-select kavach-business-select">
+            <select aria-label="Supplier profile" title={profiles.find(profile => profile.id === workspaceId)?.name || 'Switch supplier business profile'} value={workspaceId} disabled={demoBusy} onChange={event => handleBusinessChange(event.target.value)} className="kavach-pill-select kavach-business-select">
               <option value="">Select business</option>
               {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} · {profile.role}</option>)}
+              <option value="__try_demo__">{demoBusy ? t('Loading demo…') : t('Try our demo')}</option>
             </select>
           </label>
 
@@ -374,12 +401,15 @@ function BusinessApp({ user, onLogout }) {
 
     <main className="content">
       {accessError && <p role="alert">{accessError}</p>}
-      <DashboardErrorBoundary key={`boundary:${page}:${workspaceId}`}>
+      <DashboardErrorBoundary key={`boundary:${page}:${workspaceId}:${demoVersion}`}>
         <Page
-          key={`${page}:${workspaceId}`}
+          key={`${page}:${workspaceId}:${demoVersion}`}
           workspaceId={workspaceId}
           workspaceName={profiles.find(p => p.id === workspaceId)?.name}
           businessRole={profiles.find(p => p.id === workspaceId)?.role}
+          isDemo={profiles.find(p => p.id === workspaceId)?.isDemo === true}
+          onResetDemo={() => openDemoWorkspace(true)}
+          demoResetBusy={demoBusy}
           user={user}
           onWorkspaceCreated={selectWorkspace}
           onNavigate={navigate}
@@ -408,4 +438,5 @@ function BusinessApp({ user, onLogout }) {
     {showDefenseModal && <CapstoneDefenseModal onClose={() => setShowDefenseModal(false)} />}
   </div></>;
 }
+export { BusinessApp };
 export default function App() { return <AuthGate>{(user, logout) => <BusinessApp key={user.id} user={user} onLogout={logout} />}</AuthGate>; }

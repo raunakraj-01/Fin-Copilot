@@ -6,7 +6,7 @@ import { getRateLimitConfig } from './config/rateLimits.js';
 import { clientOrigin, isAllowedOrigin } from './services/auth.js';
 import express from 'express';
 import multer from 'multer';
-import workspaces from './routes/workspaces.js';
+import workspaces, { demoWorkspaceRoute } from './routes/workspaces.js';
 import imports from './routes/imports.js';
 import bank from './routes/bank.js';
 import items from './routes/items.js';
@@ -92,6 +92,7 @@ app.get('/api/readyz', publicLimiter, async (_req, res) => {
   }
 });
 app.use('/api/auth', auth);
+app.post('/api/workspaces/demo', ...demoWorkspaceRoute);
 app.use('/api/workspaces/:workspaceId', requireBusiness, auditBusinessRequest);
 app.use('/api/workspaces', workspaces);
 app.use('/api/workspaces/:workspaceId/imports', imports);

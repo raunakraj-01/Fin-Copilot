@@ -13,15 +13,25 @@ import { normalizeRows } from '../services/imports/normalize.js';
 import { workspaceCreate, workspacePatch } from '../validators/finance.js';
 import Workspace from '../models/Workspace.js';
 import { appendAudit } from '../services/audit.js';
+import { provisionDemoWorkspace } from '../services/demo/seedDemoWorkspace.js';
 
 const router = Router();
 const shape = workspace => ({ id: String(workspace._id), name: workspace.name, asOfDate: workspace.asOfDate,
   openingCashPaise: workspace.openingCashPaise, minimumReservePaise: workspace.minimumReservePaise,
-  businessGstin: workspace.businessGstin || '', sharePaymentTelemetry: workspace.sharePaymentTelemetry === true });
+  businessGstin: workspace.businessGstin || '', sharePaymentTelemetry: workspace.sharePaymentTelemetry === true,
+  isDemo: workspace.isDemo === true });
 router.get('/', requireSession, asyncRoute(async (req, res) => {
   const workspaces = await Workspace.find({ $or: [{ ownerUserId: req.user._id }, { 'members.userId': req.user._id }] }).sort({ createdAt: 1 });
   res.json({ workspaces: workspaces.map(w => ({ ...shape(w), role: String(w.ownerUserId) === String(req.user._id) ? 'owner' : 'accountant' })) });
 }));
+
+export const demoWorkspaceRoute = [requireSession, asyncRoute(async (req, res) => {
+  const { reset = false } = validate(z.object({ reset: z.boolean().optional() }).strict(), req.body ?? {});
+  const { workspace, created, reset: wasReset } = await provisionDemoWorkspace(req.user._id, { reset });
+  res.status(created ? 201 : 200).json({ workspace: { ...shape(workspace), role: 'owner' }, created, reset: wasReset });
+})];
+
+router.post('/demo', ...demoWorkspaceRoute);
 
 router.post('/', requireSession, asyncRoute(async (req, res) => {
   const workspace = await Workspace.create({ ...validate(workspaceCreate, req.body), ownerUserId: req.user._id });

@@ -22,10 +22,11 @@ function issuePrompt(issue) {
   return issue.message;
 }
 
-export default function SpendingCheck({ workspaceId, refreshKey, businessRole = 'owner', onNavigate, onDataResolved }) {
+export default function SpendingCheck({ workspaceId, refreshKey, businessRole = 'owner', isDemo = false, onNavigate, onDataResolved }) {
   const [horizon, setHorizon] = useState('30');
   const [delay, setDelay] = useState('7');
   const [confirmedFor, setConfirmedFor] = useState('');
+  const [demoDismissedFor, setDemoDismissedFor] = useState('');
   const [amount, setAmount] = useState('');
   const [requestAmount, setRequestAmount] = useState(0);
   const [response, setResponse] = useState(null);
@@ -39,7 +40,7 @@ export default function SpendingCheck({ workspaceId, refreshKey, businessRole = 
   const [version, setVersion] = useState(0);
 
   const confirmationKey = `${workspaceId}:${refreshKey}:${horizon}`;
-  const confirmed = confirmedFor === confirmationKey;
+  const confirmed = confirmedFor === confirmationKey || (isDemo && demoDismissedFor !== confirmationKey);
   const requestKey = `${confirmationKey}:${delay}:${confirmed}:${requestAmount}:${version}`;
   const result = response?.key === requestKey ? response.value : null;
 
@@ -203,7 +204,15 @@ export default function SpendingCheck({ workspaceId, refreshKey, businessRole = 
     </div>
 
     <div className="spending-confirm-box">
-      <label><input type="checkbox" checked={confirmed} onChange={e => setConfirmedFor(e.target.checked ? confirmationKey : '')} /> I included all wages, tax payments, supplier bills, loan payments and other commitments for this period.</label>
+      <label><input type="checkbox" checked={confirmed} onChange={e => {
+        if (e.target.checked) {
+          setConfirmedFor(confirmationKey);
+          setDemoDismissedFor('');
+        } else {
+          setConfirmedFor('');
+          if (isDemo) setDemoDismissedFor(confirmationKey);
+        }
+      }} /> I included all wages, tax payments, supplier bills, loan payments and other commitments for this period.</label>
       <p>Confirm that this cash snapshot includes all payments already received and all other commitments for the selected period.</p>
     </div>
 

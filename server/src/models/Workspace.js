@@ -11,6 +11,7 @@ const schema = new mongoose.Schema({
   minimumReservePaise: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
   currency: { type: String, default: 'INR', immutable: true },
   mode: { type: String, default: 'demo', immutable: true },
+  isDemo: { type: Boolean, default: false },
   businessGstin: { type: String, uppercase: true, trim: true,
     match: /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/ },
   sharePaymentTelemetry: { type: Boolean, default: false },

@@ -16,7 +16,7 @@ import { exportForecastToCsv, exportToTallyXml } from '../services/exportAudit.j
 const money = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR' }).format(value / 100);
 const compactMoney = value => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', notation: 'compact', maximumFractionDigits: 1 }).format(value / 100);
 
-export default function Outlook({ workspaceId, onNavigate, user, workspaceName, businessRole = 'owner', promiseDraft, onPromiseDraftConsumed }) {
+export default function Outlook({ workspaceId, onNavigate, user, workspaceName, businessRole = 'owner', isDemo = false, onResetDemo, demoResetBusy = false, promiseDraft, onPromiseDraftConsumed }) {
   useLanguage();
   const [forecast, setForecast] = useState(null);
   const [error, setError] = useState('');
@@ -88,6 +88,11 @@ export default function Outlook({ workspaceId, onNavigate, user, workspaceName, 
         <p>{workspaceName ? `${workspaceName}. ` : ''}{t('Prepared for')} {user?.name || t('your business')}</p>
       </div>
       <div className="outlook-heading-actions no-print">
+        {isDemo && onResetDemo && (
+          <button type="button" className="secondary" disabled={demoResetBusy} onClick={onResetDemo}>
+            {demoResetBusy ? t('Resetting demo…') : t('Reset demo data')}
+          </button>
+        )}
         <button type="button" onClick={() => onNavigate?.('orders')}>{t('Check a new buyer')}</button>
       </div>
     </header>
@@ -168,7 +173,7 @@ export default function Outlook({ workspaceId, onNavigate, user, workspaceName, 
       <p>{freshness.lastSuccessfulSyncAt ? `${t('Last successful Tally sync')}: ${new Date(freshness.lastSuccessfulSyncAt).toLocaleDateString(locale())}` : t('No successful Tally sync recorded')}</p>
     </section>
     <SpendingCheck key={`spending-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey}
-      businessRole={businessRole} onNavigate={onNavigate} onDataResolved={() => setForecastRefreshKey(value => value + 1)} />
+      businessRole={businessRole} isDemo={isDemo} onNavigate={onNavigate} onDataResolved={() => setForecastRefreshKey(value => value + 1)} />
     <PaymentPromises key={workspaceId} workspaceId={workspaceId} onChanged={() => setRefreshKey(value => value + 1)}
       initialDraft={promiseDraft} onDraftConsumed={onPromiseDraftConsumed} />
     {events.length === 0 && <p className="notice">{t("No future cash movements are scheduled. Add or import records on Setup & Import, and check any data warnings below.")}</p>}
