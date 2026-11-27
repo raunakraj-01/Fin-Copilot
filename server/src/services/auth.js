@@ -2,6 +2,8 @@ import { createHash, createHmac, randomBytes, scrypt, timingSafeEqual } from 'no
 import { promisify } from 'node:util';
 import AuthSession from '../models/AuthSession.js';
 import AuthAttempt from '../models/AuthAttempt.js';
+import { getRateLimitConfig } from '../config/rateLimits.js';
+import { setRateLimitHeaders } from '../middleware/rateLimit.js';
 import { fail } from '../utils/http.js';
 const derive = promisify(scrypt);
 const options = { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 };
@@ -61,14 +63,108 @@ export async function createSession(user, res) {
   res.cookie(cookieName(), token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', path: '/', maxAge: 8 * 60 * 60 * 1000 });
   return csrfToken(token);
 }
-export async function throttle(req, category, email = '') {
-  await AuthAttempt.init();
-  const bucket = Math.floor(Date.now() / (15 * 60000));
-  for (const [identity, limit] of [[`ip:${req.ip}`, category === 'register' ? 10 : 60], ...(email ? [[`email:${email}`, 12]] : [])]) {
-    const key = tokenHash(`${category}:${identity}:${bucket}`);
-    let attempt;
-    try { attempt = await AuthAttempt.findOneAndUpdate({ key }, { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date((bucket + 2) * 15 * 60000) } }, { upsert: true, new: true }); }
-    catch (error) { if (error.code !== 11000) throw error; attempt = await AuthAttempt.findOneAndUpdate({ key }, { $inc: { count: 1 } }, { new: true }); }
-    if (attempt.count > limit) fail(429, 'RATE_LIMITED', 'Too many attempts. Try again later.');
+function authTargets(req, category, email = '') {
+  const { auth } = getRateLimitConfig();
+  const ipLimit = auth.ipMax[category] ?? auth.ipMax.default;
+  const accountLimit = auth.accountMax[category] ?? auth.accountMax.default;
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const targets = [{ scope: 'ip', key: tokenHash(`${category}:ip:${req.ip || 'unknown'}`), limit: ipLimit }];
+  if (normalizedEmail) {
+    targets.push({ scope: 'account', key: tokenHash(`${category}:email:${normalizedEmail}`), limit: accountLimit });
   }
+  return { targets, cfg: auth };
+}
+
+/**
+ * Check per-IP and per-account exponential backoff state before verifying credentials.
+ * Blocks only while an active backoff cooldown (`blockedUntil`) has not elapsed.
+ */
+export async function checkAuthThrottle(req, res, category, email = '') {
+  await AuthAttempt.init();
+  const now = Date.now();
+  const { targets, cfg } = authTargets(req, category, email);
+  const docs = await AuthAttempt.find({ key: { $in: targets.map(t => t.key) } }).lean();
+  const byKey = new Map(docs.map(doc => [doc.key, doc]));
+
+  let strictest = null;
+  let blockedUntilMs = 0;
+
+  for (const target of targets) {
+    const doc = byKey.get(target.key);
+    const active = doc && doc.expiresAt && doc.expiresAt.getTime() > now;
+    const count = active ? (doc.count || 0) : 0;
+    const remaining = Math.max(0, target.limit - count);
+    const resetAtMs = active ? doc.expiresAt.getTime() : now + cfg.windowMs;
+    if (active && doc.blockedUntil && doc.blockedUntil.getTime() > blockedUntilMs) {
+      blockedUntilMs = doc.blockedUntil.getTime();
+    }
+    if (!strictest || remaining < strictest.remaining) {
+      strictest = { limit: target.limit, remaining, resetAtMs };
+    }
+  }
+
+  if (blockedUntilMs > now) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((blockedUntilMs - now) / 1000));
+    setRateLimitHeaders(res, { ...strictest, remaining: 0, retryAfterSeconds });
+    fail(429, 'RATE_LIMITED', `Too many attempts. Please try again in ${retryAfterSeconds}s.`);
+  }
+  setRateLimitHeaders(res, strictest);
+}
+
+/**
+ * Record an auth attempt (e.g. failed login/recovery or signup attempt) and apply
+ * exponential backoff once the per-IP or per-account threshold is reached.
+ */
+export async function recordAuthAttempt(req, res, category, email = '') {
+  await AuthAttempt.init();
+  const now = Date.now();
+  const { targets, cfg } = authTargets(req, category, email);
+  let strictest = null;
+
+  for (const target of targets) {
+    const existing = await AuthAttempt.findOne({ key: target.key }).lean();
+    const freshWindow = !existing || !existing.expiresAt || existing.expiresAt.getTime() <= now;
+    let doc;
+    if (freshWindow) {
+      try {
+        doc = await AuthAttempt.findOneAndUpdate(
+          { key: target.key },
+          { $set: { count: 1, blockedUntil: null, expiresAt: new Date(now + cfg.windowMs) } },
+          { upsert: true, new: true },
+        );
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+        doc = await AuthAttempt.findOneAndUpdate({ key: target.key }, { $inc: { count: 1 } }, { new: true });
+      }
+    } else {
+      doc = await AuthAttempt.findOneAndUpdate({ key: target.key }, { $inc: { count: 1 } }, { new: true });
+    }
+
+    if (doc.count >= target.limit) {
+      const excess = doc.count - target.limit + 1;
+      const backoffMs = Math.min(cfg.backoffMaxMs, cfg.backoffBaseMs * (2 ** (excess - 1)));
+      const nextBlocked = new Date(now + backoffMs);
+      const nextExpires = new Date(Math.max(doc.expiresAt?.getTime() || 0, now + cfg.windowMs, now + backoffMs));
+      await AuthAttempt.updateOne({ _id: doc._id }, { $set: { blockedUntil: nextBlocked, expiresAt: nextExpires } });
+    }
+
+    const remaining = Math.max(0, target.limit - doc.count);
+    const resetAtMs = doc.expiresAt?.getTime() || now + cfg.windowMs;
+    if (!strictest || remaining < strictest.remaining) {
+      strictest = { limit: target.limit, remaining, resetAtMs };
+    }
+  }
+  setRateLimitHeaders(res, strictest);
+}
+
+/** Clear per-account failure/backoff state after successful authentication. */
+export async function clearAuthAttempts(category, email = '') {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return;
+  await AuthAttempt.deleteOne({ key: tokenHash(`${category}:email:${normalizedEmail}`) });
+}
+
+export async function throttle(req, category, email = '', res = null) {
+  await checkAuthThrottle(req, res, category, email);
+  await recordAuthAttempt(req, res, category, email);
 }

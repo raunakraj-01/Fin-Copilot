@@ -34,7 +34,7 @@ test('registration validates a long password and submits no client-selected role
   const fetch = vi.fn(async url => url.endsWith('/auth/me') ? response({ error: {} }, 401) : response({ user, csrfToken: 'csrf' }, 201));
   vi.stubGlobal('fetch', fetch); gate();
   fireEvent.click(await screen.findByRole('button', { name: 'Create an account' }));
-  expect(screen.getByLabelText('Password').minLength).toBe(15);
+  expect(screen.getByLabelText('Password').minLength).toBe(8);
   fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Owner' } });
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: user.email } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'My long password 42' } });

@@ -19,10 +19,11 @@ import OrderScenario from '../src/models/OrderScenario.js';
 import RescuePlan from '../src/models/RescuePlan.js';
 import CollectionFollowUp from '../src/models/CollectionFollowUp.js';
 import { tokenHash } from '../src/services/auth.js';
+import { resetRateLimiters } from '../src/middleware/rateLimit.js';
 let mongo, sequence = 0;
 const password = 'Long test password 42!';
 beforeAll(async () => { mongo = await MongoMemoryServer.create(); await mongoose.connect(mongo.getUri()); await Promise.all([User.init(), AuthSession.init(), AuthAttempt.init()]); }, 600000);
-beforeEach(async () => { await AuthAttempt.deleteMany({}); });
+beforeEach(async () => { await AuthAttempt.deleteMany({}); resetRateLimiters(); });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); app.locals.demoMode = false; app.locals.localSyntheticDev = false; });
 afterAll(async () => { await mongoose.disconnect(); await mongo?.stop(); });
 async function register(name = 'Owner') {

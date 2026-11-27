@@ -55,9 +55,9 @@ export default function AuthGate({ children }) {
       {register && <label>Your name<input required maxLength={100} autoComplete="name" value={name} onChange={event => setName(event.target.value)} /></label>}
       <label>Email<input required type="email" autoComplete="username" maxLength={254} value={email} onChange={event => setEmail(event.target.value)} /></label>
       {recover && <label>Unused recovery code<input required autoComplete="one-time-code" value={recoveryCode} onChange={event => setRecoveryCode(event.target.value.toUpperCase())} /></label>}
-      <label>{recover ? 'New password' : 'Password'}<input required type="password" minLength={register || recover ? 15 : 1} maxLength={128}
+      <label>{recover ? 'New password' : 'Password'}<input required type="password" minLength={register || recover ? 8 : 1} maxLength={128}
         autoComplete={register || recover ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} /></label>
-      {(register || recover) && <p>Use at least 15 characters.</p>}
+      {(register || recover) && <p>Use at least 8 characters.</p>}
       <button>{busy ? 'Please wait' : recover ? 'Change password' : register ? 'Create account' : 'Sign in'}</button>
     </fieldset></form>
     <button className="secondary" onClick={() => { setRegister(!register); setRecover(false); setError(''); }}>{register ? 'Use an existing account' : 'Create an account'}</button>

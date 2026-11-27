@@ -5,15 +5,17 @@ import User from '../models/User.js';
 import Workspace from '../models/Workspace.js';
 import SyncDevice from '../models/SyncDevice.js';
 import { tokenHash, cookieToken, csrfToken, assertOrigin } from '../services/auth.js';
+import { enforceAuthenticatedRateLimit } from './rateLimit.js';
 import { asyncRoute, fail } from '../utils/http.js';
 
-export const requireSession = asyncRoute(async (req, _res, next) => {
+export const requireSession = asyncRoute(async (req, res, next) => {
   const token = cookieToken(req);
   if (!token) fail(401, 'UNAUTHORIZED', 'Sign in to continue');
   const session = await AuthSession.findOne({ tokenHash: tokenHash(token), expiresAt: { $gt: new Date() } }).lean();
   const user = session && await User.findOne({ _id: session.userId, authVersion: session.authVersion, disabled: false }).lean();
   if (!user) fail(401, 'UNAUTHORIZED', 'Session expired. Sign in again.');
   req.user = user; req.session = session; req.csrfToken = csrfToken(token);
+  enforceAuthenticatedRateLimit(req, res);
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     assertOrigin(req);
     const supplied = req.get('X-CSRF-Token') || '';
@@ -34,7 +36,9 @@ export const requireBusiness = asyncRoute(async (req, res, next) => {
     const device = token && await SyncDevice.findOne({ workspaceId: req.params.workspaceId, tokenHash: tokenHash(token), revokedAt: null, kind: 'sync' }).lean();
     const workspace = device && await Workspace.findOne({ _id: req.params.workspaceId, ownerUserId: { $exists: true, $ne: null } }).lean();
     if (!workspace) fail(401, 'UNAUTHORIZED', 'A valid business-scoped sync credential is required');
-    req.service = device; req.businessRole = 'service'; return next();
+    req.service = device; req.businessRole = 'service';
+    enforceAuthenticatedRateLimit(req, res);
+    return next();
   }
   // Authentication runs before a business lookup so an unauthenticated caller
   // cannot probe whether a real business ID exists.
@@ -51,9 +55,11 @@ export const requireBusiness = asyncRoute(async (req, res, next) => {
     } catch (cause) { next(cause); }
   });
 });
-export const requireAutomation = asyncRoute(async (req, _res, next) => {
+export const requireAutomation = asyncRoute(async (req, res, next) => {
   const token = req.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];
   const device = token && await SyncDevice.findOne({ tokenHash: tokenHash(token), revokedAt: null, kind: 'automation' }).lean();
   if (!device || !await Workspace.exists({ _id: device.workspaceId, ownerUserId: { $exists: true, $ne: null } })) fail(401, 'UNAUTHORIZED', 'A valid business-scoped automation credential is required');
-  req.service = device; next();
+  req.service = device;
+  enforceAuthenticatedRateLimit(req, res);
+  next();
 });

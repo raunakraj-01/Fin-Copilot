@@ -1,6 +1,8 @@
 import cors from 'cors';
 import auth from './routes/auth.js';
 import { requireBusiness } from './middleware/auth.js';
+import { rateLimitPublic } from './middleware/rateLimit.js';
+import { getRateLimitConfig } from './config/rateLimits.js';
 import { clientOrigin, isAllowedOrigin } from './services/auth.js';
 import express from 'express';
 import multer from 'multer';
@@ -33,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 
 const app = express();
+if (!process.env.VITEST) getRateLimitConfig();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use((_req, res, next) => {
@@ -49,18 +52,19 @@ app.use((req, res, next) => cors({
   credentials: true,
 })(req, res, next));
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('X-Content-Type-Options', 'nosniff'); res.set('Referrer-Policy', 'no-referrer'); next(); });
-app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
+app.use('/api/webhooks/razorpay', rateLimitPublic('webhook'), express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/api/health', (_req, res) => res.json(app.locals.demoMode === true ? { ok: true, demoMode: true }
+const publicLimiter = rateLimitPublic('public');
+app.get('/api/health', publicLimiter, (_req, res) => res.json(app.locals.demoMode === true ? { ok: true, demoMode: true }
   : app.locals.localSyntheticDev === true ? { ok: true, localSyntheticDev: true } : { ok: true }));
 
 // SRE Cloud Probes: Liveness & Readiness for AWS ECS / GCP Cloud Run / Kubernetes
-app.get('/api/healthz', (_req, res) => {
+app.get('/api/healthz', publicLimiter, (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/readyz', async (_req, res) => {
+app.get('/api/readyz', publicLimiter, async (_req, res) => {
   try {
     const mongoose = (await import('mongoose')).default;
     const dbConnected = mongoose.connection?.readyState === 1 || app.locals.demoMode === true || app.locals.localSyntheticDev === true;
@@ -109,7 +113,7 @@ app.use('/api/capture-automation', captureAutomation);
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
 if (process.env.NODE_ENV === 'production' || existsSync(path.join(dist, 'index.html'))) {
   app.use(express.static(dist));
-  app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+  app.get(/^(?!\/api\/).*/, publicLimiter, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
 
 app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }));
