@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import multer from 'multer';
 import { z } from 'zod';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
+import { createXmlUpload, validateXmlMeta } from '../middleware/upload.js';
 import { generateMorningBrief } from '../services/automation/morningBrief.js';
 import { morningBriefEnabled } from '../services/automation/morningBriefScheduler.js';
 import { parseTallyXml } from '../services/imports/tallyXml.js';
@@ -10,7 +10,9 @@ import CashItem from '../models/CashItem.js';
 import SyncBatch from '../models/SyncBatch.js';
 
 const router = Router({ mergeParams: true });
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+const XML_MAX_BYTES = 5 * 1024 * 1024;
+const upload = createXmlUpload(XML_MAX_BYTES);
+const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
 
 // GET Morning Cash Brief preview
 router.get('/morning-brief', asyncRoute(async (req, res) => {
@@ -39,15 +41,32 @@ router.post('/tally-xml', upload.single('file'), asyncRoute(async (req, res) => 
 
   let xmlString = '';
   if (req.file) {
-    xmlString = req.file.buffer.toString('utf8');
+    validateXmlMeta(req.file);
+    if (!Buffer.isBuffer(req.file.buffer) || req.file.buffer.length === 0) {
+      fail(400, 'VALIDATION_ERROR', 'Uploaded XML file is empty');
+    }
+    if (req.file.buffer.includes(0x00)) {
+      fail(400, 'VALIDATION_ERROR', 'Uploaded XML file contains binary null bytes');
+    }
+    try {
+      xmlString = utf8Decoder.decode(req.file.buffer);
+    } catch {
+      fail(400, 'VALIDATION_ERROR', 'Uploaded XML file must contain valid UTF-8 text');
+    }
   } else if (req.body && typeof req.body.xml === 'string') {
     xmlString = req.body.xml;
   } else if (typeof req.body === 'string') {
     xmlString = req.body;
   }
 
-  if (!xmlString || !xmlString.includes('<ENVELOPE>')) {
-    fail(400, 'VALIDATION_ERROR', 'Valid Tally XML with <ENVELOPE> header is required');
+  if (Buffer.byteLength(xmlString, 'utf8') > XML_MAX_BYTES) {
+    fail(413, 'UPLOAD_TOO_LARGE', 'XML payload exceeds the 5 MB limit');
+  }
+  if (/<!(?:doctype|entity)\b|<script\b/i.test(xmlString)) {
+    fail(400, 'VALIDATION_ERROR', 'Disallowed DTD or script content in XML');
+  }
+  if (!xmlString || !xmlString.includes('<ENVELOPE>') || !xmlString.includes('</ENVELOPE>')) {
+    fail(400, 'VALIDATION_ERROR', 'Valid Tally XML with <ENVELOPE>...</ENVELOPE> is required');
   }
 
   const parsed = parseTallyXml(xmlString);

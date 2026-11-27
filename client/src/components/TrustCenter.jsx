@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
-import { sessionFetch } from '../services/session.js';
+import { sessionFetch, setCsrf } from '../services/session.js';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 const eventLabel = event => `${event.action} · ${event.entityType}${event.entityId ? ` · ${event.entityId}` : ''}`;
@@ -8,6 +8,7 @@ const eventLabel = event => `${event.action} · ${event.entityType}${event.entit
 export default function TrustCenter({ workspaceId, businessRole }) {
   const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [codes, setCodes] = useState([]);
   const [audit, setAudit] = useState([]);
   const [error, setError] = useState('');
@@ -27,6 +28,16 @@ export default function TrustCenter({ workspaceId, businessRole }) {
     try { const result = await json('/auth/recovery-codes', 'POST', { currentPassword }); setCodes(result.codes); setCurrentPassword('');
       setNotice('These codes are shown once. Save them somewhere private and offline. Creating new codes invalidates the previous set.'); }
     catch (cause) { setError(cause.message); } finally { setBusy(false); }
+  }
+
+  async function changePassword(event) {
+    event.preventDefault(); setBusy(true); setError(''); setNotice('');
+    try {
+      const result = await json('/auth/password', 'POST', passwordForm);
+      if (result.csrfToken) setCsrf(result.csrfToken);
+      setPasswordForm({ currentPassword: '', newPassword: '' });
+      setNotice('Password updated and other active sessions signed out.');
+    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
 
   async function downloadExport() {
@@ -49,6 +60,13 @@ export default function TrustCenter({ workspaceId, businessRole }) {
     <button className="secondary" type="button" onClick={() => setOpen(value => !value)}>{open ? 'Close security' : 'Account security'}</button>
     {open && <section className="trust-center card" aria-label="Account security and business data">
       <h2>Account security & business data</h2>
+      <h3>Change password</h3>
+      <form className="form-grid" onSubmit={changePassword}>
+        <label>Current password<input type="password" autoComplete="current-password" required value={passwordForm.currentPassword} onChange={event => setPasswordForm(f => ({ ...f, currentPassword: event.target.value }))} /></label>
+        <label>New password (min 8 chars)<input type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={passwordForm.newPassword} onChange={event => setPasswordForm(f => ({ ...f, newPassword: event.target.value }))} /></label>
+        <button disabled={busy}>Update password</button>
+      </form>
+      <h3>Recovery codes</h3>
       <p>Recovery codes work without email delivery. Store them outside this device; each code can be used once.</p>
       <form className="form-grid" onSubmit={makeCodes}>
         <label>Confirm password<input type="password" autoComplete="current-password" required value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} /></label>

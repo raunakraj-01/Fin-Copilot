@@ -7,8 +7,9 @@ import { startMorningBriefScheduler } from './services/automation/morningBriefSc
 import { startTelegramCopilot } from './services/ai/telegramCopilot.js';
 import { startPaymentDelayUpdater } from './services/finance/paymentDelayUpdater.js';
 
-const port = Number(process.env.PORT || 5001);
-app.locals.localSyntheticDev = process.env.LOCAL_SYNTHETIC_DEV === '1'
+const port = Number(process.env.PORT || 5000);
+const isProduction = process.env.NODE_ENV === 'production';
+app.locals.localSyntheticDev = !isProduction && process.env.LOCAL_SYNTHETIC_DEV === '1'
   && /^mongodb:\/\/(?:127\.0\.0\.1|localhost):/.test(process.env.MONGODB_URI || '');
 
 let server;
@@ -16,22 +17,25 @@ let server;
 async function startServer() {
   let connected = false;
 
-  // 1. Attempt connection to configured MONGODB_URI if provided
   if (process.env.MONGODB_URI) {
     try {
       console.log('Attempting connection to MongoDB...');
-      await connectDb(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+      await connectDb(process.env.MONGODB_URI, { serverSelectionTimeoutMS: isProduction ? 15_000 : 5000 });
       connected = true;
       console.log('✓ Connected to MongoDB');
     } catch (err) {
+      if (isProduction || process.env.ALLOW_MEMORY_DB_FALLBACK !== '1') {
+        throw err;
+      }
       console.warn(`! Could not connect to external MongoDB: ${err.message}`);
-      console.warn('💡 Tip: If using MongoDB Atlas, verify your current IP is whitelisted (Network Access -> Add IP Address 0.0.0.0/0)');
     }
+  } else if (isProduction || process.env.ALLOW_MEMORY_DB_FALLBACK !== '1') {
+    throw new Error('MONGODB_URI environment variable is required');
   }
 
-  // 2. Fall back to embedded MongoMemoryServer if external Mongo is not accessible
+  // Embedded MongoMemoryServer fallback is strictly opt-in for local non-production dev
   if (!connected) {
-    console.log('⚡ Initializing embedded in-memory MongoDB engine...');
+    console.log('⚡ Initializing embedded in-memory MongoDB engine (non-production fallback)...');
     const { MongoMemoryServer } = await import('mongodb-memory-server');
     const mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();

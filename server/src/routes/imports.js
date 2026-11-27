@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
-import multer from 'multer';
 import { z } from 'zod';
 import { asyncRoute, fail, validate, workspaceOr404 } from '../utils/http.js';
+import { createSpreadsheetUpload, safeUploadFilename } from '../middleware/upload.js';
 import ImportBatch from '../models/ImportBatch.js';
 import CashItem from '../models/CashItem.js';
 import { parseUpload, suggestMapping } from '../services/imports/parse.js';
@@ -10,7 +10,7 @@ import { normalizeRows } from '../services/imports/normalize.js';
 import { invoiceIdentity, canonicalId, digest } from '../services/imports/identity.js';
 
 const router = Router({ mergeParams: true });
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
+const upload = createSpreadsheetUpload(2 * 1024 * 1024);
 const keys = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDate', 'expectedDate', 'status',
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
   'maxEarlyCollectionInr', 'estimatedActionCostInr', 'actionCostDate'];
@@ -32,7 +32,7 @@ router.post('/inspect', upload.single('file'), asyncRoute(async (req, res) => {
   if (!req.file) fail(400, 'VALIDATION_ERROR', 'File is required');
   const parsed = await parseUpload(req.file);
   const mapping = suggestMapping(parsed.headers);
-  const batch = await ImportBatch.create({ workspaceId: req.params.workspaceId, fileName: req.file.originalname,
+  const batch = await ImportBatch.create({ workspaceId: req.params.workspaceId, fileName: safeUploadFilename(req.file.originalname),
     fileType: parsed.type, kind, sourceSystem: parsed.type === 'csv' ? 'csv' : 'excel',
     headers: parsed.headers, rawRows: parsed.rawRows, mapping,
     counts: { accepted: 0, needsReview: 0, rejected: 0, committed: 0 } });

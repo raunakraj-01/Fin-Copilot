@@ -64,16 +64,26 @@ export default function AutomationHub({ workspaceId, token }) {
   }
 
   async function handleXmlSync() {
-    if (!xmlPreview?.rawXml) return;
+    if (!selectedFile && !xmlPreview?.rawXml) return;
     setSyncLoading(true);
     setError('');
     setSyncStatus(null);
     try {
-      const data = await api(`/workspaces/${workspaceId}/automation/tally-xml`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ xml: xmlPreview.rawXml }),
-      });
+      let data;
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        data = await api(`/workspaces/${workspaceId}/automation/tally-xml`, {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        data = await api(`/workspaces/${workspaceId}/automation/tally-xml`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ xml: xmlPreview.rawXml }),
+        });
+      }
       setSyncStatus(data);
       setSelectedFile(null);
       setXmlPreview(null);
@@ -118,7 +128,7 @@ export default function AutomationHub({ workspaceId, token }) {
           </span>
           <h2 className="automation-title">Kavach Automation Hub</h2>
           <p className="automation-desc">
-            Continuous background accounting sync, daily 8:30 AM WhatsApp executive briefs, and Section 43B(h) escalation drips.
+            Continuous background accounting sync, daily {morningBrief?.scheduleIST || '07:00'} IST WhatsApp executive briefs, and Section 43B(h) escalation drips.
           </p>
         </div>
         <div className="automation-badge-wrap">
@@ -195,7 +205,7 @@ export default function AutomationHub({ workspaceId, token }) {
           <div className="automation-card-head">
             <div className="automation-icon-box">🌅</div>
             <div>
-              <h3>Daily 8:30 AM Morning Cash Brief</h3>
+              <h3>Daily {morningBrief?.scheduleIST || '07:00'} IST Morning Cash Brief</h3>
               <p>Executive WhatsApp & SMS briefing for founder & finance team</p>
             </div>
           </div>
@@ -231,8 +241,8 @@ export default function AutomationHub({ workspaceId, token }) {
           )}
 
           <div className="brief-schedule-footer">
-            <span className="status-pill text-success">● Scheduled Daily</span>
-            <small>Dispatches at 08:30 AM IST via WhatsApp / Webhook</small>
+            <span className="status-pill text-success">● {morningBrief?.schedulerEnabled ? 'Scheduled Daily' : 'Manual / Draft Ready'}</span>
+            <small>Schedule window: {morningBrief?.scheduleIST || '07:00'} IST</small>
           </div>
         </div>
 

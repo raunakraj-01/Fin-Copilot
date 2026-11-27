@@ -89,6 +89,13 @@ export async function finishFollowup(claimId, outcome, providerMessageId, worksp
 export async function dispatchFollowupWebhook(rule, current) {
   const webhookUrl = process.env.FOLLOWUP_WEBHOOK_URL || process.env.MORNING_BRIEF_WEBHOOK_URL;
   if (!webhookUrl || !liveFollowupsEnabled()) return false;
+  const pinnedWorkspaceId = process.env.MORNING_BRIEF_WORKSPACE_ID;
+  if (pinnedWorkspaceId) {
+    if (String(rule.workspaceId) !== pinnedWorkspaceId) return false;
+  } else if (process.env.NODE_ENV === 'production' || await Workspace.countDocuments() > 1) {
+    console.warn('[FollowUp] Skipping global followup webhook in multi-tenant mode without MORNING_BRIEF_WORKSPACE_ID.');
+    return false;
+  }
 
   const item = current.item;
   const outstandingPaise = Math.max(0, item.amountPaise - (item.settledPaise || 0));

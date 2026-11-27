@@ -53,7 +53,7 @@ router.post('/preview', asyncRoute(async (req, res) => {
 router.post('/payment-link', asyncRoute(async (req, res) => {
   const { workspace, data, item, amountPaise, quote } = await prepareOffer(req);
   const { RAZORPAY_KEY_ID: key, RAZORPAY_KEY_SECRET: secret, RAZORPAY_WEBHOOK_SECRET: webhookSecret } = process.env;
-  if (!key?.startsWith('rzp_test_') || !secret || !webhookSecret) fail(503, 'PAYMENTS_UNAVAILABLE', 'Set Razorpay test API and webhook credentials on the server');
+  if (!/^rzp_(?:test|live)_/.test(key || '') || !secret || !webhookSecret) fail(503, 'PAYMENTS_UNAVAILABLE', 'Set Razorpay API and webhook credentials on the server');
   if (data.settleBy < new Date().toISOString().slice(0, 10) || quote.buyerPaysPaise < 100) fail(400, 'VALIDATION_ERROR', 'Payment link needs a future date and at least INR 1 due');
   const offer = await PaymentOffer.create({ workspaceId: workspace._id, cashItemId: item._id,
     grossPaise: amountPaise, buyerPaysPaise: quote.buyerPaysPaise, discountPaise: quote.discountPaise,

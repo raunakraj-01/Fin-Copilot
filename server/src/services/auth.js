@@ -18,17 +18,28 @@ export const clientOrigin = () => {
   return 'http://localhost:5173';
 };
 
+export function allowedOrigins() {
+  const list = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+  if (process.env.CLIENT_ORIGIN) list.push(process.env.CLIENT_ORIGIN.trim());
+  if (process.env.RENDER_EXTERNAL_URL) list.push(process.env.RENDER_EXTERNAL_URL.trim());
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) list.push(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}`);
+  if (process.env.VERCEL_URL) list.push(`https://${process.env.VERCEL_URL.trim()}`);
+  return new Set(list);
+}
+
 export function isAllowedOrigin(origin, host) {
   if (!origin) return true;
-  if (origin === clientOrigin()) return true;
-  if (process.env.RENDER_EXTERNAL_URL && origin === process.env.RENDER_EXTERNAL_URL) return true;
-  if (process.env.VERCEL_URL && origin === `https://${process.env.VERCEL_URL}`) return true;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin === `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) return true;
+  if (allowedOrigins().has(origin)) return true;
   try {
     const parsed = new URL(origin);
     if (host && parsed.host === host) return true;
-    if (parsed.hostname.endsWith('.vercel.app')) return true;
-    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return true;
+    const isLocalHost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+    if (isLocalHost && (process.env.NODE_ENV !== 'production' || /^(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(host || ''))) {
+      return true;
+    }
   } catch {}
   return false;
 }

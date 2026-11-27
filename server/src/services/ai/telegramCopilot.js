@@ -23,6 +23,11 @@ export async function startTelegramCopilot() {
     .map((id) => Number(id.trim()))
     .filter((id) => !isNaN(id) && id !== 0);
 
+  if (allowedChatIds.length === 0) {
+    console.warn('[TelegramCopilot] TELEGRAM_ALLOWED_CHAT_ID is not configured; listener disabled (fail-closed).');
+    return () => {};
+  }
+
   if (isPolling) return () => {};
   isPolling = true;
   shouldStop = false;
@@ -32,10 +37,20 @@ export async function startTelegramCopilot() {
   let offset = 0;
 
   async function resolveWorkspaceId() {
-    if (process.env.MORNING_BRIEF_WORKSPACE_ID) {
-      return process.env.MORNING_BRIEF_WORKSPACE_ID;
+    const pinnedId = process.env.TELEGRAM_WORKSPACE_ID || process.env.MORNING_BRIEF_WORKSPACE_ID;
+    if (pinnedId) {
+      return pinnedId;
     }
-    const ws = await Workspace.findOne().sort({ updatedAt: -1 }).lean();
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[TelegramCopilot] TELEGRAM_WORKSPACE_ID is required in production to prevent cross-tenant lookup.');
+      return null;
+    }
+    const count = await Workspace.countDocuments();
+    if (count !== 1) {
+      console.warn('[TelegramCopilot] Multiple workspaces present; set TELEGRAM_WORKSPACE_ID to bind Telegram queries.');
+      return null;
+    }
+    const ws = await Workspace.findOne().lean();
     return ws ? ws._id.toString() : null;
   }
 
