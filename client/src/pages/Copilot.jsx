@@ -49,7 +49,7 @@ export default function Copilot({ workspaceId }) {
       
       {entry.mode && (
         <span className="rag-mode-badge">
-          {entry.mode === 'gemini-rag' ? '✨ Gemini-2.0 Fin-RAG · Grounded' : entry.mode === 'ollama' ? `🦙 Local Ollama RAG · ${entry.model}` : '⚡ Deterministic Fin-RAG (Zero Hallucination)'}
+          {entry.mode === 'gemini-rag' ? '✨ Gemini-2.0 Fin-RAG · Grounded' : '⚡ Deterministic Fin-RAG (Zero Hallucination)'}
         </span>
       )}
       

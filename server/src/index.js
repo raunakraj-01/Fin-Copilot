@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import app from './app.js';
 import { connectDb } from './config/db.js';
-import { ensureLocalOllama } from './services/ai/startOllama.js';
 import { startFollowupWorker } from './services/finance/followups.js';
 import { startMorningBriefScheduler } from './services/automation/morningBriefScheduler.js';
 import { startTelegramCopilot } from './services/ai/telegramCopilot.js';
@@ -47,7 +46,6 @@ async function startServer() {
   }
 
   try {
-    await ensureLocalOllama().catch(() => {});
     startFollowupWorker();
     startMorningBriefScheduler();
     startPaymentDelayUpdater();

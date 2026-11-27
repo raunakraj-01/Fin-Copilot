@@ -4,7 +4,6 @@
 [![React Version](https://img.shields.io/badge/React-19.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB%207.0-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Vite](https://img.shields.io/badge/Bundler-Vite%207.3-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Ollama](https://img.shields.io/badge/AI%20Engine-Ollama%20%2F%20CUDA%20v12-FF6F00?logo=ollama&logoColor=white)](https://ollama.com/)
 [![Tests](https://img.shields.io/badge/Tests-44%20Files%20%7C%20247%20Passing-success?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -34,7 +33,6 @@
   - [One-Click Isolated Demo](#one-click-isolated-demo)
   - [Docker Containerized Run](#docker-containerized-run)
 - [Guided Demo Scenario](#guided-demo-scenario)
-- [Local LLM Configuration (Ollama / CUDA GPU Offload)](#local-llm-configuration-ollama--cuda-gpu-offload)
 - [API Reference](#api-reference)
 - [Verification & Quality Assurance](#verification--quality-assurance)
 - [Directory Structure](#directory-structure)
@@ -76,7 +74,7 @@ flowchart TD
     end
 
     subgraph AIAndSync["Intelligence & Integrations"]
-        OllamaLocal["Local Ollama LLM\n(CUDA Layer Offloading • Privacy First)"]
+        GeminiRAG["Google Gemini Fin-RAG\n(Grounded Workspace Context)"]
         TallySync["Tally Prime XML Agent\nOwner Change-Review Queue"]
         BankDesk["Bank Matching Desk\nIdempotent Partial Allocations"]
         WhatsAppRazorpay["WhatsApp & Razorpay Webhooks\n(Supervised Capture & Payment Links)"]
@@ -123,7 +121,7 @@ flowchart TD
 - **Material Scheduling:** Schedules phased supplier material purchases against the delivery timeline.
 
 ### 6. Privacy-Preserving Fin-RAG & Telegram Copilot
-- **Local Ollama & Cloud RAG:** Runs on-premise using open models (e.g., Huihui-GLM-4, Llama 3) via Ollama with dedicated GPU VRAM offloading, or connects to Google Gemini Generative RAG for natural language ledger queries.
+- **Gemini Cloud & Deterministic RAG:** Connects to Google Gemini Generative RAG for natural language ledger queries, with an automatic deterministic offline fallback.
 - **2-Way Telegram Assistant:** Autonomous background Telegram bot (`server/src/services/ai/telegramCopilot.js`) with long-polling that queries live MongoDB financial records and replies directly to authenticated business owners on mobile.
 - **Strict Data Containment:** Only the active workspace ledger, recurring rules, and computed forecast are passed to the model context.
 - **Guaranteed Fallback:** If LLM endpoints timeout or are offline, the copilot falls back to an exact, rule-based deterministic response drawer.
@@ -154,7 +152,7 @@ flowchart TD
 | **Frontend** | React 19, Vite 7.3, Recharts, Modern CSS Glassmorphism |
 | **Backend** | Node.js 22 LTS, Express 4.21, Mongoose 8.19, Zod |
 | **Database** | MongoDB 7.0 (Atlas / Local Server / Embedded in-memory for testing) |
-| **Local AI** | Ollama Engine (CUDA v12 optimization), Optional OpenAI / Gemini connectors |
+| **AI Copilot** | Google Gemini (`@google/genai`) with Deterministic Offline Fin-RAG fallback |
 | **Automations** | n8n Workflows, Meta WhatsApp Cloud Webhooks, Razorpay SDK |
 | **Testing** | Vitest 4, Supertest, React Testing Library, jsdom |
 
@@ -257,28 +255,6 @@ To reproduce the benchmark manufacturing supplier shortfall scenario:
    - The engine calculates the safe minimum customer advance percentage needed to preserve liquidity.
 6. Open **Section 43B(h) Auditor**:
    - Review delayed receivables subject to statutory disallowance penalties and generate audit-ready notices.
-
----
-
-## Local LLM Configuration (Ollama / CUDA GPU Offload)
-
-Fin-Copilot provides private, air-gapped ledger intelligence through Ollama without sending financial records to external cloud APIs:
-
-```env
-# server/.env
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=alibilge/Huihui-GLM-4.6V-Flash-abliterated:q4_k_s
-```
-
-### Dedicated GPU Acceleration (NVIDIA RTX 4050 / 3060)
-For dedicated local GPU environments, configure the background helper:
-```env
-OLLAMA_PORT=11435
-OLLAMA_LLM_LIBRARY=cuda_v12
-OLLAMA_NUM_GPU=26
-OLLAMA_NUM_CTX=4096
-```
-This offloads 26 transformer layers into VRAM while keeping usage comfortably below 6 GB to prevent CUDA initialization timeouts.
 
 ---
 

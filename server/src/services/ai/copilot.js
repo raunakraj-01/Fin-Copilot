@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { buildForecast } from '../finance/forecast.js';
 import { loadDecisionContext } from '../rescue/decisionContext.js';
-import { answerWithOllama } from './ollama.js';
 import { buildKnowledgeIndex, retrieveKnowledgeUnits } from './knowledgeIndexer.js';
 
 export const chatInput = z.object({
@@ -112,7 +111,6 @@ function localIntent(message) {
 }
 
 async function intent(message) {
-  if (!process.env.GEMINI_API_KEY && process.env.OLLAMA_MODEL) return localIntent(message);
   if (!process.env.GEMINI_API_KEY) return localIntent(message);
   try {
     const { GoogleGenAI } = await import('@google/genai');
@@ -221,7 +219,6 @@ export async function answerChat(workspaceId, { message, sessionId }) {
 
   let mode = process.env.GEMINI_API_KEY ? 'gemini-rag' : 'offline-rag';
   let model;
-  let modelWarning;
 
   // Gemini Generative RAG Generation if API key is provided
   if (process.env.GEMINI_API_KEY) {
@@ -282,21 +279,6 @@ CFO RESPONSE (Direct, natural, complete, and practical):`;
     } catch {
       mode = 'offline-rag';
     }
-  } else if (process.env.OLLAMA_MODEL) {
-    try {
-      const modelContext = { ...context,
-        cashItems: context.cashItems.map(({ category, externalId, counterparty, amountPaise, settledPaise, status, dueDate, expectedDate, confidenceState }) =>
-          ({ category, externalId, counterparty, amountPaise, settledPaise, status, dueDate, expectedDate, confidenceState })),
-        recurringRules: context.recurringRules.map(({ description, amountPaise, startsOn, endsOn, dayOfMonth, mandatory }) =>
-          ({ description, amountPaise, startsOn, endsOn, dayOfMonth, mandatory })),
-        forecast: { risk: forecast.risk, warnings: forecast.warnings, assumptions: forecast.assumptions } };
-      const result = await answerWithOllama({ message, context: modelContext,
-        calculatedAnswer: { reply, facts, tool }, entity, history: active?.history });
-      if (result) { reply = result.reply; model = result.model; mode = 'ollama'; }
-    } catch {
-      mode = 'offline';
-      modelWarning = 'Local Ollama is unavailable or timed out. Showing the calculated workspace answer.';
-    }
   }
 
   sessions.set(key, {
@@ -312,7 +294,6 @@ CFO RESPONSE (Direct, natural, complete, and practical):`;
     mode,
     sources,
     ...(model ? { model } : {}),
-    ...(modelWarning ? { modelWarning } : {}),
     assumptions: ['Based on workspace records, financial snapshot, and hypothetical parameters where provided'],
   };
 }

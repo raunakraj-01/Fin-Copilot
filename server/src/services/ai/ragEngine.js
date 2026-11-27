@@ -103,7 +103,7 @@ function synthesizeOfflineRAG({ message, retrievedKUs, context, entity }) {
  * Performs:
  * 1. Document Indexing (Invoices, Payables, Bank, Tax Shocks)
  * 2. Hybrid Lexical + Entity + Temporal Retrieval
- * 3. Generation via Gemini (Cloud) / Ollama (Local) / Deterministic Synthesizer (Offline)
+ * 3. Generation via Gemini (Cloud) / Deterministic Synthesizer (Offline)
  */
 export async function answerWithRAG({ message, context, entity, history = [] }) {
   // Step 1: Index workspace records into Knowledge Units
@@ -125,7 +125,7 @@ export async function answerWithRAG({ message, context, entity, history = [] }) 
   }));
 
   // Step 3: Check for Gemini Generative AI capability
-  if (process.env.GEMINI_API_KEY && !process.env.OLLAMA_MODEL) {
+  if (process.env.GEMINI_API_KEY) {
     try {
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });

@@ -7,8 +7,24 @@ import Workspace from '../src/models/Workspace.js';
 import CashItem from '../src/models/CashItem.js';
 import { maskPII } from '../src/services/ai/copilot.js';
 
+const { generateContentMock } = vi.hoisted(() => ({
+  generateContentMock: vi.fn(),
+}));
+
+vi.mock('@google/genai', () => ({
+  GoogleGenAI: class {
+    constructor() {
+      this.models = { generateContent: generateContentMock };
+    }
+  },
+}));
+
 let mongo, workspaceId;
-afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  generateContentMock.mockReset();
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
@@ -23,7 +39,6 @@ it('masks financial identifiers before model transit', () => {
 });
 
 it('streams grounded collections and resolves the same debtor in a follow-up', async () => {
-  vi.stubEnv('OLLAMA_MODEL', '');
   vi.stubEnv('GEMINI_API_KEY', '');
   const sessionId = crypto.randomUUID();
   const base = `/api/workspaces/${workspaceId}/copilot/chat`;
@@ -36,37 +51,33 @@ it('streams grounded collections and resolves the same debtor in a follow-up', a
   expect(await CashItem.countDocuments({ workspaceId })).toBe(1);
 });
 
-it('answers through local Ollama with only the selected workspace records', async () => {
-  vi.stubEnv('OLLAMA_MODEL', 'demo-model');
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { content: 'Surya Plastics owes ₹200.00.' } }) });
-  vi.stubGlobal('fetch', fetchMock);
+it('answers through Gemini RAG with only the selected workspace records', async () => {
+  vi.stubEnv('GEMINI_API_KEY', 'test-gemini-key');
+  generateContentMock
+    .mockResolvedValueOnce({ text: 'collections' })
+    .mockResolvedValueOnce({ text: 'Surya Plastics owes ₹200.00.' });
   const other = await Workspace.create({ name: 'Other tenant', asOfDate: '2026-11-01', openingCashPaise: 0 });
   await CashItem.create({ workspaceId: other._id, category: 'payable', counterparty: 'Private Other Buyer', sourceSystem: 'manual', amountPaise: 99900, dueDate: '2026-11-05' });
   const response = await request(app).post(`/api/workspaces/${workspaceId}/copilot/chat`)
     .send({ sessionId: crypto.randomUUID(), message: 'Who owes us money?' }).expect(200);
-  expect(response.text).toContain('"mode":"ollama"');
+  expect(response.text).toContain('"mode":"gemini-rag"');
   expect(response.text).toContain('Surya Plastics owes');
-  const [url, options] = fetchMock.mock.calls[0];
-  expect(String(url)).toBe('http://127.0.0.1:11434/api/chat');
-  const body = JSON.parse(options.body);
-  expect(body.model).toBe('demo-model');
-  expect(options.body).toContain('Surya Plastics');
-  expect(options.body).not.toContain('Private Other Buyer');
-  expect(options.body).toContain('20000');
+  const prompt = generateContentMock.mock.calls[1][0].contents;
+  expect(prompt).toContain('Surya Plastics');
+  expect(prompt).not.toContain('Private Other Buyer');
+  expect(prompt).toContain('200.00');
 });
 
-it('returns a labeled calculated fallback when local Ollama fails', async () => {
-  vi.stubEnv('OLLAMA_MODEL', 'demo-model');
-  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+it('falls back to deterministic offline-rag when Gemini fails', async () => {
+  vi.stubEnv('GEMINI_API_KEY', 'test-gemini-key');
+  generateContentMock.mockRejectedValue(new Error('offline'));
   const response = await request(app).post(`/api/workspaces/${workspaceId}/copilot/chat`)
     .send({ sessionId: crypto.randomUUID(), message: 'Surya Plastics overdue?' }).expect(200);
   expect(response.text).toContain('₹200.00');
-  expect(response.text).toContain('"mode":"offline"');
-  expect(response.text).toContain('modelWarning');
+  expect(response.text).toContain('"mode":"offline-rag"');
 });
 
 it('retrieves relevant knowledge units and attaches sources in RAG response', async () => {
-  vi.stubEnv('OLLAMA_MODEL', '');
   vi.stubEnv('GEMINI_API_KEY', '');
   const response = await request(app).post(`/api/workspaces/${workspaceId}/copilot/chat`)
     .send({ sessionId: crypto.randomUUID(), message: 'What is the payment status for Surya Plastics?' }).expect(200);
