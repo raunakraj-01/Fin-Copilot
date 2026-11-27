@@ -33,6 +33,7 @@ import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 
 const app = express();
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use((_req, res, next) => {
   res.set('X-Frame-Options', 'DENY');

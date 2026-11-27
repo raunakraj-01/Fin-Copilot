@@ -10,6 +10,7 @@ export const csrfToken = token => createHmac('sha256', token).update('cashflow-c
 export const cookieName = () => process.env.NODE_ENV === 'production' ? '__Host-cashflow_session' : 'cashflow_session';
 export const clientOrigin = () => {
   if (process.env.CLIENT_ORIGIN) return process.env.CLIENT_ORIGIN;
+  if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL;
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return 'http://localhost:5173';
@@ -18,6 +19,7 @@ export const clientOrigin = () => {
 export function isAllowedOrigin(origin, host) {
   if (!origin) return true;
   if (origin === clientOrigin()) return true;
+  if (process.env.RENDER_EXTERNAL_URL && origin === process.env.RENDER_EXTERNAL_URL) return true;
   if (process.env.VERCEL_URL && origin === `https://${process.env.VERCEL_URL}`) return true;
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin === `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) return true;
   try {
