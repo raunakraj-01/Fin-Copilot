@@ -20,7 +20,7 @@ services:
       - NODE_ENV=production
       - PORT=5000
       - MONGODB_URI=mongodb://mongo:27017/fin_copilot
-      - SESSION_SECRET=${SESSION_SECRET:-enterprise_fincopilot_secret_key_production_2026}
+      - SESSION_SECRET=${SESSION_SECRET:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}

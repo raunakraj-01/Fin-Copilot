@@ -26,7 +26,8 @@ async function main() {
   console.log('Connecting to MongoDB...');
   await connectDb(process.env.MONGODB_URI);
 
-  const ownerUser = await User.findOne({ email: 'satviktripathi.cs25@rvce.edu.in' }).lean();
+  const ownerEmail = process.env.SEED_OWNER_EMAIL || process.argv[2] || '';
+  const ownerUser = ownerEmail ? await User.findOne({ email: ownerEmail.trim().toLowerCase() }).lean() : null;
 
   console.log('Setting up Workspace: "Kalyani Industrial Packaging (Live Real-World)"...');
   await Workspace.updateOne(
