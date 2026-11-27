@@ -1,4 +1,4 @@
-import { sessionFetch } from '../../services/session.js';
+import { readJsonSafe, sessionFetch } from '../../services/session.js';
 import { t, useLanguage } from '../../i18n/index.js';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { decisionApiBase, rupees, Notices } from '../RescuePlanner/DecisionUI.jsx';
@@ -16,9 +16,9 @@ export function SaveScenario({ order, workspaceId, apiBaseUrl, onSaved }) {
       const response = await sessionFetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/orders/scenarios`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order), signal: controller.signal,
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || 'Could not save scenario');
-      if (!payload._id) throw new Error('The server did not confirm a saved scenario');
+      const payload = await readJsonSafe(response);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Could not save scenario');
+      if (!payload?._id) throw new Error('The server did not confirm a saved scenario');
       if (!controller.signal.aborted) { setState({ busy: false, saved: payload, error: '' }); onSaved(); }
     } catch (error) {
       if (!controller.signal.aborted) setState({ busy: false, saved: null, error: error.message });
@@ -45,9 +45,9 @@ function ScenarioRecord({ scenario, workspaceId, apiBaseUrl, onRecalculated, onT
       const response = await sessionFetch(`${decisionApiBase(apiBaseUrl)}/workspaces/${encodeURIComponent(workspaceId)}/orders/scenarios/${encodeURIComponent(scenario._id)}/recalculate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: controller.signal,
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || 'Could not recalculate scenario');
-      if (!payload._id || !payload.freshness) throw new Error('The server returned an incomplete recalculation');
+      const payload = await readJsonSafe(response);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Could not recalculate scenario');
+      if (!payload?._id || !payload.freshness) throw new Error('The server returned an incomplete recalculation');
       if (!controller.signal.aborted) {
         onRecalculated(payload);
         setState({ busy: false, error: '', message: payload.freshness.stale ? 'Recalculated, but cash inputs changed again. Refresh before use.' : 'Recalculated and saved using current cash records. No accounting entries were posted.' });
@@ -63,8 +63,8 @@ function ScenarioRecord({ scenario, workspaceId, apiBaseUrl, onRecalculated, onT
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: trackingStatus, note: trackingNote }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || 'Could not update order tracking');
+      const payload = await readJsonSafe(response);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Could not update order tracking');
       setTrackingNote(payload.scenario.trackingNote || '');
       setState(current => ({ ...current, trackingBusy: false, message: 'Order progress saved. Cash records remain unchanged.' }));
       onTracked({ ...scenario, ...payload.scenario });

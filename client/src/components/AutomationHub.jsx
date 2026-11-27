@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { sessionFetch } from '../services/session.js';
+import { readJsonSafe, sessionFetch } from '../services/session.js';
 import { t } from '../i18n/index.js';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 async function api(path, options = {}) {
   const response = await sessionFetch(`${base}${path}`, options);
-  const data = response.status === 204 ? null : await response.json();
+  const data = await readJsonSafe(response);
   if (!response.ok) throw new Error(data?.error?.message || 'Request failed');
   return data;
 }

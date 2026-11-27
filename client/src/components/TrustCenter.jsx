@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api, json } from '../services/api.js';
-import { sessionFetch, setCsrf } from '../services/session.js';
+import { readJsonSafe, sessionFetch, setCsrf } from '../services/session.js';
 
 const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 const eventLabel = event => `${event.action} · ${event.entityType}${event.entityId ? ` · ${event.entityId}` : ''}`;
@@ -44,7 +44,7 @@ export default function TrustCenter({ workspaceId, businessRole }) {
     setBusy(true); setError(''); setNotice('');
     try {
       const response = await sessionFetch(`${base}/workspaces/${workspaceId}/trust/export`);
-      if (!response.ok) { const result = await response.json(); throw new Error(result.error?.message || 'Export failed'); }
+      if (!response.ok) { const result = await readJsonSafe(response); throw new Error(result?.error?.message || 'Export failed'); }
       const blob = await response.blob(); const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
       anchor.href = url; anchor.download = `cashflow-${workspaceId}-export.json`; anchor.click(); URL.revokeObjectURL(url);
       setNotice('Business export downloaded.');

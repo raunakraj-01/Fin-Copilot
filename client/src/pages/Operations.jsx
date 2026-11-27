@@ -1,4 +1,4 @@
-import { sessionFetch } from '../services/session.js';
+import { readJsonSafe, sessionFetch } from '../services/session.js';
 import React, { useEffect, useState } from 'react';
 import { inputRupees, parseRupees } from './OrderAnalyzer/money.js';
 import ProactiveCollections from '../components/ProactiveCollections.jsx';
@@ -32,11 +32,11 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
   const [syncForm, setSyncForm] = useState({ companyId: '', sourceId: '', buyerGstin: '', invoiceDate: '', dueDate: '', clearedDate: '', amount: '' });
   const [error, setError] = useState('');
   useEffect(() => { setStatus(null); setSyncChanges([]); setTiming(null); setTimingItemId(''); setScore(null); setOffer(null); setPayment(null); setConfirmSend(false); setReceivables([]); setConsent(false); setDeviceToken(''); setSyncMessage('');
-    if (workspaceId) sessionFetch(`${base}/workspaces/${workspaceId}/items?category=receivable`).then(response => response.json())
-      .then(data => setReceivables((data.items || []).filter(item => ['open', 'partial'].includes(item.status)))).catch(() => {});
+    if (workspaceId) sessionFetch(`${base}/workspaces/${workspaceId}/items?category=receivable`).then(readJsonSafe)
+      .then(data => setReceivables((data?.items || []).filter(item => ['open', 'partial'].includes(item.status)))).catch(() => {});
   }, [workspaceId]);
-  useEffect(() => { sessionFetch(`${base}/health`).then(response => response.json()).then(data => {
-    setDemoMode(data.demoMode === true); setLocalSyntheticDev(data.localSyntheticDev === true);
+  useEffect(() => { sessionFetch(`${base}/health`).then(readJsonSafe).then(data => {
+    setDemoMode(data?.demoMode === true); setLocalSyntheticDev(data?.localSyntheticDev === true);
   }).catch(() => {}); }, []);
   useEffect(() => {
     if (!workspaceId || businessRole !== 'owner') return;
@@ -46,8 +46,8 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
   async function call(path, body) {
     setError('');
     const response = await sessionFetch(`${base}/workspaces/${workspaceId}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'Request failed');
+    const data = await readJsonSafe(response);
+    if (!response.ok) throw new Error(data?.error?.message || 'Request failed');
     return data;
   }
   async function ownerRequest(path, method = 'GET', body) {
@@ -55,8 +55,8 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
     const response = await sessionFetch(`${base}/workspaces/${workspaceId}/${path}`, { method,
       headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}` },
       ...(body ? { body: JSON.stringify(body) } : {}) });
-    const data = response.status === 204 ? null : await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'Request failed');
+    const data = await readJsonSafe(response);
+    if (!response.ok) throw new Error(data?.error?.message || 'Request failed');
     return data;
   }
   async function refreshSyncStatus() {
@@ -80,8 +80,8 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
           observation: { buyerGstin: syncForm.buyerGstin, invoiceDate: syncForm.invoiceDate, dueDate: syncForm.dueDate,
             clearedDate: syncForm.clearedDate, amountPaise },
         }] }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || 'Sync failed');
+      const data = await readJsonSafe(response);
+      if (!response.ok) throw new Error(data?.error?.message || 'Sync failed');
       setSyncMessage(`Applied ${data.count} Tally row and ${data.observationCount} payment observation. Switch profiles and repeat for the same buyer GSTIN.`);
       setSyncForm(current => ({ ...current, sourceId: '', amount: '' }));
     } catch (cause) { setError(cause.message); }
@@ -91,7 +91,7 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
     const timer = setInterval(async () => {
       try {
         const response = await sessionFetch(`${base}/workspaces/${workspaceId}/offers/payment-link/${payment.id}`, { headers: { Authorization: `Bearer ${token}` } });
-        if (response.ok) { const data = await response.json(); setPayment(current => current?.id === data.id ? { ...current, ...data } : current); }
+        if (response.ok) { const data = await readJsonSafe(response); if (data) setPayment(current => current?.id === data.id ? { ...current, ...data } : current); }
       } catch { /* A later poll can recover from a temporary network error. */ }
     }, 5000);
     return () => clearInterval(timer);
@@ -136,7 +136,7 @@ export default function Operations({ workspaceId, operationsItemId, businessRole
           <button type="button" onClick={async () => { try { await ownerRequest(`reliability/payment-timing/${timingItemId}/apply`, 'POST', { confirm: true, expectedDate: timing.expectedDate }); setTiming({ ...timing, ownerExpectedDate: timing.expectedDate }); setReceivables(records => records.map(item => item.id === timingItemId ? { ...item, expectedDate: timing.expectedDate } : item)); } catch (cause) { setError(cause.message); } }}>Apply suggested date</button>
         </div> : <p>{timing.reason}</p>)}
       </div>
-      <form className="card" onSubmit={async e => { e.preventDefault(); try { const response = await sessionFetch(`${base}/workspaces/${workspaceId}/reliability/buyers/${encodeURIComponent(gstin.toUpperCase())}`, { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.error?.message); setScore(data); } catch (cause) { setError(cause.message); } }}>
+      <form className="card" onSubmit={async e => { e.preventDefault(); try { const response = await sessionFetch(`${base}/workspaces/${workspaceId}/reliability/buyers/${encodeURIComponent(gstin.toUpperCase())}`, { headers: { Authorization: `Bearer ${token}` } }); const data = await readJsonSafe(response); if (!response.ok) throw new Error(data?.error?.message); setScore(data); } catch (cause) { setError(cause.message); } }}>
         <h2>Buyer payment reliability</h2><label>Buyer GSTIN<input value={gstin} onChange={e => setGstin(e.target.value)} placeholder={demoMode ? 'Demo: 22AAAAA0000A1Z5' : ''} required /></label><button disabled={!canPreview}>Check score</button>
         {score && <p>{score.available ? `Median clearance: ${score.clearanceDays} days; median lateness: ${score.latenessDays} days; score: ${score.score}/100; ${score.supplierCount} suppliers.` : score.reason}</p>}
       </form>

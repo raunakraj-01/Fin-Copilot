@@ -11,6 +11,7 @@ export default function AuthGate({ children }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [recoveryNotice, setRecoveryNotice] = useState(false);
   const invite = new URLSearchParams(window.location.search).get('invite');
   const [inviteToken, setInviteToken] = useState(invite || '');
 
@@ -29,6 +30,7 @@ export default function AuthGate({ children }) {
     try {
       const data = await json(`/auth/${register ? 'register' : 'login'}`, 'POST', { email, password, ...(register ? { name } : {}) });
       setCsrf(data.csrfToken); setUser(data.user); setPassword('');
+      if (register) setRecoveryNotice(true);
     } catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
 
@@ -38,7 +40,7 @@ export default function AuthGate({ children }) {
     setCsrf(''); setUser(null); localStorage.removeItem('cashflowProfiles'); localStorage.removeItem('cashflowWorkspaceId'); sessionStorage.clear();
   }
 
-  if (loading) return <main className="decision-page auth-page auth-page--loading"><section className="decision-card"><p role="status">Checking your session?</p></section></main>;
+  if (loading) return <main className="decision-page auth-page auth-page--loading"><section className="decision-card"><p role="status">Checking your session…</p></section></main>;
   if (!user) return <main className="decision-page auth-page"><section className="decision-card">
     <h1>{register ? 'Create your account' : 'Sign in to CashFlow Copilot'}</h1>
     <form onSubmit={authenticate} className="form-grid"><fieldset disabled={busy}>
@@ -56,5 +58,10 @@ export default function AuthGate({ children }) {
     <button disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await json('/auth/invitations/accept', 'POST', { token: inviteToken }); setInviteToken(''); } catch (cause) { setError(cause.message); } finally { setBusy(false); } }}>Accept invitation</button>
     <button className="secondary" onClick={() => setInviteToken('')}>Skip invitation</button><button className="secondary" onClick={logout}>Sign out</button>
     {error && <p role="alert">{error}</p>}</section></main>;
-  return <>{error && <p role="alert">{error}</p>}{children(user, logout)}</>;
+  return <>{error && <p role="alert">{error}</p>}
+    {recoveryNotice && <div className="decision-notice" role="status">
+      <strong>Account created:</strong> Visit <em>Setup → Account security</em> to generate and save one-time recovery codes in case you forget your password.{' '}
+      <button type="button" className="secondary" onClick={() => setRecoveryNotice(false)}>Dismiss</button>
+    </div>}
+    {children(user, logout)}</>;
 }

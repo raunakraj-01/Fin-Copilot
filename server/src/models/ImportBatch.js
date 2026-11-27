@@ -13,5 +13,9 @@ const schema = new mongoose.Schema({
   counts: { accepted: Number, needsReview: Number, rejected: Number, committed: Number },
 }, { timestamps: true, optimisticConcurrency: true });
 schema.index({ workspaceId: 1, createdAt: -1 });
+schema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 30 * 24 * 60 * 60, partialFilterExpression: { status: { $in: ['inspected', 'validated', 'failed'] } } },
+);
 
 export default mongoose.model('ImportBatch', schema);

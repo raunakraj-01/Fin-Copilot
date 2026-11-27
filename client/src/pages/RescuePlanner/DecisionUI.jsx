@@ -1,4 +1,4 @@
-import { sessionFetch } from '../../services/session.js';
+import { readJsonSafe, sessionFetch } from '../../services/session.js';
 import { t, useLanguage, locale } from '../../i18n/index.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { baseUrl } from '../../services/api.js';
@@ -34,9 +34,9 @@ export function useAnalysis(workspaceId, feature, apiBaseUrl) {
       const response = await sessionFetch(`${base}/workspaces/${encodeURIComponent(workspaceId)}/${feature}/analyze`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal,
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || 'Analysis failed. Please try again.');
-      if (!payload.baseline || (feature === 'rescue' ? !Array.isArray(payload.plans) || !Array.isArray(payload.partialMitigations) : feature === 'shock' ? !payload.stressed || !Array.isArray(payload.priorities) : !payload.withOrder || !payload.minimumAdvance)) throw new Error('The server returned an incomplete analysis. Please retry after checking the API.');
+      const payload = await readJsonSafe(response);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Analysis failed. Please try again.');
+      if (!payload?.baseline || (feature === 'rescue' ? !Array.isArray(payload.plans) || !Array.isArray(payload.partialMitigations) : feature === 'shock' ? !payload.stressed || !Array.isArray(payload.priorities) : !payload.withOrder || !payload.minimumAdvance)) throw new Error('The server returned an incomplete analysis. Please retry after checking the API.');
       if (request === serial.current) setState({ result: payload, error: '', loading: false });
     } catch (error) {
       if (request === serial.current && error.name !== 'AbortError') setState({ result: null, error: error.message || 'Unable to reach the analysis service', loading: false });

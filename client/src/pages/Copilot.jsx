@@ -1,4 +1,4 @@
-import { sessionFetch } from '../services/session.js';
+import { readJsonSafe, sessionFetch } from '../services/session.js';
 import React, { useEffect, useRef, useState } from 'react';
 import AsyncActionButton from '../components/AsyncActionButton.jsx';
 
@@ -25,7 +25,7 @@ export default function Copilot({ workspaceId }) {
       const response = await sessionFetch(`${base}/workspaces/${workspaceId}/copilot/chat`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: question, sessionId }),
       });
-      if (!response.ok) { const error = await response.json(); throw new Error(error.error?.message || 'Chat failed'); }
+      if (!response.ok) { const error = await readJsonSafe(response); throw new Error(error?.error?.message || 'Chat failed'); }
       const text = await response.text();
       const answer = text.split('\n\n').find(part => part.startsWith('event: answer'));
       if (!answer) throw new Error('Incomplete response');

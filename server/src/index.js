@@ -12,6 +12,7 @@ app.locals.localSyntheticDev = !isProduction && process.env.LOCAL_SYNTHETIC_DEV 
   && /^mongodb:\/\/(?:127\.0\.0\.1|localhost):/.test(process.env.MONGODB_URI || '');
 
 let server;
+const stopWorkers = [];
 
 async function startServer() {
   let connected = false;
@@ -50,10 +51,10 @@ async function startServer() {
   }
 
   try {
-    startFollowupWorker();
-    startMorningBriefScheduler();
-    startPaymentDelayUpdater();
-    startTelegramCopilot();
+    stopWorkers.push(startFollowupWorker());
+    stopWorkers.push(startMorningBriefScheduler());
+    stopWorkers.push(startPaymentDelayUpdater());
+    stopWorkers.push(await startTelegramCopilot());
   } catch (err) {
     console.warn('Background services notice:', err.message);
   }
@@ -77,6 +78,12 @@ async function gracefulShutdown(signal) {
   if (isShuttingDown) return;
   isShuttingDown = true;
   console.log(`\n[Fin-Copilot Startup] Received ${signal}. Initiating zero-downtime graceful shutdown...`);
+
+  for (const stop of stopWorkers) {
+    try {
+      if (typeof stop === 'function') stop();
+    } catch {}
+  }
 
   if (!server) {
     process.exit(0);
