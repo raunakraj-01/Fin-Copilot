@@ -50,7 +50,7 @@ EXPOSE 5000
 
 # Automated Container Healthcheck
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1:5000/api/healthz || exit 1
+  CMD sh -c "wget -q -O /dev/null http://127.0.0.1:${PORT:-5000}/api/healthz || exit 1"
 
 # Launch with dumb-init wrapper to handle SIGTERM/SIGINT cleanly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]

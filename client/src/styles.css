@@ -1381,6 +1381,11 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
   .spending-fix-controls { width: 100%; display: grid; grid-template-columns: 1fr; }
   .spending-fix-controls button, .spending-fix-controls input { width: 100%; }
   input, select, textarea { font-size: 16px; }
+  .kavach-header-container { padding: 8px 10px 4px; }
+  .kavach-floating-nav { flex-wrap: wrap; border-radius: 20px; padding: 8px 12px; gap: 8px; }
+  .kavach-nav-actions { flex: 1 1 100%; justify-content: space-between; flex-wrap: wrap; }
+  .kavach-business-select { min-width: 0; max-width: none; width: 100%; }
+  .kavach-nav-actions > .kavach-select-label:first-of-type { flex: 1 1 120px; min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
@@ -1436,14 +1441,17 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
     left: 0;
     right: 0;
     height: 56px;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid #283640;
+    border-top: 1px solid var(--border);
     z-index: 100;
     justify-content: space-around;
     align-items: center;
     padding: 0 4px;
+  }
+  html.dark .mobile-bottom-nav {
+    background: rgba(13, 22, 20, 0.94);
   }
   .mobile-bottom-nav a {
     display: flex;
