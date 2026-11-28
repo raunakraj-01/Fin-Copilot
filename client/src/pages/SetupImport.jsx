@@ -5,6 +5,7 @@ import ManualRecords from '../components/ManualRecords.jsx';
 import AsyncActionButton from '../components/AsyncActionButton.jsx';
 import BankReconciliation from '../components/BankReconciliation.jsx';
 import BusinessAccess from '../components/BusinessAccess.jsx';
+import TelegramConnect from '../components/TelegramConnect.jsx';
 
 const fields = ['externalId', 'counterparty', 'amountInr', 'settledInr', 'dueDate', 'expectedDate', 'status',
   'mandatory', 'negotiable', 'discretionary', 'maxExtensionDays', 'earliestCollectionDate',
@@ -210,6 +211,7 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
     {workspaceId && <ManualRecords key={`records-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} />}
     {workspaceId && <BankReconciliation key={`bank-${workspaceId}`} workspaceId={workspaceId} refreshKey={refreshKey} onChanged={() => setRefreshKey(value => value + 1)} />}
     {workspaceId && businessRole === 'owner' && <BusinessAccess key={`access-${workspaceId}`} workspaceId={workspaceId} />}
+    {workspaceId && <TelegramConnect key={`telegram-${workspaceId}`} workspaceId={workspaceId} />}
     {message && <p role="status" className="notice">{t(message)}</p>}
   </section>;
 }

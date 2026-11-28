@@ -536,6 +536,11 @@ const PillNav = ({
         setCollapsed(false);
         return;
       }
+      if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+        if (introRef.current && !collapsed) pendingRef.current = true;
+        setCollapsed(true);
+        return;
+      }
       const parent = root.parentElement;
       if (!parent) return;
       const styles = getComputedStyle(parent);

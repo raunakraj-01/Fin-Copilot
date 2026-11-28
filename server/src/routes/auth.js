@@ -4,6 +4,8 @@ import { z } from 'zod';
 import User from '../models/User.js';
 import AuthSession from '../models/AuthSession.js';
 import Workspace from '../models/Workspace.js';
+import TelegramLink from '../models/TelegramLink.js';
+import TelegramLinkCode from '../models/TelegramLinkCode.js';
 import { asyncRoute, fail, validate } from '../utils/http.js';
 import { requireSession } from '../middleware/auth.js';
 import { assertOrigin, checkAuthThrottle, clearAuthAttempts, cookieName, createSession, hashPassword, recordAuthAttempt, tokenHash, verifyPassword } from '../services/auth.js';
@@ -135,6 +137,8 @@ router.delete('/account', requireSession, asyncRoute(async (req, res) => {
   await Workspace.updateMany({ 'members.userId': user._id }, { $pull: { members: { userId: user._id } } });
   await Workspace.updateMany({ 'invitations.email': user.email }, { $pull: { invitations: { email: user.email } } });
   await AuthSession.deleteMany({ userId: user._id });
+  await TelegramLink.deleteMany({ userId: user._id });
+  await TelegramLinkCode.deleteMany({ userId: user._id });
   await User.deleteOne({ _id: user._id });
   await appendSecurityEvent({ action: 'auth.account_deleted', outcome: 'succeeded', actorUserId: user._id, ip: req.ip, details: [`owned:${owned.length}`] });
   res.clearCookie(cookieName(), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', path: '/' });

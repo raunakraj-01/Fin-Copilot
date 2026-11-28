@@ -23,6 +23,8 @@ import offers from './routes/offers.js';
 import followups, { automationRouter } from './routes/followups.js';
 import automation from './routes/automation.js';
 import razorpayWebhook from './routes/razorpayWebhook.js';
+import telegram from './routes/telegram.js';
+import telegramWebhook from './routes/telegramWebhook.js';
 import trust from './routes/trust.js';
 import inventory from './routes/inventory.js';
 import captures, { automationRouter as captureAutomation } from './routes/captures.js';
@@ -60,6 +62,7 @@ app.use((req, res, next) => cors({
 })(req, res, next));
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('X-Content-Type-Options', 'nosniff'); res.set('Referrer-Policy', 'no-referrer'); next(); });
 app.use('/api/webhooks/razorpay', rateLimitPublic('webhook'), express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
+app.use('/api/webhooks/telegram', rateLimitPublic('webhook'), express.json({ limit: '256kb' }), telegramWebhook);
 app.use(express.json({ limit: '1mb' }));
 
 const publicLimiter = rateLimitPublic('public');
@@ -111,6 +114,7 @@ app.use('/api/workspaces/:workspaceId/reliability', reliabilityRoutes);
 app.use('/api/workspaces/:workspaceId/offers', offers);
 app.use('/api/workspaces/:workspaceId/followups', followups);
 app.use('/api/workspaces/:workspaceId/automation', automation);
+app.use('/api/workspaces/:workspaceId/telegram', telegram);
 app.use('/api/workspaces/:workspaceId/trust', trust);
 app.use('/api/workspaces/:workspaceId/inventory', inventory);
 app.use('/api/workspaces/:workspaceId/captures', captures);

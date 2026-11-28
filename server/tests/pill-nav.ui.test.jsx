@@ -91,4 +91,31 @@ describe('PillNav component', () => {
     expect(nav.style.getPropertyValue('--pn-pill')).toBe('#2ebd85');
     expect(nav.style.getPropertyValue('--pn-pill-ink')).toBe('#0d1614');
   });
+
+  it('opens collapsed mobile menu toggle and allows navigation without breaking labels', () => {
+    const handleClick = vi.fn();
+    const { container } = render(
+      <PillNav
+        items={items}
+        activeHref="/cash-outlook"
+        collapse="always"
+        onItemClick={(item, index, event) => {
+          event.preventDefault();
+          handleClick(item);
+        }}
+      />
+    );
+
+    const nav = container.querySelector('nav.pill-nav');
+    expect(nav.hasAttribute('data-collapsed')).toBe(true);
+
+    const toggle = screen.getByRole('button', { name: 'Open menu' });
+    fireEvent.click(toggle);
+
+    const targetLink = screen.getByRole('link', { name: 'Cash Copilot' });
+    expect(targetLink).toBeTruthy();
+    fireEvent.click(targetLink);
+    expect(handleClick).toHaveBeenCalledTimes(1);
+    expect(handleClick.mock.calls[0][0].href).toBe('/cash-copilot');
+  });
 });

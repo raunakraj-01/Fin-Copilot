@@ -18,6 +18,8 @@ import SyncConflict from '../../models/SyncConflict.js';
 import SyncRun from '../../models/SyncRun.js';
 import SyncDevice from '../../models/SyncDevice.js';
 import PaymentObservation from '../../models/PaymentObservation.js';
+import TelegramLink from '../../models/TelegramLink.js';
+import TelegramLinkCode from '../../models/TelegramLinkCode.js';
 import { addDays } from '../rescue/dates.js';
 import { todayIndia } from '../../utils/dates.js';
 import { loadDecisionContext, loadSharedForecast } from '../rescue/decisionContext.js';
@@ -50,7 +52,12 @@ export async function purgeWorkspaceData(workspaceId, { includeDevicesAndTelemet
     PaymentOffer.deleteMany({ workspaceId }),
     ImportBatch.deleteMany({ workspaceId }),
     ...(includeDevicesAndTelemetry
-      ? [SyncDevice.deleteMany({ workspaceId }), PaymentObservation.deleteMany({ workspaceId })]
+      ? [
+        SyncDevice.deleteMany({ workspaceId }),
+        PaymentObservation.deleteMany({ workspaceId }),
+        TelegramLinkCode.deleteMany({ workspaceId }),
+        TelegramLink.updateMany({ activeWorkspaceId: workspaceId }, { $set: { activeWorkspaceId: null } }),
+      ]
       : []),
   ]);
 }

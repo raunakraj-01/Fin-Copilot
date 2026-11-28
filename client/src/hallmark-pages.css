@@ -326,23 +326,210 @@ html.dark .kavach-floating-nav { background: var(--app-surface); }
   .content .decision-page--orders .decision-cost-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+@media (max-width: 768px) {
+  html, body { min-width: 0; max-width: 100%; overflow-x: clip; }
+  .kavach-app-wrapper { min-width: 0; max-width: 100%; }
+  .kavach-header-container { padding: 8px 10px 6px; }
+  .kavach-floating-nav {
+    flex-wrap: wrap;
+    border-radius: 16px;
+    padding: 8px 12px;
+    gap: 8px;
+    justify-content: space-between;
+  }
+  .kavach-nav-brand { transform: none; }
+  .kavach-floating-nav > .pill-nav[data-collapsed] {
+    position: static;
+    flex: 0 0 auto;
+    width: auto;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .kavach-floating-nav > .pill-nav[data-collapsed] .pill-nav__panel {
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    padding: 8px;
+    border-radius: 16px;
+    background: var(--app-surface);
+    border: var(--app-line) solid var(--app-rule-strong);
+    box-shadow: var(--app-nav-shadow);
+    z-index: 160;
+  }
+  .kavach-floating-nav > .kavach-nav-actions {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kavach-floating-nav .kavach-select-label:first-of-type { flex: 1 1 130px; min-width: 0; }
+  .kavach-floating-nav .kavach-business-select { width: 100%; max-width: none; }
+  .kavach-floating-nav .kavach-lang-select { width: 64px; }
+  .kavach-floating-nav .kavach-pill-select {
+    height: 36px;
+    min-height: 36px;
+    font-size: 16px;
+  }
+  .kavach-notifications-menu {
+    position: fixed;
+    top: 108px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 70dvh;
+    overflow-y: auto;
+  }
+  .kavach-user-menu { width: min(260px, calc(100vw - 24px)); max-width: calc(100vw - 24px); right: 0; }
+
+  .content {
+    width: 100%;
+    max-width: 100%;
+    padding: var(--app-space-md) var(--app-space-sm) calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+  .content > *,
+  .content section,
+  .content article,
+  .content form,
+  .content fieldset,
+  .content .card,
+  .content .decision-card,
+  .content .action-card,
+  .content .card > *,
+  .content .decision-card > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .content input,
+  .content select,
+  .content textarea,
+  .auth-page input {
+    font-size: 16px;
+    max-width: 100%;
+  }
+  .content input[type="checkbox"],
+  .auth-page input[type="checkbox"] {
+    width: auto;
+    min-width: 18px;
+  }
+  .content img { max-width: 100%; height: auto; }
+
+  .kavach-hero-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+    border-radius: 18px;
+    gap: 16px;
+  }
+  .kavach-hero-right,
+  .kavach-hero-right .kavach-btn-dark { width: 100%; }
+  .kavach-card-forest,
+  .kavach-card-white { min-height: auto; padding: 20px; border-radius: 18px; }
+
+  .automation-cards-grid,
+  .defense-grid-2,
+  .defense-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .monte-carlo-controls,
+  .whatif-controls-grid { grid-template-columns: minmax(0, 1fr); }
+
+  .horizon-picker { flex-wrap: wrap; max-width: 100%; }
+  .horizon-btn { min-width: 0; flex: 1 1 auto; }
+  .section-43b-card .horizon-picker {
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+  }
+  .section-43b-card .horizon-picker > button {
+    width: 100%;
+    min-height: 40px;
+    text-align: left;
+    justify-content: flex-start;
+    white-space: normal;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .mobile-bottom-nav a { min-width: 0; padding: 0 2px; font-size: 10.5px; text-align: center; }
+  .mobile-bottom-nav a span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 640px) {
   .content { padding: var(--app-space-md) var(--app-space-sm) calc(84px + env(safe-area-inset-bottom, 0px)); }
-  .content .card, .content .decision-card { padding: var(--app-space-md); }
-  .content .form-grid, .content .decision-form-grid, .content .action-card-grid { grid-template-columns: minmax(0, 1fr); }
+  .content .card,
+  .content .decision-card,
+  .capital-health-card,
+  .whatif-sandbox-card,
+  .monte-carlo-card,
+  .section-43b-card,
+  .pareto-frontier-card,
+  .automation-hub-section,
+  .automation-card { padding: var(--app-space-md); }
+  .content .form-grid,
+  .content .decision-form-grid,
+  .content .action-card-grid,
+  .whatif-metrics-bar,
+  .monte-carlo-kpis,
+  .section-43b-kpis,
+  .bench-kpi-grid,
+  .complexity-grid,
+  .test-stat-bar,
+  .rag-sources-grid { grid-template-columns: minmax(0, 1fr); }
   .content .decision-controls { align-items: stretch; flex-direction: column; }
   .content .decision-controls > *, .content .decision-controls label { width: 100%; }
   .content .metrics, .content .decision-metrics { grid-template-columns: minmax(0, 1fr); }
   .content .metrics > .card, .content .decision-metric { border-left: 0; border-top: var(--app-line) solid var(--app-rule); }
   .content .metrics > :first-child, .content .decision-metric:first-child { border-top: 0; }
   .content .decision-page--orders .decision-cost-line { grid-template-columns: minmax(0, 1fr); }
+  .content .decision-cost-line > button { width: 100%; }
+  .content .decision-action-list li button { display: flex; width: 100%; margin: 8px 0 0; }
   .content .copilot-form { align-items: stretch; flex-direction: column; }
   .content .copilot-form label { flex: 0 0 auto; }
-  .content .table-scroll, .content .decision-table-wrap { overflow-x: auto; }
+  .content .copilot-history { min-height: 220px; padding: 14px; }
+  .copilot-chip-btn { text-align: left; white-space: normal; height: auto; }
+  .content .table-scroll, .content .decision-table-wrap { overflow-x: auto; max-width: 100%; }
   .content .table-scroll table, .content .decision-table-wrap table { min-width: 640px; }
-  .content .decision-chart { padding-inline: var(--app-space-xs); }
-  .auth-page { width: 100%; min-height: 100svh; padding: var(--app-space-md) var(--app-space-sm); }
-  .auth-page .decision-card { padding: var(--app-space-lg) var(--app-space-md); }
+  .content .decision-chart { padding-inline: var(--app-space-xs); overflow: hidden; }
+  .whatif-header,
+  .monte-carlo-header,
+  .section-43b-header,
+  .pareto-header,
+  .inspector-header,
+  .defense-modal-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .brief-actions { flex-direction: column; }
+  .brief-actions > * { width: 100%; justify-content: center; }
+  .xml-preview-stat { flex-wrap: wrap; gap: 6px; }
+  .cash-desk-actions li { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .cash-desk-actions li button { margin-left: 0; width: 100%; }
+  .spending-fix-meta { flex: 1 1 100%; }
+  .outlook-workspace .outlook-tool-list button { flex: 1 1 100%; justify-content: center; }
+  .outlook-state { padding: 20px 16px; }
+  .outlook-skeleton { grid-template-columns: minmax(0, 1fr); }
+  .chart-legend-row,
+  .pareto-legend-row { flex-wrap: wrap; gap: 8px 14px; }
+  .dossier-overlay,
+  .inspector-overlay,
+  .defense-modal-overlay { padding: 10px; }
+  .inspector-modal { padding: 16px; border-radius: 16px; max-height: 92dvh; }
+  .defense-modal-container { border-radius: 16px; max-height: 92dvh; }
+  .defense-modal-header { padding: 16px; }
+  .defense-tab-nav { padding: 8px 14px; }
+  .defense-tab-body { padding: 16px 16px 24px; }
+  .dossier-actions-bar { padding: 12px 14px; flex-wrap: wrap; justify-content: stretch; }
+  .dossier-actions-bar button { flex: 1 1 140px; }
+  .dossier-document { padding: 18px 14px; }
+  .dossier-meta { text-align: left; }
+  .code-architecture-box { padding: 12px; font-size: 10.5px; }
+  .auth-page,
+  body > #root > .decision-page.auth-page { width: 100%; min-height: 100svh; padding: var(--app-space-md) var(--app-space-sm); }
+  .auth-page .decision-card,
+  body > #root > .decision-page.auth-page > .decision-card { width: 100%; padding: var(--app-space-lg) var(--app-space-md); }
 }
 
 @media (prefers-reduced-motion: reduce) {
