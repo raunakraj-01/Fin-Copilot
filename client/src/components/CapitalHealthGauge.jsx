@@ -78,10 +78,11 @@ export default function CapitalHealthGauge({ forecast }) {
   const result = computeResilienceScore(forecast);
   const { score, grade, label, color, breakdown } = result;
 
-  // Arc calculation
+  // Arc calculation (270-degree gauge sweep starting at 7:30 clockwise to 4:30)
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * (circumference * 0.75);
+  const trackArc = circumference * 0.75;
+  const activeArc = (score / 100) * trackArc;
 
   return (
     <div className="card capital-health-card">
@@ -108,21 +109,23 @@ export default function CapitalHealthGauge({ forecast }) {
               cx="70"
               cy="70"
               r={radius}
-              strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`}
+              strokeDasharray={`${trackArc} ${circumference}`}
               strokeDashoffset="0"
               transform="rotate(135 70 70)"
             />
             {/* Active metric bar */}
-            <circle
-              className="gauge-bar"
-              cx="70"
-              cy="70"
-              r={radius}
-              stroke={color}
-              strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`}
-              strokeDashoffset={strokeDashoffset}
-              transform="rotate(135 70 70)"
-            />
+            {score > 0 && (
+              <circle
+                className="gauge-bar"
+                cx="70"
+                cy="70"
+                r={radius}
+                stroke={color}
+                strokeDasharray={`${activeArc} ${circumference}`}
+                strokeDashoffset="0"
+                transform="rotate(135 70 70)"
+              />
+            )}
           </svg>
           <div className="gauge-center-label">
             <span className="gauge-score-value">{score}</span>
