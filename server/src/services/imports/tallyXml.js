@@ -1,14 +1,23 @@
 /**
  * TallyPrime XML Voucher & Master Parser
  * Parses standard Tally.ERP 9 and TallyPrime XML export documents (<ENVELOPE><BODY>...)
- * into strongly-typed, integer-paise financial items for Fin-Copilot.
+ * using linear-time block scanning (no catastrophic regex backtracking) into integer-paise items.
  */
+
+const MAX_VOUCHERS = 5000;
+const MAX_LEDGER_ENTRIES_PER_VOUCHER = 200;
 
 function decodeXmlEntities(text) {
   if (!text) return '';
   return String(text)
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const code = Number(dec);
+      return Number.isSafeInteger(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      const code = parseInt(hex, 16);
+      return Number.isSafeInteger(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+    })
     .replace(/&apos;/g, "'")
     .replace(/&quot;/g, '"')
     .replace(/&gt;/g, '>')
@@ -24,34 +33,80 @@ function parseTallyAmount(raw) {
   return Number.isFinite(value) ? value : NaN;
 }
 
+/**
+ * Extract `<TAG ...>body</TAG>` blocks in linear O(N) time without regex backtracking.
+ */
+function extractTagBlocks(source, tagName, maxBlocks, withAttributes = false) {
+  const lower = source.toLowerCase();
+  const openToken = `<${tagName.toLowerCase()}`;
+  const closeToken = `</${tagName.toLowerCase()}>`;
+  const blocks = [];
+  let cursor = 0;
+
+  while (cursor < source.length && blocks.length < maxBlocks) {
+    const start = lower.indexOf(openToken, cursor);
+    if (start === -1) break;
+
+    const afterName = lower[start + openToken.length];
+    if (afterName !== '>' && afterName !== ' ' && afterName !== '\t' && afterName !== '\r' && afterName !== '\n') {
+      cursor = start + openToken.length;
+      continue;
+    }
+
+    const openEnd = source.indexOf('>', start + openToken.length);
+    if (openEnd === -1) break;
+
+    const closeStart = lower.indexOf(closeToken, openEnd + 1);
+    if (closeStart === -1) break;
+
+    const body = source.slice(openEnd + 1, closeStart);
+    if (withAttributes) {
+      const attrs = source.slice(start + openToken.length, openEnd);
+      blocks.push({ attrs, body });
+    } else {
+      blocks.push(body);
+    }
+    cursor = closeStart + closeToken.length;
+  }
+
+  return blocks;
+}
+
+/**
+ * Extract the text inside the first `<TAG>...</TAG>` occurrence in linear time.
+ */
+function extractSingleTagText(source, tagName) {
+  const lower = source.toLowerCase();
+  const open = `<${tagName.toLowerCase()}>`;
+  const close = `</${tagName.toLowerCase()}>`;
+  const start = lower.indexOf(open);
+  if (start === -1) return null;
+  const bodyStart = start + open.length;
+  const end = lower.indexOf(close, bodyStart);
+  if (end === -1) return null;
+  return source.slice(bodyStart, end);
+}
+
 export function parseTallyXml(xmlString) {
   if (!xmlString || typeof xmlString !== 'string') {
     throw new Error('Valid XML string is required');
   }
 
-  // Extract Company Name
-  const companyMatch = xmlString.match(/<SVCURRENTCOMPANY>(.*?)<\/SVCURRENTCOMPANY>/i);
-  const companyName = companyMatch ? decodeXmlEntities(companyMatch[1]).trim() : 'Tally Company';
+  const rawCompany = extractSingleTagText(xmlString, 'SVCURRENTCOMPANY');
+  const companyName = rawCompany ? decodeXmlEntities(rawCompany).trim() : 'Tally Company';
 
-  // Extract all <VOUCHER> blocks
-  const voucherRegex = /<VOUCHER\b([^>]*)>([\s\S]*?)<\/VOUCHER>/gi;
+  const voucherBlocks = extractTagBlocks(xmlString, 'VOUCHER', MAX_VOUCHERS, true);
   const vouchers = [];
-  let match;
 
-  while ((match = voucherRegex.exec(xmlString)) !== null) {
-    const voucherAttrs = match[1];
-    const voucherBody = match[2];
+  for (const { attrs: voucherAttrs, body: voucherBody } of voucherBlocks) {
+    const typeAttrMatch = voucherAttrs.match(/VCHTYPE="([^"]{1,120})"/i);
+    const rawTypeTag = extractSingleTagText(voucherBody, 'VOUCHERTYPENAME');
+    const rawType = decodeXmlEntities(rawTypeTag ?? (typeAttrMatch ? typeAttrMatch[1] : 'Receipt')).trim();
 
-    // Determine Voucher Type
-    const typeAttrMatch = voucherAttrs.match(/VCHTYPE="([^"]+)"/i);
-    const typeTagMatch = voucherBody.match(/<VOUCHERTYPENAME>(.*?)<\/VOUCHERTYPENAME>/i);
-    const rawType = decodeXmlEntities(typeTagMatch ? typeTagMatch[1] : typeAttrMatch ? typeAttrMatch[1] : 'Receipt').trim();
-
-    // Determine Date (Tally format YYYYMMDD -> YYYY-MM-DD)
-    const dateMatch = voucherBody.match(/<DATE>(.*?)<\/DATE>/i);
+    const rawDateTag = extractSingleTagText(voucherBody, 'DATE');
     let dateStr = new Date().toISOString().slice(0, 10);
-    if (dateMatch) {
-      const rawDate = decodeXmlEntities(dateMatch[1]).trim();
+    if (rawDateTag) {
+      const rawDate = decodeXmlEntities(rawDateTag).trim();
       if (/^\d{8}$/.test(rawDate)) {
         dateStr = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
       } else if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
@@ -59,38 +114,32 @@ export function parseTallyXml(xmlString) {
       }
     }
 
-    // Voucher Number
-    const vNumMatch = voucherBody.match(/<VOUCHERNUMBER>(.*?)<\/VOUCHERNUMBER>/i);
-    const voucherNumber = vNumMatch ? decodeXmlEntities(vNumMatch[1]).trim() : `TALLY-${Date.now()}-${vouchers.length + 1}`;
+    const rawVoucherNum = extractSingleTagText(voucherBody, 'VOUCHERNUMBER');
+    const voucherNumber = rawVoucherNum ? decodeXmlEntities(rawVoucherNum).trim() : `TALLY-${Date.now()}-${vouchers.length + 1}`;
 
-    // Narration
-    const narMatch = voucherBody.match(/<NARRATION>(.*?)<\/NARRATION>/i);
-    const narration = narMatch ? decodeXmlEntities(narMatch[1]).trim() : '';
+    const rawNarration = extractSingleTagText(voucherBody, 'NARRATION');
+    const narration = rawNarration ? decodeXmlEntities(rawNarration).trim() : '';
 
-    // Extract Ledger Entries
-    const ledgerRegex = /<ALLLEDGERENTRIES\.LIST>([\s\S]*?)<\/ALLLEDGERENTRIES\.LIST>/gi;
-    let ledgerMatch;
+    const ledgerBlocks = extractTagBlocks(voucherBody, 'ALLLEDGERENTRIES.LIST', MAX_LEDGER_ENTRIES_PER_VOUCHER, false);
     const entries = [];
 
-    while ((ledgerMatch = ledgerRegex.exec(voucherBody)) !== null) {
-      const entryBody = ledgerMatch[1];
-      const nameMatch = entryBody.match(/<LEDGERNAME>(.*?)<\/LEDGERNAME>/i);
-      const amtMatch = entryBody.match(/<AMOUNT>(.*?)<\/AMOUNT>/i);
-      const posMatch = entryBody.match(/<ISDEEMEDPOSITIVE>(.*?)<\/ISDEEMEDPOSITIVE>/i);
+    for (const entryBody of ledgerBlocks) {
+      const rawName = extractSingleTagText(entryBody, 'LEDGERNAME');
+      const rawAmt = extractSingleTagText(entryBody, 'AMOUNT');
+      const rawPos = extractSingleTagText(entryBody, 'ISDEEMEDPOSITIVE');
 
-      if (nameMatch && amtMatch) {
-        const parsedAmount = parseTallyAmount(amtMatch[1]);
+      if (rawName != null && rawAmt != null) {
+        const parsedAmount = parseTallyAmount(rawAmt);
         if (Number.isFinite(parsedAmount)) {
           entries.push({
-            ledgerName: decodeXmlEntities(nameMatch[1]).trim(),
+            ledgerName: decodeXmlEntities(rawName).trim(),
             amount: parsedAmount,
-            isPositive: posMatch ? decodeXmlEntities(posMatch[1]).trim().toLowerCase() === 'yes' : false,
+            isPositive: rawPos ? decodeXmlEntities(rawPos).trim().toLowerCase() === 'yes' : false,
           });
         }
       }
     }
 
-    // Identify non-bank counterparty ledger and transaction amount
     const bankLedgerKeywords = ['bank', 'cash', 'petty cash', 'hdfc', 'sbi', 'icici', 'axis', 'kotak'];
     const counterpartyEntry = entries.find(e =>
       !bankLedgerKeywords.some(keyword => e.ledgerName.toLowerCase().includes(keyword))
@@ -99,12 +148,9 @@ export function parseTallyXml(xmlString) {
     const absAmountInr = counterpartyEntry ? Math.abs(counterpartyEntry.amount) : 0;
     const amountPaise = Math.round(absAmountInr * 100);
 
-    // Map voucher type to direction and category
-    // In Tally: Receipt / Sales = Inflow (Receivable), Payment / Purchase = Outflow (Payable)
     const isReceivable = ['receipt', 'sales', 'sale'].some(t => rawType.toLowerCase().includes(t));
     const category = isReceivable ? 'receivable' : 'payable';
 
-    // Extract invoice identity from narration if formatted
     const invMatch = narration.match(/(?:INV|BILL)-[A-Za-z0-9_-]+/i);
     const externalId = invMatch ? invMatch[0] : voucherNumber;
 

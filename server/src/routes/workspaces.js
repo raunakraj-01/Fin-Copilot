@@ -12,8 +12,13 @@ import { parseUpload, suggestMapping } from '../services/imports/parse.js';
 import { normalizeRows } from '../services/imports/normalize.js';
 import { workspaceCreate, workspacePatch } from '../validators/finance.js';
 import Workspace from '../models/Workspace.js';
-import { appendAudit } from '../services/audit.js';
-import { provisionDemoWorkspace } from '../services/demo/seedDemoWorkspace.js';
+import { appendAudit, appendSecurityEvent } from '../services/audit.js';
+import { provisionDemoWorkspace, purgeWorkspaceData } from '../services/demo/seedDemoWorkspace.js';
+import { rateLimitHeavy } from '../middleware/rateLimit.js';
+
+const MAX_OWNED_WORKSPACES = 50;
+const demoWorkspaceLimiter = rateLimitHeavy({ name: 'demo_workspace', max: 10, windowMs: 15 * 60_000 });
+const createWorkspaceLimiter = rateLimitHeavy({ name: 'create_workspace', max: 20, windowMs: 15 * 60_000 });
 
 const router = Router();
 const shape = workspace => ({ id: String(workspace._id), name: workspace.name, asOfDate: workspace.asOfDate,
@@ -25,17 +30,23 @@ router.get('/', requireSession, asyncRoute(async (req, res) => {
   res.json({ workspaces: workspaces.map(w => ({ ...shape(w), role: String(w.ownerUserId) === String(req.user._id) ? 'owner' : 'accountant' })) });
 }));
 
-export const demoWorkspaceRoute = [requireSession, asyncRoute(async (req, res) => {
+export const demoWorkspaceRoute = [requireSession, demoWorkspaceLimiter, asyncRoute(async (req, res) => {
   const { reset = false } = validate(z.object({ reset: z.boolean().optional() }).strict(), req.body ?? {});
   const { workspace, created, reset: wasReset } = await provisionDemoWorkspace(req.user._id, { reset });
+  if (created || wasReset) {
+    await appendSecurityEvent({ action: created ? 'workspace.demo_created' : 'workspace.demo_reset', actorUserId: req.user._id, workspaceId: workspace._id, ip: req.ip });
+  }
   res.status(created ? 201 : 200).json({ workspace: { ...shape(workspace), role: 'owner' }, created, reset: wasReset });
 })];
 
 router.post('/demo', ...demoWorkspaceRoute);
 
-router.post('/', requireSession, asyncRoute(async (req, res) => {
+router.post('/', requireSession, createWorkspaceLimiter, asyncRoute(async (req, res) => {
+  const ownedCount = await Workspace.countDocuments({ ownerUserId: req.user._id });
+  if (ownedCount >= MAX_OWNED_WORKSPACES) fail(409, 'WORKSPACE_LIMIT', 'Maximum number of businesses per account reached');
   const workspace = await Workspace.create({ ...validate(workspaceCreate, req.body), ownerUserId: req.user._id });
   await appendAudit({ workspaceId: workspace._id, userId: req.user._id, action: 'workspace.created', entityType: 'workspace', entityId: String(workspace._id), changedFields: Object.keys(req.body || {}) });
+  await appendSecurityEvent({ action: 'workspace.created', actorUserId: req.user._id, workspaceId: workspace._id, ip: req.ip });
   res.status(201).json({ workspace: { ...shape(workspace), role: 'owner' } });
 }));
 router.get('/:workspaceId', asyncRoute(async (req, res) => {
@@ -46,6 +57,18 @@ router.patch('/:workspaceId', requireOwner, asyncRoute(async (req, res) => {
   Object.assign(workspace, validate(workspacePatch, req.body));
   await workspace.save();
   res.json({ workspace: { ...shape(workspace), role: req.businessRole } });
+}));
+
+router.delete('/:workspaceId', requireOwner, asyncRoute(async (req, res) => {
+  const workspace = await workspaceOr404(req.params.workspaceId);
+  const { workspaceName } = validate(z.object({ workspaceName: z.string().trim().min(1).max(100) }).strict(), req.body);
+  if (workspaceName !== workspace.name) {
+    fail(400, 'VALIDATION_ERROR', 'Type the exact workspace name to confirm deletion');
+  }
+  await purgeWorkspaceData(workspace._id, { includeDevicesAndTelemetry: true });
+  await Workspace.deleteOne({ _id: workspace._id });
+  await appendSecurityEvent({ action: 'workspace.deleted', actorUserId: req.user._id, workspaceId: workspace._id, ip: req.ip });
+  res.status(204).end();
 }));
 
 router.get('/:workspaceId/members', requireOwner, asyncRoute(async (req, res) => {

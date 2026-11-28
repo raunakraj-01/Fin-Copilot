@@ -105,8 +105,9 @@ export default function SetupImport({ workspaceId, onWorkspaceCreated, businessR
     if (!workspaceId || !file) return;
     if (file.name.toLowerCase().endsWith('.xml')) {
       run('inspect', async () => {
-        const rawXml = xmlPreview?.rawXml ?? await file.text();
-        const result = await json(`/workspaces/${workspaceId}/automation/tally-xml`, 'POST', { xml: rawXml });
+        const body = new FormData();
+        body.append('file', file);
+        const result = await api(`/workspaces/${workspaceId}/automation/tally-xml`, { method: 'POST', body });
         setFile(null);
         setXmlPreview(null);
         setRefreshKey(value => value + 1);

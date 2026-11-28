@@ -94,6 +94,25 @@ export function enforceAuthenticatedRateLimit(req, res) {
   }
 }
 
+export function rateLimitHeavy({ name, max, windowMs }) {
+  return (req, res, next) => {
+    const actorKey = req.user?._id
+      ? `user:${String(req.user._id)}`
+      : req.service?._id
+        ? `service:${String(req.service._id)}`
+        : `ip:${req.ip || 'unknown'}`;
+    const result = consumeBucket(`heavy:${name}`, actorKey, { limit: max, windowMs });
+    setRateLimitHeaders(res, result);
+    if (!result.allowed) {
+      return next(Object.assign(new Error(`Too many requests for this action. Try again in ${result.retryAfterSeconds}s.`), {
+        status: 429,
+        code: 'RATE_LIMITED',
+      }));
+    }
+    next();
+  };
+}
+
 export function resetRateLimiters() {
   stores.clear();
 }

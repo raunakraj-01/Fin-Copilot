@@ -1,4 +1,20 @@
+import mongoose from 'mongoose';
+import { createHash } from 'node:crypto';
 import AuditEvent from '../models/AuditEvent.js';
+import SecurityEvent from '../models/SecurityEvent.js';
+
+export function appendSecurityEvent({ action, outcome = 'succeeded', actorUserId = null, workspaceId = null, ip = '', details = [] }) {
+  if (mongoose.connection?.readyState !== 1) return Promise.resolve(null);
+  const ipHash = ip ? createHash('sha256').update(String(ip)).digest('hex') : '';
+  return SecurityEvent.create({
+    action: String(action || '').slice(0, 80),
+    outcome,
+    actorUserId: mongoose.isValidObjectId(actorUserId) ? actorUserId : null,
+    workspaceId: mongoose.isValidObjectId(workspaceId) ? workspaceId : null,
+    ipHash,
+    details: (Array.isArray(details) ? details : []).map(d => String(d).slice(0, 120)).slice(0, 10),
+  }).catch(() => null);
+}
 
 const safeFields = new Set(['name', 'asOfDate', 'openingCashPaise', 'minimumReservePaise', 'category', 'externalId', 'counterparty',
   'amountPaise', 'settledPaise', 'status', 'dueDate', 'expectedDate', 'confidenceState', 'state', 'decision', 'share', 'mode',

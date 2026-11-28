@@ -9,6 +9,8 @@ export default function TrustCenter({ workspaceId, businessRole }) {
   const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
+  const [deleteWorkspaceName, setDeleteWorkspaceName] = useState('');
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
   const [codes, setCodes] = useState([]);
   const [audit, setAudit] = useState([]);
   const [error, setError] = useState('');
@@ -56,6 +58,23 @@ export default function TrustCenter({ workspaceId, businessRole }) {
     const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'cashflow-recovery-codes.txt'; anchor.click(); URL.revokeObjectURL(url);
   }
 
+  async function deleteWorkspace(event) {
+    event.preventDefault(); setBusy(true); setError(''); setNotice('');
+    try {
+      await json(`/workspaces/${workspaceId}`, 'DELETE', { workspaceName: deleteWorkspaceName });
+      window.location.assign('/setup-import');
+    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
+  }
+
+  async function deleteAccount(event) {
+    event.preventDefault(); setBusy(true); setError(''); setNotice('');
+    try {
+      await json('/auth/account', 'DELETE', { currentPassword: deleteAccountPassword });
+      setCsrf('');
+      window.dispatchEvent(new Event('cashflow-session-expired'));
+    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
+  }
+
   return <>
     <button className="secondary" type="button" onClick={() => setOpen(value => !value)}>{open ? 'Close security' : 'Account security'}</button>
     {open && <section className="trust-center card" aria-label="Account security and business data">
@@ -79,8 +98,20 @@ export default function TrustCenter({ workspaceId, businessRole }) {
       {workspaceId && businessRole === 'owner' && <><h3>Business data</h3><p>Export the current business ledger, bank matches, follow-up history, sync history, and audit records.</p>
         <button disabled={busy || !workspaceId} onClick={downloadExport}>Download business export</button>
         <h3>Recent change history</h3>{audit.length === 0 ? <p>No recorded changes yet.</p> : <ol>{audit.slice(0, 20).map(event => <li key={event._id}>{new Date(event.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST · {eventLabel(event)}</li>)}</ol>}
+        <h3>Delete business workspace</h3>
+        <p>Permanently remove this workspace and all its financial records.</p>
+        <form className="form-grid" onSubmit={deleteWorkspace}>
+          <label>Type exact business name to confirm<input required maxLength={100} value={deleteWorkspaceName} onChange={event => setDeleteWorkspaceName(event.target.value)} /></label>
+          <button disabled={busy} className="secondary">Delete this workspace</button>
+        </form>
       </>}
       {workspaceId && businessRole !== 'owner' && <p>Business export and change history are available to the business owner.</p>}
+      <h3>Delete user account</h3>
+      <p>Permanently erase your user account and all workspaces you own.</p>
+      <form className="form-grid" onSubmit={deleteAccount}>
+        <label>Confirm password to erase account<input type="password" autoComplete="current-password" required value={deleteAccountPassword} onChange={event => setDeleteAccountPassword(event.target.value)} /></label>
+        <button disabled={busy} className="secondary">Delete my account</button>
+      </form>
       {notice && <p role="status">{notice}</p>}{error && <p role="alert">{error}</p>}
     </section>}
   </>;

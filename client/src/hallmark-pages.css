@@ -327,7 +327,7 @@ html.dark .kavach-floating-nav { background: var(--app-surface); }
 }
 
 @media (max-width: 640px) {
-  .content { padding: var(--app-space-md) var(--app-space-sm) 40px; }
+  .content { padding: var(--app-space-md) var(--app-space-sm) calc(84px + env(safe-area-inset-bottom, 0px)); }
   .content .card, .content .decision-card { padding: var(--app-space-md); }
   .content .form-grid, .content .decision-form-grid, .content .action-card-grid { grid-template-columns: minmax(0, 1fr); }
   .content .decision-controls { align-items: stretch; flex-direction: column; }

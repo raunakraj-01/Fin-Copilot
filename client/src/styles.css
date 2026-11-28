@@ -350,7 +350,16 @@ html.dark .kavach-popover-menu {
 }
 
 .kavach-notifications-menu {
-  width: 290px;
+  width: min(290px, calc(100vw - 24px));
+}
+@media (max-width: 600px) {
+  .kavach-notifications-menu {
+    position: fixed;
+    top: 108px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
 }
 
 .popover-header {
@@ -1440,7 +1449,7 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
     bottom: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -1448,7 +1457,7 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
     z-index: 100;
     justify-content: space-around;
     align-items: center;
-    padding: 0 4px;
+    padding: 0 4px env(safe-area-inset-bottom, 0px);
   }
   html.dark .mobile-bottom-nav {
     background: rgba(13, 22, 20, 0.94);
@@ -1563,6 +1572,11 @@ body > #root > .decision-page > .decision-card > button { width: 100%; margin-to
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+}
+@media (max-width: 640px) {
+  .dossier-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .dossier-kpi {
   background: #f7f9fa;

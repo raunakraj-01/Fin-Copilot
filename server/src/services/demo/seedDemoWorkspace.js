@@ -16,6 +16,8 @@ import PaymentOffer from '../../models/PaymentOffer.js';
 import ImportBatch from '../../models/ImportBatch.js';
 import SyncConflict from '../../models/SyncConflict.js';
 import SyncRun from '../../models/SyncRun.js';
+import SyncDevice from '../../models/SyncDevice.js';
+import PaymentObservation from '../../models/PaymentObservation.js';
 import { addDays } from '../rescue/dates.js';
 import { todayIndia } from '../../utils/dates.js';
 import { loadDecisionContext, loadSharedForecast } from '../rescue/decisionContext.js';
@@ -29,7 +31,7 @@ function clampDayOfMonth(dateStr, fallbackDay) {
   return Number.isInteger(day) && day >= 1 && day <= 28 ? day : fallbackDay;
 }
 
-async function clearWorkspaceDemoCollections(workspaceId) {
+export async function purgeWorkspaceData(workspaceId, { includeDevicesAndTelemetry = false } = {}) {
   await Promise.all([
     CashItem.deleteMany({ workspaceId }),
     RecurringRule.deleteMany({ workspaceId }),
@@ -47,7 +49,14 @@ async function clearWorkspaceDemoCollections(workspaceId) {
     RescuePlan.deleteMany({ workspaceId }),
     PaymentOffer.deleteMany({ workspaceId }),
     ImportBatch.deleteMany({ workspaceId }),
+    ...(includeDevicesAndTelemetry
+      ? [SyncDevice.deleteMany({ workspaceId }), PaymentObservation.deleteMany({ workspaceId })]
+      : []),
   ]);
+}
+
+async function clearWorkspaceDemoCollections(workspaceId) {
+  return purgeWorkspaceData(workspaceId);
 }
 
 async function populateIndianMsmeDemoData(workspace, userId) {
